@@ -1,4 +1,4 @@
-from myhdl import block, instances, always_seq, enum, Signal
+from myhdl import block, instances, always_seq, enum, Signal, ResetSignal
 import yaml
 
 import num
@@ -55,19 +55,71 @@ def stage(
             state.next = stage_state.FINISHED
         elif state == stage_state.FINISHED:
             out_v.next = rhs_out
-            out_finished.next = 1
+            out_finished.next = True
 
     return instances()
 
 
 @block
-def runge_kutta(enable, method = {}):
+def runge_kutta(clk, rst, enable, finished, method, ivp):
+    rk_state = enum('RESET', 'WAITING', 'CALCULATING', 'FINISHED')
+    state = Signal(rk_state.RESET)
 
-    pass
+    x = Signal(num.from_float(ivp['x']))
+    x_end = Signal(num.from_float(ivp['x_end']))
+    y = Signal(num.from_float(ivp['y']))
+    h = Signal(num.from_float(ivp['h']))
 
+    stage_reset = ResetSignal(False, True, False)
+    stage_ints = [None for i in range(method['stages'])]
+    enable_sigs = [Signal(bool(0)) for i in range(method['stages'])]
+    v_sigs = []
 
-# with open("method.yaml", 'r') as stream:
-#     try:
-#         print(yaml.safe_load(stream))
-#     except yaml.YAMLError as exc:
-#         print(exc)
+    for si in range(method['stages']):
+        c_a = list(map(num.from_float, method['A'][si]))
+        c_c = num.from_float(method['c'][si])
+
+        stage_enable = enable if si == 0 else enable_sigs[si - 1]
+
+        v = Signal(num.default())
+
+        stage_ints[si] = stage(c_a, c_c, clk, stage_reset, stage_enable, x, h, v_sigs, y, enable_sigs[si], v)
+        v_sigs.append(v)
+
+    x_n = Signal(num.same_as(x))
+    x_add_inst = num.add(x, h, x_n)
+
+    y_lincomb_inst_res = Signal(num.same_as(y))
+    y_lincomb_inst = lincomb(list(map(num.from_float, method['b'])), v_sigs, y_lincomb_inst_res)
+    y_mul_inst_res = Signal(num.same_as(y))
+    y_mul_inst = num.mul(h, y_lincomb_inst_res, y_mul_inst_res)
+    y_n = Signal(num.same_as(y))
+    y_add_inst = num.add(y, y_mul_inst_res, y_n)
+
+    @always_seq(clk.posedge, reset=rst)
+    def calc_final():
+        if state == rk_state.RESET:
+            if enable:
+                state.next = rk_state.WAITING
+        elif state == rk_state.WAITING:
+            if stage_reset == 1:
+                stage_reset.next = False
+            elif enable_sigs[method['stages'] - 1]:
+                state.next = rk_state.CALCULATING
+        elif state == rk_state.CALCULATING:
+            state.next = rk_state.CALCULATING
+            # All stages finished
+            print('%f: %s : %f' % (num.to_float(x_n), list(map(num.to_float, v_sigs)), num.to_float(y_n)))
+            x.next = x_n
+            y.next = y_n
+            stage_reset.next = True
+            if x_n > x_end:
+                state.next = rk_state.FINISHED
+            else:
+                state.next = rk_state.WAITING
+        elif state == rk_state.FINISHED:
+            stage_reset.next = True
+            finished.next = True
+        # print(enable_sigs)
+
+    return instances()
