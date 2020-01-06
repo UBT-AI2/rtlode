@@ -66,8 +66,8 @@ def runge_kutta(enable, method = {}):
     pass
 
 
-with open("method.yaml", 'r') as stream:
-    try:
-        print(yaml.safe_load(stream))
-    except yaml.YAMLError as exc:
-        print(exc)
+# with open("method.yaml", 'r') as stream:
+#     try:
+#         print(yaml.safe_load(stream))
+#     except yaml.YAMLError as exc:
+#         print(exc)
