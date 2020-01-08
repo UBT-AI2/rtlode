@@ -4,10 +4,23 @@ import unittest
 from myhdl import Signal, intbv, delay, Simulation
 
 import num
-from utils import lincomb
+from utils import lincomb, UnequalVectorLength
 
 
 class TestLincomb(unittest.TestCase):
+    def test_lincomb_unequal_vector_len(self):
+        """Check if vector of length 0 is working."""
+
+        in_a = [Signal(num.from_float(0)), Signal(num.from_float(1))]
+        in_b = [Signal(num.from_float(0.5))]
+        out_sum = Signal(num.default())
+
+        def test():
+            yield delay(10)
+            self.assertEqual(0, out_sum)
+
+        self.assertRaises(UnequalVectorLength, self.runTest, in_a, in_b, out_sum, test)
+
     def test_lincomb_no_element(self):
         """Check if vector of length 0 is working."""
 
@@ -38,7 +51,7 @@ class TestLincomb(unittest.TestCase):
         self.runTest(in_a, in_b, out_sum, test)
 
     def test_lincomb(self):
-        """Check longer vectors are working."""
+        """Check if longer vectors are working."""
 
         n = 10
         a = [randrange(-10, 10) for i in range(n)]
