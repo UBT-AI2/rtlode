@@ -18,9 +18,9 @@ def reduce_sum(in_vector, out_sum):
 
     for i in range(max(n_elements - 1, 0)):
         if i == 0:
-            add_insts[i] = num.add_comb(in_vector[i], in_vector[i + 1], partial_sums[i])
+            add_insts[i] = num.add(in_vector[i], in_vector[i + 1], partial_sums[i])
         else:
-            add_insts[i] = num.add_comb(partial_sums[i - 1], in_vector[i + 1], partial_sums[i])
+            add_insts[i] = num.add(partial_sums[i - 1], in_vector[i + 1], partial_sums[i])
 
     @always_comb
     def assign_out():

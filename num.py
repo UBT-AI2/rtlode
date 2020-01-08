@@ -1,7 +1,7 @@
 from myhdl import intbv, block, always_seq, instances, always_comb, Signal
 
-INTEGER_SIZE = 10
-FRACTION_SIZE = 21
+INTEGER_SIZE = 16
+FRACTION_SIZE = 45
 MAX_VALUE = 2**(INTEGER_SIZE + FRACTION_SIZE) - 1
 MIN_VALUE = - MAX_VALUE
 
@@ -33,28 +33,14 @@ def to_float(fixed_val):
 
 @block
 def add(in_a, in_b, out_c, clk=None):
+    def calc():
+        out_c.next = in_a + in_b
+
     if clk is not None:
-        return add_seq(clk, in_a, in_b, out_c)
+        calc = always_seq(clk.posedge, reset=None)(calc)
     else:
-        return add_comb(in_a, in_b, out_c)
-
-
-@block
-def add_seq(in_clk, in_a, in_b, out_c):
-    @always_seq(in_clk.posedge, reset=None)
-    def calc():
-        out_c.next = in_a + in_b
-
-    return instances()
-
-
-@block
-def add_comb(in_a, in_b, out_c):
-    @always_comb
-    def calc():
-        out_c.next = in_a + in_b
-
-    return instances()
+        calc = always_comb(calc)
+    return calc
 
 
 @block
