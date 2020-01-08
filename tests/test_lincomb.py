@@ -24,8 +24,8 @@ class TestLincomb(unittest.TestCase):
     def test_lincomb_one_element(self):
         """Check if vector of length 1 is working."""
 
-        a = randrange(10)
-        b = randrange(10)
+        a = randrange(-10, 10)
+        b = randrange(-10, 10)
 
         in_a = [Signal(num.from_float(a))]
         in_b = [Signal(num.from_float(b))]
@@ -41,8 +41,8 @@ class TestLincomb(unittest.TestCase):
         """Check longer vectors are working."""
 
         n = 10
-        a = [randrange(10) for i in range(n)]
-        b = [randrange(10) for i in range(n)]
+        a = [randrange(-10, 10) for i in range(n)]
+        b = [randrange(-10, 10) for i in range(n)]
 
         in_a = [Signal(num.from_float(a[i])) for i in range(n)]
         in_b = [Signal(num.from_float(b[i])) for i in range(n)]

@@ -55,6 +55,19 @@ class TestMul(unittest.TestCase):
 
         self.runTest(in_a, in_b, out_sum, test)
 
+    def test_mul_zero(self):
+        """Check multiplication with zero."""
+
+        in_a = Signal(num.from_float(0))
+        in_b = Signal(num.from_float(10))
+        out_sum = Signal(num.default())
+
+        def test():
+            yield delay(1)
+            self.assertEqual(0, num.to_float(out_sum))
+
+        self.runTest(in_a, in_b, out_sum, test)
+
     @staticmethod
     def runTest(in_a, in_b, out_sum, test, clk=None):
         dut = num.mul(in_a, in_b, out_sum, clk=clk)
