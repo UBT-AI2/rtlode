@@ -1,8 +1,7 @@
 from myhdl import block, instances, always_seq, enum, Signal, ResetSignal
-import yaml
 
 import num
-from utils import lincomb
+from vector_utils import lincomb
 
 
 @block

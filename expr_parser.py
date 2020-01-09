@@ -35,9 +35,10 @@ def expr(expression, scope, result, clk=None):
         if isinstance(parse_tree, ParseResults):
             if 'index' in parse_tree and 'var' in parse_tree:
                 if parse_tree['var'] in scope:
+                    var = scope[parse_tree['var']][parse_tree['index']]
                     @always_comb
                     def assign():
-                        out.next = scope[parse_tree['var']][parse_tree['index']]
+                        out.next = var
                     return [assign]
                 else:
                     raise Exception('Unknown var identifier found: %s' % parse_tree['var'])
@@ -68,9 +69,10 @@ def expr(expression, scope, result, clk=None):
                 inst = mod(val_lhs, val_rhs, out)
                 return [lhs] + [rhs] + [inst]
         elif isinstance(parse_tree, float):
+            const = Signal(num.from_float(parse_tree, result))
             @always_comb
             def assign():
-                out.next = num.from_float(parse_tree, result)
+                out.next = const
             return [assign]
         raise Exception('Unknown Parse Error')
 
