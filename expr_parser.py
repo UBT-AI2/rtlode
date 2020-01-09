@@ -1,4 +1,4 @@
-from myhdl import block, always_seq, instances, Signal
+from myhdl import block, always_seq, Signal, always_comb
 from pyparsing import *
 
 import num
@@ -30,22 +30,26 @@ def get_expr_grammar():
 
 @block
 def expr(expression, scope, result, clk=None):
-    def generate_logic(parse_tree):
+    @block
+    def generate_logic(parse_tree, out):
         if isinstance(parse_tree, ParseResults):
             if 'index' in parse_tree and 'var' in parse_tree:
                 if parse_tree['var'] in scope:
-                    return [], scope[parse_tree['var']][parse_tree['index']]
+                    @always_comb
+                    def assign():
+                        out.next = scope[parse_tree['var']][parse_tree['index']]
+                    return [assign]
                 else:
                     raise Exception('Unknown var identifier found: %s' % parse_tree['var'])
             elif 'sign' in parse_tree and len(parse_tree) == 2:
                 if parse_tree['sign'] == '+':
-                    return generate_logic(parse_tree[1])
+                    return generate_logic(parse_tree[1], out)
                 elif parse_tree['sign'] == '-':
                     val = Signal(num.same_as(result))
-                    rhs = generate_logic(parse_tree[1])
-                    zero = Signal(num.from_float(0, sig=rhs[1]))
-                    add_inst = num.sub(zero, rhs[1], val)
-                    return rhs[0] + [add_inst], val
+                    rhs = generate_logic(parse_tree[1], val)
+                    zero = Signal(num.from_float(0, sig=val))
+                    inst = num.sub(zero, val, out)
+                    return [rhs] + [inst]
                 else:
                     raise Exception('Unhandled sign operator found: %s' % parse_tree['sign'])
             elif 'op' in parse_tree and len(parse_tree) == 3:
@@ -57,21 +61,26 @@ def expr(expression, scope, result, clk=None):
                     mod = num.mul
                 else:
                     raise Exception('Unhandled operator found: %s' % parse_tree['op'])
-                val = Signal(num.same_as(result))
-                lhs = generate_logic(parse_tree[0])
-                rhs = generate_logic(parse_tree[2])
-                inst = mod(lhs[1], rhs[1], val)
-                return lhs[0] + rhs[0] + [inst], val
+                val_lhs = Signal(num.same_as(result))
+                val_rhs = Signal(num.same_as(result))
+                lhs = generate_logic(parse_tree[0], val_lhs)
+                rhs = generate_logic(parse_tree[2], val_rhs)
+                inst = mod(val_lhs, val_rhs, out)
+                return [lhs] + [rhs] + [inst]
         elif isinstance(parse_tree, float):
-            return [], Signal(num.from_float(parse_tree, result))
+            @always_comb
+            def assign():
+                out.next = num.from_float(parse_tree, result)
+            return [assign]
         raise Exception('Unknown Parse Error')
 
     res = get_expr_grammar().parseString(expression, parseAll=True)
     # TODO handle prop_delay, maybe enable finish implementation
-    (insts, out, prop_delay) = generate_logic(res[0])
+    expr_out = Signal(num.same_as(result))
+    insts = generate_logic(res[0], expr_out)
 
     @always_seq(clk.posedge, reset=None)
     def calc():
-        result.next = out
+        result.next = expr_out
 
-    return instances()
+    return [insts, calc]
