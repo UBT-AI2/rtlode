@@ -44,6 +44,18 @@ def add(in_a, in_b, out_c, clk=None):
 
 
 @block
+def sub(in_a, in_b, out_c, clk=None):
+    def calc():
+        out_c.next = in_a - in_b
+
+    if clk is not None:
+        calc = always_seq(clk.posedge, reset=None)(calc)
+    else:
+        calc = always_comb(calc)
+    return calc
+
+
+@block
 def mul(in_a, in_b, out_c, clk=None):
     reg = Signal(intbv(0, min=DOUBLE_MIN_VALUE, max=DOUBLE_MAX_VALUE))
 
