@@ -1,21 +1,27 @@
 from myhdl import block, instances, always_seq, enum, Signal, ResetSignal
 
+import expr_parser
 import num
 from vector_utils import lincomb
 
 
 @block
-def rhs(in_clk, in_x, in_y, out_y):
+def rhs_map(components, in_x, in_y, out_y, clk=None):
+    n_components = len(components)
 
-    @always_seq(in_clk.posedge, reset=None)
-    def calc():
-        out_y.next = in_y << 1  # * 2
+    scope = {
+        'x': in_x,
+        'y': in_y
+    }
+
+    rhs_insts = [expr_parser.expr(components[i], scope, out_y[i], clk=clk) for i in range(n_components)]
 
     return instances()
 
 
 @block
 def stage(
+        c_comp,
         c_a,
         c_c,
         in_clk,
@@ -27,23 +33,33 @@ def stage(
         in_y,
         out_finished,
         out_v):
+    n_components = len(c_comp)
+
     stage_state = enum('RESET', 'CALCULATING', 'FINISHED')
     state = Signal(stage_state.RESET)
 
     rhs_x = Signal(num.same_as(in_x))
-    rhs_y = Signal(num.same_as(in_y))
-    rhs_out = Signal(num.same_as(out_v))
-    inst_rhs = rhs(in_clk, rhs_x, rhs_y, rhs_out)
+    rhs_y = [Signal(num.same_as(in_y[i])) for i in range(n_components)]
+    rhs_out = [Signal(num.same_as(out_v[i])) for i in range(n_components)]
+    inst_rhs = rhs_map(c_comp, rhs_x, rhs_y, rhs_out, clk=in_clk)
 
     x_inst_mul_res = Signal(num.same_as(in_x))
     x_inst_mul = num.mul(c_c, in_h, x_inst_mul_res, clk=in_clk)
     x_inst_add = num.add(in_x, x_inst_mul_res, rhs_x)
 
-    y_inst_lincomb_res = Signal(num.same_as(out_v))
-    y_inst_lincomb = lincomb(c_a, in_v, y_inst_lincomb_res)
-    y_inst_mul_res = Signal(num.same_as(in_y))
-    y_inst_mul = num.mul(in_h, y_inst_lincomb_res, y_inst_mul_res, clk=in_clk)
-    y_inst_add = num.add(in_y, y_inst_mul_res, rhs_y)
+    @block
+    def calc_rhs_y(i):
+        y_inst_lincomb_res = Signal(num.same_as(out_v[i]))
+        print(i)
+        print(c_a)
+        print(in_v)
+        # TODO Bug here
+        y_inst_lincomb = lincomb(c_a, [el[i] for el in in_v], y_inst_lincomb_res)
+        y_inst_mul_res = Signal(num.same_as(out_v[i]))
+        y_inst_mul = num.mul(in_h, y_inst_lincomb_res, y_inst_mul_res, clk=in_clk)
+        y_insts_add = num.add(in_y[i], y_inst_mul_res, rhs_y[i])
+        return instances()
+    rhs_y_insts = [calc_rhs_y(i) for i in range(n_components)]
 
     @always_seq(in_clk.posedge, in_reset)
     def statemachine():
@@ -53,7 +69,8 @@ def stage(
         elif state == stage_state.CALCULATING:
             state.next = stage_state.FINISHED
         elif state == stage_state.FINISHED:
-            out_v.next = rhs_out
+            for i in range(n_components):
+                out_v[i].next = rhs_out[i]
             out_finished.next = True
 
     return instances()
@@ -64,9 +81,10 @@ def runge_kutta(clk, rst, enable, finished, method, ivp):
     rk_state = enum('RESET', 'WAITING', 'CALCULATING', 'FINISHED')
     state = Signal(rk_state.RESET)
 
+    components = ivp['components']
     x = Signal(num.from_float(ivp['x']))
     x_end = Signal(num.from_float(ivp['x_end']))
-    y = Signal(num.from_float(ivp['y']))
+    y = [Signal(num.from_float(ivp['y'])) for _ in range(len(components))]
     h = Signal(num.from_float(ivp['h']))
 
     stage_reset = ResetSignal(False, True, False)
@@ -80,20 +98,24 @@ def runge_kutta(clk, rst, enable, finished, method, ivp):
 
         stage_enable = enable if si == 0 else enable_sigs[si - 1]
 
-        v = Signal(num.default())
+        v = [Signal(num.default()) for _ in range(len(components))]
 
-        stage_ints[si] = stage(c_a, c_c, clk, stage_reset, stage_enable, x, h, v_sigs, y, enable_sigs[si], v)
+        stage_ints[si] = stage(components, c_a, c_c, clk, stage_reset, stage_enable, x, h, v_sigs, y, enable_sigs[si], v)
         v_sigs.append(v)
 
     x_n = Signal(num.same_as(x))
     x_add_inst = num.add(x, h, x_n)
 
-    y_lincomb_inst_res = Signal(num.same_as(y))
-    y_lincomb_inst = lincomb(list(map(num.from_float, method['b'])), v_sigs, y_lincomb_inst_res)
-    y_mul_inst_res = Signal(num.same_as(y))
-    y_mul_inst = num.mul(h, y_lincomb_inst_res, y_mul_inst_res)
-    y_n = Signal(num.same_as(y))
-    y_add_inst = num.add(y, y_mul_inst_res, y_n)
+    y_n = [Signal(num.same_as(y[i])) for i in range(len(components))]
+    @block
+    def calc_y_n(i):
+        y_lincomb_inst_res = Signal(num.same_as(y[i]))
+        y_lincomb_inst = lincomb(list(map(num.from_float, method['b'])), [el[i] for el in v_sigs], y_lincomb_inst_res)
+        y_mul_inst_res = Signal(num.same_as(y[i]))
+        y_mul_inst = num.mul(h, y_lincomb_inst_res, y_mul_inst_res)
+        y_add_inst = num.add(y[i], y_mul_inst_res, y_n[i])
+        return instances()
+    calc_y_n_insts = [calc_y_n(i) for i in range(len(components))]
 
     @always_seq(clk.posedge, reset=rst)
     def calc_final():
@@ -108,9 +130,11 @@ def runge_kutta(clk, rst, enable, finished, method, ivp):
         elif state == rk_state.CALCULATING:
             state.next = rk_state.CALCULATING
             # All stages finished
-            print('%f: %s : %f' % (num.to_float(x_n), list(map(num.to_float, v_sigs)), num.to_float(y_n)))
+            for i in range(len(components)):
+                print('%d %f: %s : %f' % (i, num.to_float(x_n), list(map(num.to_float, [el[i] for el in v_sigs])), num.to_float(y_n[i])))
             x.next = x_n
-            y.next = y_n
+            for i in range(len(components)):
+                y[i].next = y_n[i]
             stage_reset.next = True
             if x_n > x_end:
                 state.next = rk_state.FINISHED

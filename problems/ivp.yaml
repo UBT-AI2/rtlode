@@ -2,3 +2,6 @@ x: 0
 y: 2
 h: 0.1
 x_end: 2
+components:
+  - 2 * y[0]
+  - 1.5 * y[1]
