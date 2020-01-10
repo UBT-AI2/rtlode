@@ -11,7 +11,8 @@ class TestExpr(unittest.TestCase):
 
         clk = Signal(bool(0))
         scope = {
-            'x': [Signal(num.from_float(5))]
+            'x': Signal(num.from_float(2)),
+            'y': [Signal(num.from_float(5))]
         }
         out = Signal(num.default())
 
@@ -20,9 +21,9 @@ class TestExpr(unittest.TestCase):
                 yield delay(10)
                 clk.next = not clk
 
-            self.assertEqual(num.from_float(17), out)
+            self.assertEqual(num.from_float(22), out)
 
-        self.runTest('3*4+x[0]', scope, out, test, clk=clk)
+        self.runTest('3*4+y[0]*x', scope, out, test, clk=clk)
 
     @staticmethod
     def runTest(expression, scope, out, test, clk=None):
