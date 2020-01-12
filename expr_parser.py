@@ -9,6 +9,11 @@ class ExprParserException(Exception):
 
 
 def get_expr_grammar():
+    """
+    Defines the grammar used by the expression parser.
+
+    :return: expr grammar
+    """
     decimal = Regex(r"\d([\d ])*(\.\d*)?")
     decimal.setParseAction(lambda t: float(t[0].replace(" ", "")))
     variable = Group(Word(alphas).setResultsName("var") + Optional(Literal("[")
@@ -34,8 +39,21 @@ def get_expr_grammar():
 
 @block
 def expr(expression, scope, result, clk=None):
+    """
+    Computes the given expression. Variable access to vars provided in
+    scpope is provided.
+
+    :param expression: string of expression
+    :param scope: dict with var names mapped to vars
+    :param result: result of the expression
+    :param clk: optional clk
+    :return: myhdl instances
+    """
     @block
     def generate_logic(parse_tree, out):
+        # while isinstance(parse_tree, ParseResults) and len(parse_tree) == 1:
+        #     parse_tree = parse_tree[0]
+
         if isinstance(parse_tree, ParseResults):
             if 'var' in parse_tree:
                 if parse_tree['var'] in scope:
@@ -62,7 +80,7 @@ def expr(expression, scope, result, clk=None):
                     return [rhs] + [inst]
                 else:
                     raise ExprParserException('Unhandled sign operator found: %s' % parse_tree['sign'])
-            elif 'op' in parse_tree and len(parse_tree) == 3:
+            elif 'op' in parse_tree and len(parse_tree) >= 3:
                 if parse_tree['op'] == '+':
                     mod = num.add
                 elif parse_tree['op'] == '-':
@@ -73,8 +91,15 @@ def expr(expression, scope, result, clk=None):
                     raise ExprParserException('Unhandled operator found: %s' % parse_tree['op'])
                 val_lhs = Signal(num.same_as(result))
                 val_rhs = Signal(num.same_as(result))
-                lhs = generate_logic(parse_tree[0], val_lhs)
-                rhs = generate_logic(parse_tree[2], val_rhs)
+                lhs = generate_logic(parse_tree.pop(0), val_lhs)
+                if parse_tree[0] == parse_tree['op']:
+                    parse_tree.pop(0)
+                else:
+                    raise ExprParserException('Expected operator: %s found: %s' % (parse_tree['op'], parse_tree[0]))
+                if len(parse_tree) > 1:
+                    rhs = generate_logic(parse_tree, val_rhs)
+                else:
+                    rhs = generate_logic(parse_tree[0], val_rhs)
                 inst = mod(val_lhs, val_rhs, out)
                 return [lhs] + [rhs] + [inst]
         elif isinstance(parse_tree, float):

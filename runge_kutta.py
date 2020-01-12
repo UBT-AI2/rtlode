@@ -83,8 +83,8 @@ def runge_kutta(clk, rst, enable, finished, method, ivp):
 
     components = ivp['components']
     x = Signal(num.from_float(ivp['x']))
-    x_end = Signal(num.from_float(ivp['x_end']))
-    y = [Signal(num.from_float(ivp['y'])) for _ in range(len(components))]
+    n_end = Signal(num.integer(ivp['n']))
+    y = [Signal(num.from_float(ivp['y'][i])) for i in range(len(components))]
     h = Signal(num.from_float(ivp['h']))
 
     stage_reset = ResetSignal(False, True, False)
@@ -117,6 +117,7 @@ def runge_kutta(clk, rst, enable, finished, method, ivp):
         return instances()
     calc_y_n_insts = [calc_y_n(i) for i in range(len(components))]
 
+    n = Signal(num.same_as(n_end))
     @always_seq(clk.posedge, reset=rst)
     def calc_final():
         if state == rk_state.RESET:
@@ -127,6 +128,7 @@ def runge_kutta(clk, rst, enable, finished, method, ivp):
                 stage_reset.next = False
             elif enable_sigs[method['stages'] - 1]:
                 state.next = rk_state.CALCULATING
+                n.next = n + 1
         elif state == rk_state.CALCULATING:
             state.next = rk_state.CALCULATING
             # All stages finished
@@ -136,7 +138,7 @@ def runge_kutta(clk, rst, enable, finished, method, ivp):
             for i in range(len(components)):
                 y[i].next = y_n[i]
             stage_reset.next = True
-            if x_n > x_end:
+            if n >= n_end:
                 state.next = rk_state.FINISHED
             else:
                 state.next = rk_state.WAITING
