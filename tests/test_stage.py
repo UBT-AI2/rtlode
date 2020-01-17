@@ -30,8 +30,8 @@ class TestStage(unittest.TestCase):
                 in_x.next = num.from_float(td[2])
                 in_h.next = num.from_float(td[3])
                 for i in range(len(td[4])):
-                    in_v[i].next = num.from_float(td[4][i])
-                in_y.next = num.from_float(td[5])
+                    in_v[i][0].next = num.from_float(td[4][i])
+                in_y[0].next = num.from_float(td[5])
                 enable.next = 1
 
                 for i in range(2 * 5):
@@ -43,7 +43,7 @@ class TestStage(unittest.TestCase):
                     res_lincomb += td[0][i] * td[4][i]
 
                 self.assertEqual(True, out_finished)
-                self.assertAlmostEqual(num.from_float(2 * (td[5] + td[3] * res_lincomb)), out_v, delta=5, msg=td)
+                self.assertAlmostEqual(num.from_float(2 * (td[5] + td[3] * res_lincomb)), out_v[0], delta=20000, msg=td)
 
             self.runTest(c_a, c_c, test)
 
@@ -55,12 +55,12 @@ class TestStage(unittest.TestCase):
 
         in_x = Signal(num.default())
         in_h = Signal(num.default())
-        in_v = [Signal(num.default()) for _ in range(len(c_a))]
-        in_y = Signal(num.default())
+        in_v = [[Signal(num.default())] for _ in range(len(c_a))]
+        in_y = [Signal(num.default())]
         out_finished = Signal(bool(0))
-        out_v = Signal(num.default())
+        out_v = [Signal(num.default())]
 
-        dut = stage(c_a, c_c, clk, rst, enable, in_x, in_h, in_v, in_y, out_finished, out_v)
+        dut = stage(['2*y[0]'], c_a, c_c, clk, rst, enable, in_x, in_h, in_v, in_y, out_finished, out_v)
         check = test(clk, rst, enable, in_x, in_h, in_v, in_y, out_finished, out_v)
         sim = Simulation(dut, check)
         sim.run(quiet=1)
