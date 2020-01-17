@@ -51,9 +51,6 @@ def expr(expression, scope, result, clk=None):
     """
     @block
     def generate_logic(parse_tree, out):
-        # while isinstance(parse_tree, ParseResults) and len(parse_tree) == 1:
-        #     parse_tree = parse_tree[0]
-
         if isinstance(parse_tree, ParseResults):
             if 'var' in parse_tree:
                 if parse_tree['var'] in scope:
