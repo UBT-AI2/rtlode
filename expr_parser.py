@@ -1,4 +1,6 @@
-from myhdl import block, always_seq, Signal, always_comb
+import typing
+
+from myhdl import block, always_seq, Signal, always_comb, SignalType
 from pyparsing import *
 
 import num
@@ -38,7 +40,10 @@ def get_expr_grammar():
 
 
 @block
-def expr(expression, scope, result, clk=None):
+def expr(expression: str,
+         scope: typing.Dict[str, typing.Union[SignalType, typing.List[SignalType]]],
+         result: SignalType,
+         clk=None):
     """
     Computes the given expression. Variable access to vars provided in
     scpope is provided.

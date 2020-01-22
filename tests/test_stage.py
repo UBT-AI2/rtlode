@@ -4,7 +4,8 @@ import unittest
 from myhdl import Signal, Simulation, ResetSignal, delay
 
 import num
-from runge_kutta import stage
+from rk_stage import stage
+
 
 # TODO: Reset testen
 

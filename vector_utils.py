@@ -67,6 +67,8 @@ def lincomb(in_a, in_b, out_sum, clk=None):
         raise UnequalVectorLength("len(in_a) = %d != len(in_b) = %d" % (len(in_a), len(in_b)))
     n_elements = len(in_a)
 
+    # TODO ignore elements with constant factor of 0
+
     mul_insts = [None for i in range(n_elements)]
     partial_results = [Signal(num.same_as(out_sum)) for i in range(n_elements)]
 
