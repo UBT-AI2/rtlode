@@ -1,11 +1,13 @@
 from myhdl import intbv, block, always_seq, instances, always_comb, Signal
 
+from utils import FlowControl
+
 INTEGER_SIZE = 64
 FRACTION_SIZE = 64
-MAX_VALUE = 2**(INTEGER_SIZE + FRACTION_SIZE) - 1
+MAX_VALUE = 2 ** (INTEGER_SIZE + FRACTION_SIZE) - 1
 MIN_VALUE = - MAX_VALUE
 
-DOUBLE_MAX_VALUE = 2**(2 * INTEGER_SIZE + 2 * FRACTION_SIZE) - 1
+DOUBLE_MAX_VALUE = 2 ** (2 * INTEGER_SIZE + 2 * FRACTION_SIZE) - 1
 DOUBLE_MIN_VALUE = - DOUBLE_MAX_VALUE
 
 
@@ -48,12 +50,48 @@ def add(in_a, in_b, out_c, clk=None):
 
 
 @block
+def add_flow(in_a, in_b, out_c, flow: FlowControl = None):
+    enable = flow.enb if flow is not None else True
+
+    def calc():
+        if enable:
+            out_c.next = in_a + in_b
+            flow.fin.next = True
+        else:
+            flow.fin.next = False
+
+    if flow is not None:
+        calc = always_seq(flow.clk_edge(), flow.rst)(calc)
+    else:
+        calc = always_comb(calc)
+    return calc
+
+
+@block
 def sub(in_a, in_b, out_c, clk=None):
     def calc():
         out_c.next = in_a - in_b
 
     if clk is not None:
         calc = always_seq(clk.posedge, reset=None)(calc)
+    else:
+        calc = always_comb(calc)
+    return calc
+
+
+@block
+def sub_flow(in_a, in_b, out_c, flow: FlowControl = None):
+    enable = flow.enb if flow is not None else True
+
+    def calc():
+        if enable:
+            out_c.next = in_a - in_b
+            flow.fin.next = True
+        else:
+            flow.fin.next = False
+
+    if flow is not None:
+        calc = always_seq(flow.clk_edge(), flow.rst)(calc)
     else:
         calc = always_comb(calc)
     return calc
@@ -72,7 +110,30 @@ def mul(in_a, in_b, out_c, clk=None):
 
     if clk is not None:
         calc = always_seq(clk.posedge, reset=None)(calc)
-        return [resize, calc]
     else:
         calc = always_comb(calc)
-        return [resize, calc]
+    return [resize, calc]
+
+
+@block
+def mul_flow(in_a, in_b, out_c, flow: FlowControl = None):
+    enable = flow.enb if flow is not None else True
+
+    reg = Signal(intbv(0, min=DOUBLE_MIN_VALUE, max=DOUBLE_MAX_VALUE))
+
+    @always_comb
+    def resize():
+        out_c.next = reg[INTEGER_SIZE + FRACTION_SIZE + 1 + FRACTION_SIZE:FRACTION_SIZE].signed()
+
+    def calc():
+        if enable:
+            reg.next = (in_a * in_b)
+            flow.fin.next = True
+        else:
+            flow.fin.next = False
+
+    if flow is not None:
+        calc = always_seq(flow.clk_edge(), flow.rst)(calc)
+    else:
+        calc = always_comb(calc)
+    return [resize, calc]
