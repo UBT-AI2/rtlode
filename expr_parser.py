@@ -4,6 +4,8 @@ from myhdl import block, always_seq, Signal, always_comb, SignalType
 from pyparsing import *
 
 import num
+from utils import FlowControl, clone_signal
+from vector_utils import reduce_and
 
 
 class ExprParserException(Exception):
@@ -43,7 +45,7 @@ def get_expr_grammar():
 def expr(expression: str,
          scope: typing.Dict[str, typing.Union[SignalType, typing.List[SignalType]]],
          result: SignalType,
-         clk=None):
+         flow: FlowControl):
     """
     Computes the given expression. Variable access to vars provided in
     scpope is provided.
@@ -51,11 +53,11 @@ def expr(expression: str,
     :param expression: string of expression
     :param scope: dict with var names mapped to vars
     :param result: result of the expression
-    :param clk: optional clk
+    :param flow: FlowControl sigs
     :return: myhdl instances
     """
     @block
-    def generate_logic(parse_tree, out):
+    def generate_logic(parse_tree, out: SignalType, expr_flow: FlowControl):
         if isinstance(parse_tree, ParseResults):
             if 'var' in parse_tree:
                 if parse_tree['var'] in scope:
@@ -65,62 +67,85 @@ def expr(expression: str,
                         var = scope[parse_tree['var']]
 
                     @always_comb
-                    def assign():
+                    def assign_comb():
                         out.next = var
+                        expr_flow.fin.next = True
 
-                    return [assign]
+                    @always_seq(expr_flow.clk_edge(), expr_flow.rst)
+                    def assign_seq():
+                        if expr_flow.enb:
+                            out.next = var
+                            expr_flow.fin.next = True
+                        else:
+                            expr_flow.fin.next = False
+
+                    if isinstance(var, SignalType):
+                        return [assign_seq]
+                    else:
+                        return [assign_comb]
                 else:
                     raise ExprParserException('Unknown var identifier found: %s' % parse_tree['var'])
             elif 'sign' in parse_tree and len(parse_tree) == 2:
                 if parse_tree['sign'] == '+':
-                    return generate_logic(parse_tree[1], out)
+                    return generate_logic(parse_tree[1], out, expr_flow)
                 elif parse_tree['sign'] == '-':
-                    val = Signal(num.same_as(result))
-                    rhs = generate_logic(parse_tree[1], val)
+                    val = clone_signal(result)
                     zero = Signal(num.from_float(0, sig=val))
-                    inst = num.sub(zero, val, out)
+
+                    subflow = expr_flow.create_subflow(enb=expr_flow.enb)
+                    rhs = generate_logic(parse_tree[1], val, subflow)
+                    inst = num.sub_flow(zero, val, out, expr_flow.create_subflow(enb=subflow.fin, fin=expr_flow.fin))
                     return [rhs] + [inst]
                 else:
                     raise ExprParserException('Unhandled sign operator found: %s' % parse_tree['sign'])
             elif 'op' in parse_tree and len(parse_tree) >= 3:
                 if parse_tree['op'] == '+':
-                    mod = num.add
+                    mod = num.add_flow
                 elif parse_tree['op'] == '-':
-                    mod = num.sub
+                    mod = num.sub_flow
                 elif parse_tree['op'] == '*':
-                    mod = num.mul
+                    mod = num.mul_flow
                 else:
                     raise ExprParserException('Unhandled operator found: %s' % parse_tree['op'])
-                val_lhs = Signal(num.same_as(result))
-                val_rhs = Signal(num.same_as(result))
-                lhs = generate_logic(parse_tree.pop(0), val_lhs)
+                val_lhs = clone_signal(result)
+                val_rhs = clone_signal(result)
+                subflow_lhs = expr_flow.create_subflow(enb=expr_flow.enb)
+                subflow_rhs = expr_flow.create_subflow(enb=expr_flow.enb)
+                lhs = generate_logic(parse_tree.pop(0), val_lhs, subflow_lhs)
                 if parse_tree[0] == parse_tree['op']:
                     parse_tree.pop(0)
                 else:
                     raise ExprParserException('Expected operator: %s found: %s' % (parse_tree['op'], parse_tree[0]))
                 if len(parse_tree) > 1:
-                    rhs = generate_logic(parse_tree, val_rhs)
+                    rhs = generate_logic(parse_tree, val_rhs, subflow_rhs)
                 else:
-                    rhs = generate_logic(parse_tree[0], val_rhs)
-                inst = mod(val_lhs, val_rhs, out)
-                return [lhs] + [rhs] + [inst]
+                    rhs = generate_logic(parse_tree[0], val_rhs, subflow_rhs)
+                subflows_finished = clone_signal(expr_flow.fin)
+                fin_reduce = reduce_and([subflow_lhs.fin, subflow_rhs.fin], subflows_finished)
+                inst = mod(val_lhs, val_rhs, out, expr_flow.create_subflow(enb=subflows_finished, fin=expr_flow.fin))
+                return [lhs] + [rhs] + [fin_reduce] + [inst]
         elif isinstance(parse_tree, float):
             const = Signal(num.from_float(parse_tree, result))
 
             @always_comb
             def assign():
                 out.next = const
+                expr_flow.fin.next = True
 
             return [assign]
         raise ExprParserException('Unknown Parse Error')
 
     res = get_expr_grammar().parseString(expression, parseAll=True)
-    # TODO handle prop_delay, maybe enable finish implementation
-    expr_out = Signal(num.same_as(result))
-    insts = generate_logic(res[0], expr_out)
+    expr_out = clone_signal(result)
+    expr_subflow = flow.create_subflow(enb=flow.enb)
+    insts = generate_logic(res[0], expr_out, expr_subflow)
 
-    @always_seq(clk.posedge, reset=None)
+    @always_seq(flow.clk_edge(), reset=None)
     def calc():
-        result.next = expr_out
+        if expr_subflow.fin:
+            result.next = expr_out
+            flow.fin.next = True
+        else:
+            flow.fin.next = False
 
     return [insts, calc]

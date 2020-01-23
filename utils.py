@@ -10,6 +10,16 @@ class FlowControl:
         self.enb = enb
         self.fin = fin
 
+    def clk_edge(self):
+        return self.clk.posedge
+
+    def create_subflow(self, enb=None, fin=None):
+        if enb is None:
+            enb = Signal(bool(0))
+        if fin is None:
+            fin = Signal(bool(0))
+        return FlowControl(self.clk, self.rst, enb, fin)
+
 
 def clone_signal(sig, value=0):
     return Signal(num.same_as(sig, val=value))
