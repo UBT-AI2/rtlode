@@ -138,7 +138,7 @@ def expr(expression: str,
     expr_subflow = flow.create_subflow(enb=flow.enb)
     insts = generate_logic(res[0], expr_out, expr_subflow)
 
-    @always_seq(flow.clk_edge(), reset=None)
+    @always_seq(flow.clk_edge(), reset=flow.rst)
     def calc():
         if expr_subflow.fin:
             result.next = expr_out
