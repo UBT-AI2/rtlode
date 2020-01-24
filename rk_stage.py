@@ -1,11 +1,11 @@
 from typing import List
 
-from myhdl import block, SignalType, Signal, enum, always_seq, instances
+from myhdl import block, SignalType, instances
 
 import expr_parser
 import num
-from utils import FlowControl, clone_signal, clone_signal_structure
-from vector_utils import lincomb
+from utils import FlowControl, clone_signal, clone_signal_structure, Pipeline
+from vector_utils import reduce_and, lincomb_flow
 
 
 class MethodNotExplicit(Exception):
@@ -43,49 +43,41 @@ def stage(
 
     rhs_x = clone_signal(x)
     rhs_y = clone_signal_structure(y)
-    rhs_out = clone_signal_structure(v[config.stage_index])
-    insts.append(
-        [expr_parser.expr(rhs_expr, {
-            'x': rhs_x,
-            'y': rhs_y
-        }, rhs_out[i], clk=flow.clk) for i, rhs_expr in enumerate(config.components)]
-    )
 
     # rhs_x = c_c * in_h + in_x
     rhs_x_int = clone_signal(x)
-    insts.append([
-        num.mul(num.from_float(config.c), h, rhs_x_int, clk=flow.clk),
-        num.add(x, rhs_x_int, rhs_x)
-    ])
+    rhs_x_subflow = flow.create_subflow(enb=flow.enb)
+    insts.append(
+        Pipeline(rhs_x_subflow)
+        .append(num.mul_flow, num.from_float(config.c), h, rhs_x_int)
+        .append(num.add_flow, x, rhs_x_int, rhs_x)
+        .create()
+    )
 
+    rhs_y_subflows = [flow.create_subflow(enb=flow.enb) for _ in range(config.system_size)]
     @block
     def calc_rhs_y(index):
         y_inst_lincomb_res = clone_signal(v[config.stage_index][index])
         y_inst_mul_res = clone_signal(v[config.stage_index][index])
-        return [
-            lincomb(
+
+        return Pipeline(rhs_y_subflows[index])\
+            .append(
+                lincomb_flow,
                 [num.from_float(el) for el in config.a],
                 [el[index] for el in v[:config.stage_index]],
                 y_inst_lincomb_res
-            ),
-            num.mul(h, y_inst_lincomb_res, y_inst_mul_res, clk=flow.clk),
-            num.add(y[index], y_inst_mul_res, rhs_y[index])
-        ]
+            )\
+            .append(num.mul_flow, h, y_inst_lincomb_res, y_inst_mul_res)\
+            .append(num.add_flow, y[index], y_inst_mul_res, rhs_y[index])\
+            .create()
     insts.append([calc_rhs_y(i) for i in range(config.system_size)])
 
-    stage_state = enum('RESET', 'CALCULATING', 'FINISHED')
-    state = Signal(stage_state.RESET)
-
-    @always_seq(flow.clk.posedge, flow.rst)
-    def statemachine():
-        if state == stage_state.RESET:
-            if flow.enb:
-                state.next = stage_state.CALCULATING
-        elif state == stage_state.CALCULATING:
-            state.next = stage_state.FINISHED
-        elif state == stage_state.FINISHED:
-            for i in range(config.system_size):
-                v[config.stage_index][i].next = rhs_out[i]
-            flow.fin.next = True
+    rhs_flow = flow.create_subflow(fin=flow.fin)
+    insts.append([reduce_and([rhs_x_subflow.fin] + [sf.fin for sf in rhs_y_subflows], rhs_flow.enb)])
+    insts.append([expr_parser.expr(rhs_expr, {
+            'x': rhs_x,
+            'y': rhs_y
+        }, v[config.stage_index][i], flow=rhs_flow) for i, rhs_expr in enumerate(config.components)]
+    )
 
     return instances()

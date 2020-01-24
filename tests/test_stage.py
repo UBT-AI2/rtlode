@@ -4,47 +4,55 @@ import unittest
 from myhdl import Signal, Simulation, ResetSignal, delay
 
 import num
-from rk_stage import stage
+from rk_stage import stage, StageConfig
 
 
 # TODO: Reset testen
+from utils import FlowControl
 
 
 class TestStage(unittest.TestCase):
     testdata = [
         # c_a, c_c, in_x, in_h, in_v, in_y
+        [[], 0.5, 0, 0.1, [], 3],
         [[0.5], 0.5, 0, 0.1, [3], 2],
         [[0.5], 0,   0, 0.1, [3], 2],
         [[0.5], 0.5, 0,   1, [3], 2],
         [[0.75], 0.5, 0, 0.1, [1], 3],
-        [[], 0.5, 0, 0.1, [], 3],
     ]
 
     def test_stage(self):
         """Check sample data."""
 
         for td in self.testdata:
-            c_a = list(map(num.from_float, td[0]))
-            c_c = num.from_float(td[1])
+            c_a = td[0]
+            c_c = td[1]
 
-            def test(clk, rst, enable, in_x, in_h, in_v, in_y, out_finished, out_v):
+            print(td)
+
+            def test(flow, in_h, in_x, in_y, in_v):
                 in_x.next = num.from_float(td[2])
                 in_h.next = num.from_float(td[3])
                 for i in range(len(td[4])):
                     in_v[i][0].next = num.from_float(td[4][i])
                 in_y[0].next = num.from_float(td[5])
-                enable.next = 1
+                flow.enb.next = 1
 
-                for i in range(2 * 5):
+                clks = 0
+                while not flow.fin:
                     yield delay(10)
-                    clk.next = not clk
+                    flow.clk.next = not flow.clk
+                    clks += 1
+                    yield delay(10)
+                    flow.clk.next = not flow.clk
+
+                print("Finished after %i clock cycles." % clks)
 
                 res_lincomb = 0
                 for i in range(len(td[0])):
                     res_lincomb += td[0][i] * td[4][i]
 
-                self.assertEqual(True, out_finished)
-                self.assertAlmostEqual(num.from_float(2 * (td[5] + td[3] * res_lincomb)), out_v[0], delta=20000, msg=td)
+                self.assertAlmostEqual(num.from_float(2 * (td[5] + td[3] * res_lincomb)), in_v[len(c_a)][0], delta=20000, msg=td)
 
             self.runTest(c_a, c_c, test)
 
@@ -53,16 +61,18 @@ class TestStage(unittest.TestCase):
         clk = Signal(bool(0))
         rst = ResetSignal(False, True, False)
         enable = Signal(bool(0))
+        finished = Signal(bool(0))
 
         in_x = Signal(num.default())
         in_h = Signal(num.default())
-        in_v = [[Signal(num.default())] for _ in range(len(c_a))]
+        in_v = [[Signal(num.default())] for _ in range(len(c_a) + 1)]
         in_y = [Signal(num.default())]
-        out_finished = Signal(bool(0))
-        out_v = [Signal(num.default())]
 
-        dut = stage(['2*y[0]'], c_a, c_c, clk, rst, enable, in_x, in_h, in_v, in_y, out_finished, out_v)
-        check = test(clk, rst, enable, in_x, in_h, in_v, in_y, out_finished, out_v)
+        config = StageConfig(['2*y[0]'], c_a, c_c)
+        flow = FlowControl(clk, rst, enable, finished)
+
+        dut = stage(config, flow, in_h, in_x, in_y, in_v)
+        check = test(flow, in_h, in_x, in_y, in_v)
         sim = Simulation(dut, check)
         sim.run(quiet=1)
 
