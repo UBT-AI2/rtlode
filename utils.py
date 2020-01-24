@@ -1,4 +1,4 @@
-from myhdl import Signal, ResetSignal, SignalType
+from myhdl import Signal, ResetSignal, SignalType, block, always_comb
 
 import num
 
@@ -19,6 +19,31 @@ class FlowControl:
         if fin is None:
             fin = Signal(bool(0))
         return FlowControl(self.clk, self.rst, enb, fin)
+
+
+class Pipeline:
+    def __init__(self, flow: FlowControl):
+        self._flow = flow
+        self._components = []
+
+    @block
+    def create(self):
+        insts = []
+        pre_fin = self._flow.enb
+        for (mod, args) in self._components:
+            subflow = self._flow.create_subflow(enb=pre_fin)
+            pre_fin = subflow.fin
+            insts.append(mod(*args, flow=subflow))
+
+        @always_comb
+        def assign():
+            self._flow.fin.next = pre_fin
+
+        return insts + [assign]
+
+    def append(self, mod, *args):
+        self._components.append((mod, args))
+        return self
 
 
 def clone_signal(sig, value=0):
