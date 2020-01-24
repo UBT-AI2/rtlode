@@ -76,8 +76,6 @@ def expr(expression: str,
                         if expr_flow.enb:
                             out.next = var
                             expr_flow.fin.next = True
-                        else:
-                            expr_flow.fin.next = False
 
                     if isinstance(var, SignalType):
                         return [assign_seq]
@@ -145,7 +143,5 @@ def expr(expression: str,
         if expr_subflow.fin:
             result.next = expr_out
             flow.fin.next = True
-        else:
-            flow.fin.next = False
 
     return [insts, calc]

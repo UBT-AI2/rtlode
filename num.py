@@ -57,8 +57,6 @@ def add_flow(in_a, in_b, out_c, flow: FlowControl = None):
         if enable:
             out_c.next = in_a + in_b
             flow.fin.next = True
-        else:
-            flow.fin.next = False
 
     if flow is not None:
         calc = always_seq(flow.clk_edge(), flow.rst)(calc)
@@ -87,8 +85,6 @@ def sub_flow(in_a, in_b, out_c, flow: FlowControl = None):
         if enable:
             out_c.next = in_a - in_b
             flow.fin.next = True
-        else:
-            flow.fin.next = False
 
     if flow is not None:
         calc = always_seq(flow.clk_edge(), flow.rst)(calc)
@@ -129,8 +125,6 @@ def mul_flow(in_a, in_b, out_c, flow: FlowControl = None):
         if enable:
             reg.next = (in_a * in_b)
             flow.fin.next = True
-        else:
-            flow.fin.next = False
 
     if flow is not None:
         calc = always_seq(flow.clk_edge(), flow.rst)(calc)
