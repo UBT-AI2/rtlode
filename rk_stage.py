@@ -4,28 +4,13 @@ from myhdl import block, SignalType, instances
 
 import expr_parser
 import num
+from config import StageConfig
 from utils import FlowControl, clone_signal, clone_signal_structure, Pipeline
 from vector_utils import reduce_and, lincomb_flow
 
 
 class MethodNotExplicit(Exception):
     pass
-
-
-class StageConfig:
-    def __init__(self, components: List[str], a: List[float], c: float):
-        self.components = components
-        self.a = a
-        self.c = c
-        self.stage_index = len(a)
-        self.system_size = len(components)
-        # TODO Check if config is wellformed
-
-    def is_explicit(self):
-        for i, f in enumerate(self.a):
-            if f != 0 and i >= self.stage_index:
-                return False
-        return True
 
 
 @block

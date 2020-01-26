@@ -4,8 +4,8 @@ import unittest
 from myhdl import Signal, Simulation, ResetSignal, delay
 
 import num
-from rk_stage import stage, StageConfig
-
+from rk_stage import stage
+from config import StageConfig
 
 # TODO: Reset testen
 from utils import FlowControl
