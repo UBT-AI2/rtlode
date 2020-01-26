@@ -28,7 +28,7 @@ def reduce(in_vector, op, out, default=0, clk=None):
     partial_results = [clone_signal(out) for i in range(max(n_elements - 1, 0))]
     op_insts = [None for i in range(max(n_elements - 1, 0))]
 
-    result = Signal(num.same_as(out, val=default))
+    result = clone_signal(out, value=default)
     if n_elements == 1:
         result = in_vector[0]
     elif n_elements >= 2:

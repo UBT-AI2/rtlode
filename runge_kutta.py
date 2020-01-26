@@ -89,12 +89,13 @@ def runge_kutta(config: Config, interface: Interface):
 
                 # Print debug informations
                 for i in range(config.system_size):
-                    print('%d %f: %s : %f' % (
-                        i,
-                        num.to_float(x_n),
-                        list(map(num.to_float, [el[i] for el in v])),
-                        num.to_float(y_n[i])
-                    ))
+                    if __debug__:
+                        print('%d %f: %s : %f' % (
+                            i,
+                            num.to_float(x_n),
+                            list(map(num.to_float, [el[i] for el in v])),
+                            num.to_float(y_n[i])
+                        ))
 
                 if step_counter + 1 >= interface.n:
                     interface.flow.fin.next = True
