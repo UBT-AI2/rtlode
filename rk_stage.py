@@ -34,7 +34,7 @@ def stage(
     rhs_x_subflow = flow.create_subflow(enb=flow.enb)
     insts.append(
         Pipeline(rhs_x_subflow)
-        .append(num.mul_flow, num.from_float(config.c), h, rhs_x_int)
+        .append(num.mul_flow, clone_signal(rhs_x_int, value=num.from_float(config.c)), h, rhs_x_int)
         .append(num.add_flow, x, rhs_x_int, rhs_x)
         .create()
     )
@@ -48,7 +48,7 @@ def stage(
         return Pipeline(rhs_y_subflows[index])\
             .append(
                 lincomb_flow,
-                [num.from_float(el) for el in config.a],
+                [clone_signal(v[config.stage_index][index], value=num.from_float(el)) for el in config.a],
                 [el[index] for el in v[:config.stage_index]],
                 y_inst_lincomb_res
             )\

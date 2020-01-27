@@ -52,7 +52,7 @@ def runge_kutta(config: Config, interface: RKInterface):
         return Pipeline(y_subflows[i])\
             .append(
                 lincomb_flow,
-                [num.from_float(el) for el in config.b],
+                [clone_signal(y_n[i], value=num.from_float(el)) for el in config.b],
                 [el[i] for el in v],
                 y_lincomb_inst_res
             )\
