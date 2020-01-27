@@ -160,25 +160,21 @@ int main(int argc, char *argv[])
 	ON_ERR_GOTO(res, out_close, "reading from MMIO");
 	printf("AFU RESERVED = %08lx\n", data);
 	
-	// Access AFU user scratch-pad register
-	res = fpgaReadMMIO64(afc_handle, 0, SCRATCH_REG, &data);
-	ON_ERR_GOTO(res, out_close, "reading from MMIO");
-	printf("Reading Scratch Register (Byte Offset=%08x) = %08lx\n", SCRATCH_REG, data);
-	
-	printf("MMIO Write h (Byte Offset=%08x) = %08lx\n", 0x80, 429496730);
+	// Do AFU stuff	
+	printf("MMIO Write h (Byte Offset=%08x) = %08lx\n", 0x80, (long unsigned int) 429496730);
 	res = fpgaWriteMMIO64(afc_handle, 0, 0x80, 429496730);
 	ON_ERR_GOTO(res, out_close, "writing to MMIO");
 
-	printf("MMIO Write n (Byte Offset=%08x) = %08lx\n", 0xC0, 20);
-	res = fpgaWriteMMIO64(afc_handle, 0, 0xC0), 20);
+	printf("MMIO Write n (Byte Offset=%08x) = %08lx\n", 0xC0, (long unsigned int) 20);
+	res = fpgaWriteMMIO64(afc_handle, 0, 0xC0, 20);
 	ON_ERR_GOTO(res, out_close, "writing to MMIO");
 
-	printf("MMIO Write y_start_val (Byte Offset=%08x) = %08lx\n", 0x180, 8589934592);
-	res = fpgaWriteMMIO64(afc_handle, 0, 0x180), 8589934592);
+	printf("MMIO Write y_start_val (Byte Offset=%08x) = %08lx\n", 0x180, (long unsigned int) 8589934592);
+	res = fpgaWriteMMIO64(afc_handle, 0, 0x180, 8589934592);
 	ON_ERR_GOTO(res, out_close, "writing to MMIO");
 
-	printf("MMIO Write y_start_val (Byte Offset=%08x) = %08lx\n", 0x200, 1);
-	res = fpgaWriteMMIO64(afc_handle, 0, 0x200), 1);
+	printf("MMIO Write enable (Byte Offset=%08x) = %08lx\n", 0x200, (long unsigned int) 1);
+	res = fpgaWriteMMIO64(afc_handle, 0, 0x200, 1);
 	ON_ERR_GOTO(res, out_close, "writing to MMIO");
 
 	sleep(1);
@@ -194,17 +190,8 @@ int main(int argc, char *argv[])
 	res = fpgaReadMMIO64(afc_handle, 0, 0x100, &data);
 	ON_ERR_GOTO(res, out_close, "reading from MMIO");
 	printf("Reading fin (Byte Offset=%08x) = %08lx\n", 0x100, data);
-	
-	// Set Scratch Register to 0
-	printf("Setting Scratch Register (Byte Offset=%08x) = %08x\n", SCRATCH_REG, SCRATCH_RESET);
-	res = fpgaWriteMMIO64(afc_handle, 0, SCRATCH_REG, SCRATCH_RESET);
-	ON_ERR_GOTO(res, out_close, "writing to MMIO");
-	res = fpgaReadMMIO64(afc_handle, 0, SCRATCH_REG, &data);
-	ON_ERR_GOTO(res, out_close, "reading from MMIO");
-	printf("Reading Scratch Register (Byte Offset=%08x) = %08lx\n", SCRATCH_REG, data);
-	ASSERT_GOTO(data == SCRATCH_RESET, out_close, "MMIO mismatched expected result");
 
-	printf("Done Running Test\n");
+	printf("Done Running Solver on FPGA.\n");
 
 	/* Unmap MMIO space */
 	res = fpgaUnmapMMIO(afc_handle, 0);

@@ -124,7 +124,7 @@ module afu
             begin
                 case (mmioHdr.address)
                     16'h0020: solver_h <= cp2af_sRxPort.c0.data[63:0];
-                    16'h0030: solver_n <= cp2af_sRxPort.c0.data[63:0];
+                    16'h0030: solver_n <= cp2af_sRxPort.c0.data[31:0];
                     16'h0040: solver_x_start <= cp2af_sRxPort.c0.data[63:0];
                     16'h0050: solver_y_start_addr <= cp2af_sRxPort.c0.data[31:0];
                     16'h0060: solver_y_start_val <= cp2af_sRxPort.c0.data[63:0];
