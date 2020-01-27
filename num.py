@@ -1,9 +1,9 @@
-from myhdl import intbv, block, always_seq, instances, always_comb, Signal
+from myhdl import intbv, block, always_seq, always_comb, Signal
 
 from utils import FlowControl
 
-INTEGER_SIZE = 64
-FRACTION_SIZE = 64
+INTEGER_SIZE = 31
+FRACTION_SIZE = 32
 MAX_VALUE = 2 ** (INTEGER_SIZE + FRACTION_SIZE) - 1
 MIN_VALUE = - MAX_VALUE
 

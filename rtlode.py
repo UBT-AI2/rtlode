@@ -1,3 +1,4 @@
+import os
 import sys
 
 import yaml
@@ -77,7 +78,7 @@ def convert(method_file, ivp_file):
     finished = Signal(bool(0))
 
     h = Signal(num.default())
-    n = Signal(num.default())
+    n = Signal(num.integer())
     x_start = Signal(num.default())
     y_start_addr = Signal(num.integer())
     y_start_val = Signal(num.default())
@@ -98,7 +99,8 @@ def convert(method_file, ivp_file):
     )
 
     wrapper_inst = wrapper_seq(cfg, interface)
-    wrapper_inst.convert(hdl='Verilog')
+    dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'runtime', 'hw', 'generated')
+    wrapper_inst.convert(hdl='Verilog', testbench=False, name='solver', path=dir_path)
 
 
 def rtlode():
