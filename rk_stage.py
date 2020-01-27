@@ -57,12 +57,14 @@ def stage(
             .create()
     insts.append([calc_rhs_y(i) for i in range(config.system_size)])
 
-    rhs_flow = flow.create_subflow(fin=flow.fin)
-    insts.append([reduce_and([rhs_x_subflow.fin] + [sf.fin for sf in rhs_y_subflows], rhs_flow.enb)])
+    rhs_enb = clone_signal(flow.enb)
+    rhs_subflows = [flow.create_subflow(enb=rhs_enb) for _ in range(config.system_size)]
+    insts.append([reduce_and([rhs_x_subflow.fin] + [sf.fin for sf in rhs_y_subflows], rhs_enb)])
     insts.append([expr_parser.expr(rhs_expr, {
             'x': rhs_x,
             'y': rhs_y
-        }, v[config.stage_index][i], flow=rhs_flow) for i, rhs_expr in enumerate(config.components)]
+        }, v[config.stage_index][i], flow=rhs_subflows[i]) for i, rhs_expr in enumerate(config.components)]
     )
+    insts.append([reduce_and([sf.fin for sf in rhs_subflows], flow.fin)])
 
     return instances()
