@@ -1,0 +1,21 @@
+Synthesis with Quartus:
+
+  RTL simulation and synthesis are driven by the same filelist.txt and
+  underlying OPAE scripts.  To construct a Quartus synthesis environment
+  for this AFU, enter:
+
+    $ afu_synth_setup --source hw/rtl/filelist.txt build_synth
+    $ cd build_synth
+    $ ${OPAE_PLATFORM_ROOT}/bin/run.sh
+
+  run.sh will invoke Quartus, which must be properly installed.  The end
+  result will be a file named hello_afu.gbs in the build_synth directory.
+  This GBS file may be loaded onto a compatible FPGA using OPAE's fpgaconf
+  tool.
+
+  To run the software:
+
+    $ cd sw
+    $ make clean
+    $ make
+    $ ./hello_afu

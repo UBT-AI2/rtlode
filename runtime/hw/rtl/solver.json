@@ -1,0 +1,18 @@
+{
+   "version": 1,
+   "afu-image": {
+      "power": 0,
+      "afu-top-interface":
+         {
+            "class": "ccip_std_afu"
+         },
+      "accelerator-clusters":
+         [
+            {
+               "name": "solver",
+               "total-contexts": 1,
+               "accelerator-type-uuid": "2280d43c-553d-4c44-9865-c0c8e45e3ec7"
+            }
+         ]
+   }
+}
