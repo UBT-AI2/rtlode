@@ -11,7 +11,7 @@ from vector_utils import lincomb_flow, reduce_and
 
 
 @dataclass
-class Interface:
+class RKInterface:
     flow: FlowControl
     h: SignalType
     n: SignalType
@@ -22,7 +22,7 @@ class Interface:
 
 
 @block
-def runge_kutta(config: Config, interface: Interface):
+def runge_kutta(config: Config, interface: RKInterface):
     insts = []
 
     x_n = clone_signal(interface.x)

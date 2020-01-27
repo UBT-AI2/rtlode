@@ -1,11 +1,12 @@
 import sys
 
 import yaml
-from myhdl import Simulation, Signal, ResetSignal, delay
+from myhdl import Simulation, Signal, ResetSignal, delay, block
 
 import num
 from config import Config
-from runge_kutta import runge_kutta, Interface
+from interface import SeqInterface, wrapper_seq
+from runge_kutta import runge_kutta, RKInterface
 from utils import FlowControl
 
 
@@ -38,7 +39,7 @@ def sim(method_file, ivp_file):
     x = Signal(num.default())
     y = [Signal(num.default()) for _ in range(cfg.system_size)]
 
-    interface = Interface(FlowControl(clk, rst, enable, finished), h, n, x_start, y_start, x, y)
+    interface = RKInterface(FlowControl(clk, rst, enable, finished), h, n, x_start, y_start, x, y)
 
     def test():
         rst.next = True
@@ -63,6 +64,41 @@ def sim(method_file, ivp_file):
     testdriver = test()
     sim_inst = Simulation(dut, testdriver)
     sim_inst.run(quiet=1)
+
+
+def convert(method_file, ivp_file):
+    method = load_yaml(method_file)
+    ivp = load_yaml(ivp_file)
+    cfg = Config(method['A'], method['b'], method['c'], ivp['components'])
+
+    clk = Signal(bool(0))
+    rst = ResetSignal(False, True, False)
+    enable = Signal(bool(0))
+    finished = Signal(bool(0))
+
+    h = Signal(num.default())
+    n = Signal(num.default())
+    x_start = Signal(num.default())
+    y_start_addr = Signal(num.integer())
+    y_start_val = Signal(num.default())
+    x = Signal(num.default())
+    y_addr = Signal(num.integer())
+    y_val = Signal(num.default())
+
+    interface = SeqInterface(
+        FlowControl(clk, rst, enable, finished),
+        h,
+        n,
+        x_start,
+        y_start_addr,
+        y_start_val,
+        x,
+        y_addr,
+        y_val
+    )
+
+    wrapper_inst = wrapper_seq(cfg, interface)
+    wrapper_inst.convert(hdl='Verilog')
 
 
 def rtlode():
