@@ -181,11 +181,11 @@ int main(int argc, char *argv[])
 	res = fpgaWriteMMIO64(afc_handle, 0, 0x200, 1);
 	ON_ERR_GOTO(res, out_close, "writing to MMIO");
 
-	res = fpgaReadMMIO64(afc_handle, 0, 0x100, &data);
-	ON_ERR_GOTO(res, out_close, "reading from MMIO");
-	printf("Reading fin (Byte Offset=%08x) = %08lx\n", 0x100, data);
-
-	sleep(1);
+	do {
+		res = fpgaReadMMIO64(afc_handle, 0, 0x100, &data);
+		ON_ERR_GOTO(res, out_close, "reading from MMIO");
+		printf("Reading fin (Byte Offset=%08x) = %08lx\n", 0x100, data);
+	} while(data == 0);
 	
 	res = fpgaReadMMIO64(afc_handle, 0, 0x80, &data);
 	ON_ERR_GOTO(res, out_close, "reading from MMIO");
@@ -194,10 +194,6 @@ int main(int argc, char *argv[])
 	res = fpgaReadMMIO64(afc_handle, 0, 0xC0, &data);
 	ON_ERR_GOTO(res, out_close, "reading from MMIO");
 	printf("Reading y (Byte Offset=%08x) = %08lx\n", 0xC0, data);
-	
-	res = fpgaReadMMIO64(afc_handle, 0, 0x100, &data);
-	ON_ERR_GOTO(res, out_close, "reading from MMIO");
-	printf("Reading fin (Byte Offset=%08x) = %08lx\n", 0x100, data);
 
 	printf("Done Running Solver on FPGA.\n");
 
