@@ -49,6 +49,14 @@ def sim(method_file, ivp_file):
         yield delay(10)
         clk.next = not clk
         rst.next = False
+        yield delay(10)
+        clk.next = not clk
+        yield delay(10)
+        clk.next = not clk
+        yield delay(10)
+        clk.next = not clk
+        yield delay(10)
+        clk.next = not clk
         enable.next = 1
 
         clks = 0

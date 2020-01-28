@@ -68,15 +68,18 @@ def runge_kutta(config: Config, interface: RKInterface):
     @always(interface.flow.clk_edge(), interface.flow.rst.posedge)
     def calc_final():
         if interface.flow.rst == interface.flow.rst.active:
-            interface.x.next = interface.x_start
-            for i in range(config.system_size):
-                interface.y[i].next = interface.y_start[i]
             stage_reset.next = True
+            interface.flow.fin.next = False
+            step_counter.next = 0
         else:
             if interface.flow.fin:
                 pass
             elif stage_reset:
                 stage_reset.next = False
+            elif not interface.flow.enb:
+                interface.x.next = interface.x_start
+                for i in range(config.system_size):
+                    interface.y[i].next = interface.y_start[i]
             elif step_fin:
                 # Copy calculated values to working ones
                 interface.x.next = x_n
@@ -88,8 +91,8 @@ def runge_kutta(config: Config, interface: RKInterface):
                 stage_reset.next = True
 
                 # Print debug informations
-                for i in range(config.system_size):
-                    if __debug__:
+                if __debug__:
+                    for i in range(config.system_size):
                         print('%d %f: %s : %f' % (
                             i,
                             num.to_float(x_n),
