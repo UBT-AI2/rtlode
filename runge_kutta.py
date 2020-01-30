@@ -25,8 +25,6 @@ class RKInterface:
 
 @block
 def runge_kutta(config: Config, interface: RKInterface):
-    insts = []
-
     x_n = clone_signal(interface.x)
     y_n = clone_signal_structure(interface.y)
 
@@ -61,7 +59,7 @@ def runge_kutta(config: Config, interface: RKInterface):
             .append(bind(num.mul_flow, interface.h, y_lincomb_inst_res, y_mul_inst_res))\
             .append(bind(num.add_flow, interface.y[i], y_mul_inst_res, y_n[i]))
     pipe.append([calc_y_n(i) for i in range(config.system_size)])
-    insts.append(pipe.create(pipe_flow))
+    pipe_insts = pipe.create(pipe_flow)
 
     step_counter = clone_signal(interface.n)
     @always(interface.flow.clk_edge(), interface.flow.rst.posedge)
