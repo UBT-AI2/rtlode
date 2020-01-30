@@ -7,7 +7,7 @@ import num
 from config import StageConfig
 from utils import clone_signal, clone_signal_structure
 from flow import FlowControl
-from pipeline import Pipeline
+from pipeline import Pipeline, bind
 from vector_utils import reduce_and, lincomb_flow
 
 
@@ -35,10 +35,10 @@ def stage(
     rhs_x_int = clone_signal(x)
     rhs_x_subflow = flow.create_subflow(enb=flow.enb)
     insts.append(
-        Pipeline(rhs_x_subflow)
-        .append(num.mul_flow, clone_signal(rhs_x_int, value=num.from_float(config.c)), h, rhs_x_int)
-        .append(num.add_flow, x, rhs_x_int, rhs_x)
-        .create()
+        Pipeline()
+        .append(bind(num.mul_flow, clone_signal(rhs_x_int, value=num.from_float(config.c)), h, rhs_x_int))
+        .append(bind(num.add_flow, x, rhs_x_int, rhs_x))
+        .create(rhs_x_subflow)
     )
 
     rhs_y_subflows = [flow.create_subflow(enb=flow.enb) for _ in range(config.system_size)]
@@ -47,16 +47,18 @@ def stage(
         y_inst_lincomb_res = clone_signal(v[config.stage_index][index])
         y_inst_mul_res = clone_signal(v[config.stage_index][index])
 
-        return Pipeline(rhs_y_subflows[index])\
+        return Pipeline()\
             .append(
-                lincomb_flow,
-                [clone_signal(v[config.stage_index][index], value=num.from_float(el)) for el in config.a],
-                [el[index] for el in v[:config.stage_index]],
-                y_inst_lincomb_res
+                bind(
+                    lincomb_flow,
+                    [clone_signal(v[config.stage_index][index], value=num.from_float(el)) for el in config.a],
+                    [el[index] for el in v[:config.stage_index]],
+                    y_inst_lincomb_res
+                )
             )\
-            .append(num.mul_flow, h, y_inst_lincomb_res, y_inst_mul_res)\
-            .append(num.add_flow, y[index], y_inst_mul_res, rhs_y[index])\
-            .create()
+            .append(bind(num.mul_flow, h, y_inst_lincomb_res, y_inst_mul_res))\
+            .append(bind(num.add_flow, y[index], y_inst_mul_res, rhs_y[index]))\
+            .create(rhs_y_subflows[index])
     insts.append([calc_rhs_y(i) for i in range(config.system_size)])
 
     rhs_enb = clone_signal(flow.enb)
