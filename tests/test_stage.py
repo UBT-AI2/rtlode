@@ -8,7 +8,7 @@ from rk_stage import stage
 from config import StageConfig
 
 # TODO: Reset testen
-from utils import FlowControl
+from flow import FlowControl
 
 
 class TestStage(unittest.TestCase):
@@ -68,7 +68,7 @@ class TestStage(unittest.TestCase):
         in_v = [[Signal(num.default())] for _ in range(len(c_a) + 1)]
         in_y = [Signal(num.default())]
 
-        config = StageConfig(['2*y[0]'], c_a, c_c)
+        config = StageConfig(len(c_a), c_a, c_c, ['2*y[0]'])
         flow = FlowControl(clk, rst, enable, finished)
 
         dut = stage(config, flow, in_h, in_x, in_y, in_v)

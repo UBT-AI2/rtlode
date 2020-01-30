@@ -6,7 +6,9 @@ from myhdl import block, instances, ResetSignal, SignalType, always
 import num
 from config import Config
 from rk_stage import stage
-from utils import FlowControl, Pipeline, clone_signal, clone_signal_structure
+from utils import clone_signal, clone_signal_structure
+from flow import FlowControl
+from pipeline import Pipeline
 from vector_utils import lincomb_flow, reduce_and
 
 

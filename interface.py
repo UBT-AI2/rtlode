@@ -4,7 +4,8 @@ from myhdl import block, SignalType, always_seq, instances
 
 from config import Config
 from runge_kutta import runge_kutta, RKInterface
-from utils import FlowControl, clone_signal
+from utils import clone_signal
+from flow import FlowControl
 
 
 @dataclass

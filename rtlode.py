@@ -8,7 +8,7 @@ import num
 from config import Config
 from interface import SeqInterface, wrapper_seq
 from runge_kutta import runge_kutta, RKInterface
-from utils import FlowControl
+from flow import FlowControl
 
 
 def print_help():

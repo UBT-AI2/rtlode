@@ -5,7 +5,9 @@ from myhdl import block, SignalType, instances
 import expr_parser
 import num
 from config import StageConfig
-from utils import FlowControl, clone_signal, clone_signal_structure, Pipeline
+from utils import clone_signal, clone_signal_structure
+from flow import FlowControl
+from pipeline import Pipeline
 from vector_utils import reduce_and, lincomb_flow
 
 

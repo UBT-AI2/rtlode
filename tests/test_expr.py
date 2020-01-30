@@ -4,7 +4,7 @@ from myhdl import Simulation, Signal, delay, ResetSignal
 
 import num
 from expr_parser import expr
-from utils import FlowControl
+from flow import FlowControl
 
 
 class TestExpr(unittest.TestCase):

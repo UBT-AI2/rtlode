@@ -4,7 +4,8 @@ from myhdl import block, always_seq, Signal, always_comb, SignalType
 from pyparsing import *
 
 import num
-from utils import FlowControl, clone_signal
+from utils import clone_signal
+from flow import FlowControl
 from vector_utils import reduce_and
 
 
