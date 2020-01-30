@@ -32,8 +32,10 @@ def runge_kutta(config: Config, interface: RKInterface):
 
     v = [clone_signal_structure(y_n) for _ in range(config.stages)]
 
-    stage_reset = ResetSignal(False, True, False)
-    stage_flow = interface.flow.create_subflow(rst=stage_reset, enb=interface.flow.enb)
+    pipe_reset = ResetSignal(False, True, False)
+    pipe_flow = interface.flow.create_subflow(rst=pipe_reset, enb=interface.flow.enb)
+    pipe = Pipeline()
+
     stage_pipe = Pipeline()
     for si in range(config.stages):
         # TODO use parallel stage calc if possible
@@ -41,12 +43,8 @@ def runge_kutta(config: Config, interface: RKInterface):
             lambda flow, cfg=config.get_stage_config(si):
             stage(cfg, flow, interface.h, interface.x, interface.y, v)
         )
-    insts.append(stage_pipe.create(stage_flow))
+    pipe.append([stage_pipe, bind(num.add_flow, interface.x, interface.h, x_n)])
 
-    insts.append(num.add(interface.x, interface.h, x_n))
-
-    y_subflows = [interface.flow.create_subflow(rst=stage_reset, enb=stage_flow.fin) for _ in range(config.system_size)]
-    @block
     def calc_y_n(i):
         y_lincomb_inst_res = clone_signal(y_n[i])
         y_mul_inst_res = clone_signal(y_n[i])
@@ -61,30 +59,27 @@ def runge_kutta(config: Config, interface: RKInterface):
                 )
             )\
             .append(bind(num.mul_flow, interface.h, y_lincomb_inst_res, y_mul_inst_res))\
-            .append(bind(num.add_flow, interface.y[i], y_mul_inst_res, y_n[i]))\
-            .create(y_subflows[i])
-    insts.append([calc_y_n(i) for i in range(config.system_size)])
-
-    step_fin = clone_signal(interface.flow.fin)
-    insts.append([reduce_and([sf.fin for sf in y_subflows], step_fin)])
+            .append(bind(num.add_flow, interface.y[i], y_mul_inst_res, y_n[i]))
+    pipe.append([calc_y_n(i) for i in range(config.system_size)])
+    insts.append(pipe.create(pipe_flow))
 
     step_counter = clone_signal(interface.n)
     @always(interface.flow.clk_edge(), interface.flow.rst.posedge)
     def calc_final():
         if interface.flow.rst == interface.flow.rst.active:
-            stage_reset.next = True
+            pipe_reset.next = True
             interface.flow.fin.next = False
             step_counter.next = 0
         else:
             if interface.flow.fin:
                 pass
-            elif stage_reset:
-                stage_reset.next = False
+            elif pipe_reset:
+                pipe_reset.next = False
             elif not interface.flow.enb:
                 interface.x.next = interface.x_start
                 for i in range(config.system_size):
                     interface.y[i].next = interface.y_start[i]
-            elif step_fin:
+            elif pipe_flow.fin:
                 # Copy calculated values to working ones
                 interface.x.next = x_n
                 for i in range(config.system_size):
@@ -92,7 +87,7 @@ def runge_kutta(config: Config, interface: RKInterface):
                 # Increase step counter
                 step_counter.next = step_counter + 1
                 # Reset all stages
-                stage_reset.next = True
+                pipe_reset.next = True
 
                 # Print debug informations
                 if __debug__:
