@@ -1,5 +1,4 @@
-from typing import List
-
+from typing import List, Union, Callable
 from myhdl import block, always_comb
 
 from flow import FlowControl
@@ -7,18 +6,22 @@ from utils import clone_signal
 from vector_utils import reduce_and
 
 
-def bind(mod, *args):
-    def _bind(flow, _args=args):
-        return mod(*args, flow)
-    return _bind
-
-
 class Pipeline:
+    """
+    Allows simple creation of sequential and parallel logic.
+    Order of execution is managed by flow interface.
+    """
     def __init__(self):
         self._stages = []
 
     @block
     def create(self, flow: FlowControl):
+        """
+        Build up pipeline and return all myhdl instances.
+
+        :param flow: flow interface to control the whole pipe
+        :return: myhdl instances
+        """
         insts = []
         pre_fin = flow.enb
         for stage_components in self._stages:
@@ -45,7 +48,17 @@ class Pipeline:
 
         return insts + [assign]
 
-    def append(self, components):
+    component = Union['Pipeline', Callable]
+
+    def then(self, components: Union[List[component], component]) -> 'Pipeline':
+        """
+        Defines next logic step of pipeline.
+        These can either be a list of components which should be processed in parallel
+        or a single component.
+
+        :param components: components to be executed in next logic step
+        :return: pipe object
+        """
         if isinstance(components, List):
             self._stages.append(components)
         else:

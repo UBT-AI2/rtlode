@@ -5,11 +5,11 @@ from myhdl import block, instances, ResetSignal, SignalType, always
 
 import num
 from config import Config
+from rk_calc import pipe_calc_step
 from rk_stage import stage
-from utils import clone_signal, clone_signal_structure
+from utils import clone_signal, clone_signal_structure, bind
 from flow import FlowControl
-from pipeline import Pipeline, bind
-from vector_utils import lincomb_flow, reduce_and
+from pipeline import Pipeline
 
 
 @dataclass
@@ -37,28 +37,19 @@ def runge_kutta(config: Config, interface: RKInterface):
     stage_pipe = Pipeline()
     for si in range(config.stages):
         # TODO use parallel stage calc if possible
-        stage_pipe.append(
+        stage_pipe.then(
             lambda flow, cfg=config.get_stage_config(si):
             stage(cfg, flow, interface.h, interface.x, interface.y, v)
         )
-    pipe.append([stage_pipe, bind(num.add_flow, interface.x, interface.h, x_n)])
+    pipe.then([stage_pipe, bind(num.add_flow, interface.x, interface.h, x_n)])
 
-    def calc_y_n(i):
-        y_lincomb_inst_res = clone_signal(y_n[i])
-        y_mul_inst_res = clone_signal(y_n[i])
-
-        return Pipeline()\
-            .append(
-                bind(
-                    lincomb_flow,
-                    [clone_signal(y_n[i], value=num.from_float(el)) for el in config.b],
-                    [el[i] for el in v],
-                    y_lincomb_inst_res
-                )
-            )\
-            .append(bind(num.mul_flow, interface.h, y_lincomb_inst_res, y_mul_inst_res))\
-            .append(bind(num.add_flow, interface.y[i], y_mul_inst_res, y_n[i]))
-    pipe.append([calc_y_n(i) for i in range(config.system_size)])
+    pipe.then([pipe_calc_step(
+        [clone_signal(y_n[i], value=num.from_float(el)) for el in config.b],
+        [el[i] for el in v],
+        interface.h,
+        interface.y[i],
+        y_n[i]
+    ) for i in range(config.system_size)])
     pipe_insts = pipe.create(pipe_flow)
 
     step_counter = clone_signal(interface.n)
