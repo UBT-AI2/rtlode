@@ -23,6 +23,17 @@ def stage(
         x: SignalType,
         y: List[SignalType],
         v: List[List[SignalType]]):
+    """
+    Implements logic to solve a rk stage.
+
+    :param config: all relevant config parameters for this stage
+    :param flow:
+    :param h: step size
+    :param x: current x value
+    :param y: current y values
+    :param v: all intermediate y values aka v vector
+    :return:
+    """
     if not config.is_explicit():
         raise MethodNotExplicit()
     pipe = Pipeline()

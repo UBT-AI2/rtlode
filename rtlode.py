@@ -7,7 +7,7 @@ from myhdl import Simulation, Signal, ResetSignal, delay, block
 import num
 from config import Config
 from interface import SeqInterface, wrapper_seq
-from runge_kutta import runge_kutta, RKInterface
+from runge_kutta import rk_solver, RKInterface
 from flow import FlowControl
 
 
@@ -69,7 +69,7 @@ def sim(method_file, ivp_file):
 
         print("Finished after %i clock cycles." % clks)
 
-    dut = runge_kutta(cfg, interface)
+    dut = rk_solver(cfg, interface)
     testdriver = test()
     sim_inst = Simulation(dut, testdriver)
     sim_inst.run(quiet=1)

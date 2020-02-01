@@ -14,6 +14,9 @@ from pipeline import Pipeline
 
 @dataclass
 class RKInterface:
+    """
+    Internal runge kutta interface used by the solver.
+    """
     flow: FlowControl
     h: SignalType
     n: SignalType
@@ -24,7 +27,14 @@ class RKInterface:
 
 
 @block
-def runge_kutta(config: Config, interface: RKInterface):
+def rk_solver(config: Config, interface: RKInterface):
+    """
+    Implements logic for a rk solver.
+
+    :param config: configuration parameters for the solver
+    :param interface: internal interface
+    :return:
+    """
     x_n = clone_signal(interface.x)
     y_n = clone_signal_structure(interface.y)
 

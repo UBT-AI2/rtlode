@@ -3,13 +3,16 @@ from dataclasses import dataclass
 from myhdl import block, SignalType, always_seq, instances
 
 from config import Config
-from runge_kutta import runge_kutta, RKInterface
+from runge_kutta import rk_solver, RKInterface
 from utils import clone_signal
 from flow import FlowControl
 
 
 @dataclass
 class SeqInterface:
+    """
+    Defines the sequential interface used to control solver externally.
+    """
     flow: FlowControl
     h: SignalType
     n: SignalType
@@ -23,6 +26,14 @@ class SeqInterface:
 
 @block
 def wrapper_seq(config: Config, interface: SeqInterface):
+    """
+    Wrapper logic to port internally solver interface to external sequential interface.
+    Internal interface uses list of signals to enable pleasant implementation.
+
+    :param config: configuration parameters for the solver
+    :param interface: external sequential interface
+    :return: myhdl instances of solvers
+    """
     y_start = [clone_signal(interface.y_start_val) for _ in range(config.system_size)]
     y = [clone_signal(interface.y_start_val) for _ in range(config.system_size)]
 
@@ -44,6 +55,6 @@ def wrapper_seq(config: Config, interface: SeqInterface):
             if interface.y_addr == index:
                 interface.y_val.next = y[index]
 
-    rk_insts = runge_kutta(config, rk_interface)
+    rk_insts = rk_solver(config, rk_interface)
 
     return instances()
