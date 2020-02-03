@@ -2,13 +2,13 @@ import os
 import sys
 
 import yaml
-from myhdl import Simulation, Signal, ResetSignal, delay, block
+from myhdl import Simulation, Signal, ResetSignal, delay
 
-import num
-from config import Config
-from interface import SeqInterface, wrapper_seq
-from runge_kutta import rk_solver, RKInterface
-from flow import FlowControl
+from generator import num
+from generator.config import Config
+from generator.interface import SeqInterface, wrapper_seq
+from generator.runge_kutta import rk_solver, RKInterface
+from generator.flow import FlowControl
 
 
 def print_help():
@@ -107,7 +107,9 @@ def convert(method_file, ivp_file):
     )
 
     wrapper_inst = wrapper_seq(cfg, interface)
-    dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'runtime', 'hw', 'generated')
+    dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'out')
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
     wrapper_inst.convert(hdl='Verilog', testbench=False, name='solver', path=dir_path)
 
 

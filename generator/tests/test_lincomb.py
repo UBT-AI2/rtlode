@@ -3,8 +3,8 @@ import unittest
 
 from myhdl import Signal, intbv, delay, Simulation
 
-import num
-from vector_utils import lincomb, UnequalVectorLength
+from generator import num
+from generator.vector_utils import lincomb, UnequalVectorLength
 
 
 class TestLincomb(unittest.TestCase):

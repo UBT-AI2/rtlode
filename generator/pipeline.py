@@ -1,9 +1,9 @@
 from typing import List, Union, Callable
 from myhdl import block, always_comb
 
-from flow import FlowControl
-from utils import clone_signal
-from vector_utils import reduce_and
+from generator.flow import FlowControl
+from generator.utils import clone_signal
+from generator.vector_utils import reduce_and
 
 
 class Pipeline:

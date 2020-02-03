@@ -2,11 +2,10 @@ from typing import List
 
 from myhdl import SignalType
 
-
-import num
-from pipeline import Pipeline
-from utils import clone_signal, bind
-from vector_utils import lincomb_flow
+from generator import num
+from generator.pipeline import Pipeline
+from generator.utils import clone_signal, bind
+from generator.vector_utils import lincomb_flow
 
 
 def pipe_calc_step(

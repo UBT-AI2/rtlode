@@ -1,8 +1,8 @@
 import unittest
 
-from myhdl import Simulation, Signal, delay, traceSignals, intbv
+from myhdl import Simulation, Signal, delay
 
-import num
+from generator import num
 
 
 class TestMul(unittest.TestCase):

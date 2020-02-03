@@ -3,10 +3,10 @@ import typing
 from myhdl import block, always_seq, Signal, always_comb, SignalType
 from pyparsing import *
 
-import num
-from utils import clone_signal
-from flow import FlowControl
-from vector_utils import reduce_and
+from generator import num
+from generator.utils import clone_signal
+from generator.flow import FlowControl
+from generator.vector_utils import reduce_and
 
 
 class ExprParserException(Exception):

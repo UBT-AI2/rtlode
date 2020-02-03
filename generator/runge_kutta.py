@@ -3,13 +3,13 @@ from typing import List
 
 from myhdl import block, instances, ResetSignal, SignalType, always
 
-import num
-from config import Config
-from rk_calc import pipe_calc_step
-from rk_stage import stage
-from utils import clone_signal, clone_signal_structure, bind
-from flow import FlowControl
-from pipeline import Pipeline
+from generator import num
+from generator.config import Config
+from generator.rk_calc import pipe_calc_step
+from generator.rk_stage import stage
+from generator.utils import clone_signal, clone_signal_structure, bind
+from generator.flow import FlowControl
+from generator.pipeline import Pipeline
 
 
 @dataclass

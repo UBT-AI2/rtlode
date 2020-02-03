@@ -2,9 +2,9 @@ import unittest
 
 from myhdl import Simulation, Signal, delay, ResetSignal
 
-import num
-from expr_parser import expr
-from flow import FlowControl
+from generator import num
+from generator.expr_parser import expr
+from generator.flow import FlowControl
 
 
 class TestExpr(unittest.TestCase):

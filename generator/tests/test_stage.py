@@ -1,14 +1,13 @@
-from random import randrange
 import unittest
 
 from myhdl import Signal, Simulation, ResetSignal, delay
 
-import num
-from rk_stage import stage
-from config import StageConfig
+from generator import num
+from generator.rk_stage import stage
+from generator.config import StageConfig
 
 # TODO: Reset testen
-from flow import FlowControl
+from generator.flow import FlowControl
 
 
 class TestStage(unittest.TestCase):

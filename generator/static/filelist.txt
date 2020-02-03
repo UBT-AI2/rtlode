@@ -3,4 +3,4 @@ solver.json
 afu.sv
 ccip_interface_reg.sv
 ccip_std_afu.sv
-../generated/solver.v
+../out/solver.v

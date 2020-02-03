@@ -2,13 +2,12 @@ from typing import List
 
 from myhdl import block, SignalType
 
-import expr_parser
-import num
-from config import StageConfig
-from rk_calc import pipe_calc_step
-from utils import clone_signal, clone_signal_structure, bind
-from flow import FlowControl
-from pipeline import Pipeline
+from generator import num, expr_parser
+from generator.config import StageConfig
+from generator.rk_calc import pipe_calc_step
+from generator.utils import clone_signal, clone_signal_structure, bind
+from generator.flow import FlowControl
+from generator.pipeline import Pipeline
 
 
 class MethodNotExplicit(Exception):

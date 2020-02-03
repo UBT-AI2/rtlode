@@ -1,8 +1,8 @@
 from myhdl import block, Signal, instances, always_comb, always_seq
 
-import num
-from utils import clone_signal
-from flow import FlowControl
+from generator import num
+from generator.utils import clone_signal
+from generator.flow import FlowControl
 
 
 class UnequalVectorLength(Exception):

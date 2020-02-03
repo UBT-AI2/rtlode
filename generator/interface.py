@@ -2,10 +2,10 @@ from dataclasses import dataclass
 
 from myhdl import block, SignalType, always_seq, instances
 
-from config import Config
-from runge_kutta import rk_solver, RKInterface
-from utils import clone_signal
-from flow import FlowControl
+from generator.config import Config
+from generator.runge_kutta import rk_solver, RKInterface
+from generator.utils import clone_signal
+from generator.flow import FlowControl
 
 
 @dataclass

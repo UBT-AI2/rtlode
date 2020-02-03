@@ -1,6 +1,6 @@
 from myhdl import Signal, SignalType
 
-import num
+from generator import num
 
 
 def clone_signal(sig, value=0):

@@ -1,6 +1,6 @@
 from myhdl import intbv, block, always_seq, always_comb, Signal
 
-from flow import FlowControl
+from generator.flow import FlowControl
 
 INTEGER_SIZE = 31
 FRACTION_SIZE = 32
