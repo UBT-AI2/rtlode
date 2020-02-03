@@ -2,6 +2,8 @@ from dataclasses import dataclass
 
 from myhdl import SignalType, ResetSignal, Signal
 
+from generator import num
+
 
 @dataclass
 class FlowControl:
@@ -17,7 +19,7 @@ class FlowControl:
         if rst is None:
             rst = self.rst
         if enb is None:
-            enb = Signal(bool(0))
+            enb = Signal(num.bool(0))
         if fin is None:
-            fin = Signal(bool(0))
+            fin = Signal(num.bool(0))
         return FlowControl(self.clk, rst, enb, fin)
