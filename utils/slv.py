@@ -7,10 +7,9 @@ FILE_HEADER_IDENTIFIER_LEN = len(FILE_HEADER_IDENTIFIER)
 
 
 def _get_header(config):
-    header = []
-    header.extend(list(FILE_HEADER_IDENTIFIER))
-    header.extend(list(struct.pack("<I", len(json.dumps(config)))))
-    header.extend(list(json.dumps(config)))
+    header = bytearray(FILE_HEADER_IDENTIFIER, encoding='ascii')
+    header.extend(bytearray(list(struct.pack("<I", len(json.dumps(config))))))
+    header.extend(bytearray(json.dumps(config), encoding='ascii'))
     return header
 
 
@@ -18,7 +17,7 @@ def pack(gbs_path, config, out_path):
     gbs = open(gbs_path, 'rb')
     gbs_content = gbs.read()
 
-    slv_file_header = bytearray(_get_header(config))
+    slv_file_header = _get_header(config)
     with open(out_path, 'wb') as slv:
         slv.write(slv_file_header + gbs_content)
 
@@ -27,7 +26,8 @@ def unpack(slv_path, gbs_path=None):
     file = open(slv_path, 'rb')
     slv = file.read()
 
-    if len(slv) < FILE_HEADER_IDENTIFIER_LEN or slv[:FILE_HEADER_IDENTIFIER_LEN] != FILE_HEADER_IDENTIFIER:
+    if len(slv) < FILE_HEADER_IDENTIFIER_LEN \
+            or slv[:FILE_HEADER_IDENTIFIER_LEN] != bytes(FILE_HEADER_IDENTIFIER, encoding='ascii'):
         raise Exception("Can't parse given slv file.")
 
     header_begin = FILE_HEADER_IDENTIFIER_LEN + 4
