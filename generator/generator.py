@@ -134,7 +134,7 @@ def build(*config_files, name=None):
     build_dir = 'build'
     generator_path = os.path.dirname(os.path.realpath(__file__))
     filelist_path = os.path.join(generator_path, 'static', 'filelist.txt')
-    subprocess.run(['afu_synth_setup', '--source', filelist_path, build_dir], cwd=generator_path).check_returncode()
+    subprocess.run(['afu_synth_setup', '--sources', filelist_path, build_dir], cwd=generator_path).check_returncode()
 
     # 3. Start synthese and fitting.
     build_path = os.path.join(generator_path, build_dir)

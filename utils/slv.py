@@ -7,7 +7,8 @@ FILE_HEADER_IDENTIFIER_LEN = len(FILE_HEADER_IDENTIFIER)
 
 
 def _get_header(config):
-    header = [FILE_HEADER_IDENTIFIER]
+    header = []
+    header.extend(list(FILE_HEADER_IDENTIFIER))
     header.extend(list(struct.pack("<I", len(json.dumps(config)))))
     header.extend(list(json.dumps(config)))
     return header
