@@ -15,8 +15,7 @@ def integer(val=0, max=2 ** 32 - 1):
     return intbv(val, min=0, max=max)
 
 
-def bool(val=0):
-    return bool(val)
+bool = bool
 
 
 def default(val=0):

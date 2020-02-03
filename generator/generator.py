@@ -112,7 +112,7 @@ def convert(*config_files):
     wrapper_inst.convert(hdl='Verilog', testbench=False, name='solver', path=dir_path)
 
 
-def build(*config_files, name=None, path=None):
+def build(*config_files, name=None):
     """
     Create solver file for given cofiguration.
 
