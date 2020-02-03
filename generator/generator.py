@@ -125,7 +125,8 @@ def build(*config_files, name=None):
     :return:
     """
     if name is None:
-        name = '_'.join([os.path.basename(file_path) for file_path in config_files]) + slv.FILE_NAME_ENDING
+        name = '_'.join([os.path.basename(file_path).split('.')[0] for file_path in config_files])
+        name += slv.FILE_NAME_ENDING
 
     # 1. Invokes :func:`convert` to get generated solver in verilog.
     convert(*config_files)
