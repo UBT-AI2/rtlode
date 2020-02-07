@@ -77,7 +77,7 @@ def simulate(*config_files):
 
 def convert(*config_files):
     config = _load_config(*config_files)
-    cfg = Config(config['A'], config['b'], config['c'], config['components'])
+    cfg = Config(config['method']['A'], config['method']['b'], config['method']['c'], config['components'])
 
     clk = Signal(num.bool())
     rst = ResetSignal(False, True, False)
