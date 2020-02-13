@@ -88,7 +88,7 @@ module ccip_std_afu
     // Instantiate AFU logic
     // =============================================================
 
-    wrapper wrapper
+    afu afu
        (
         .clk            (pClk),
         .reset          (pck_cp2af_softReset_T1),

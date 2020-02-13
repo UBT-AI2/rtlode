@@ -7,7 +7,7 @@ from myhdl import Simulation, Signal, ResetSignal, delay
 
 from generator import num
 from generator.config import Config
-from generator.interface import SeqInterface, wrapper_seq
+from generator.afu import AfuInterface, afu
 from generator.runge_kutta import rk_solver, RKInterface
 from generator.flow import FlowControl
 from utils import slv
@@ -93,7 +93,7 @@ def convert(*config_files):
     y_addr = Signal(num.integer())
     y_val = Signal(num.default())
 
-    interface = SeqInterface(
+    interface = AfuInterface(
         FlowControl(clk, rst, enable, finished),
         h,
         n,
@@ -105,7 +105,7 @@ def convert(*config_files):
         y_val
     )
 
-    wrapper_inst = wrapper_seq(cfg, interface)
+    wrapper_inst = afu(cfg, interface)
     dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'out')
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
