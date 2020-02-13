@@ -17,6 +17,9 @@ class _PackedStruct:
 
 
 class PackedReadStruct(_PackedStruct):
+    """
+    Used to describe a read instance of a StructDescription.
+    """
     def __init__(self, fields, data):
         high_index = len(data)
         for name, value in fields.items():
@@ -32,6 +35,9 @@ class PackedReadStruct(_PackedStruct):
 
 
 class PackedWriteStruct(_PackedStruct):
+    """
+    Used to describe a write instance of a StructDescription.
+    """
     def __init__(self, fields):
         for name, value in fields.items():
             if isinstance(value, BitVector):
@@ -41,6 +47,10 @@ class PackedWriteStruct(_PackedStruct):
         super().__init__(fields)
 
     def packed(self):
+        """
+        Returns a ConcatSignal following the signals of the struct.
+        :return: concatted signal
+        """
         bitvector = []
         for name, value in self._fields.items():
             if isinstance(value, SignalType):
@@ -55,6 +65,9 @@ class PackedWriteStruct(_PackedStruct):
 
 
 class BitVector:
+    """
+    Can be used to describe a bitfield in a StructDescription.
+    """
     def __init__(self, nbr_bits):
         self._nbr_bits = nbr_bits
 
@@ -62,17 +75,39 @@ class BitVector:
         return self._nbr_bits
 
     def create_instance(self):
+        """
+        Creates a signal which can be used as representation of given BitVector.
+        :return: signal representation
+        """
         return Signal(intbv(0)[self._nbr_bits:0])
 
 
 class _LengthMetaclass(type):
+    """
+    Internal metaclass allowing the use of len() on StructDescription classes.
+    """
     def __len__(self):
         return self.len()
 
 
 class StructDescription(metaclass=_LengthMetaclass):
+    """
+    Used to describe a PackedStructure.
+    Class attributes can either be a BitVector or other StructDescriptions.
+
+    As Example:
+        class CcipRx(StructDescription):
+            c0TxAlmFull = BitVector(1)
+            c1TxAlmFull = BitVector(1)
+            c0 = CcipC0Rx
+            c1 = CcipC1Rx
+    """
     @classmethod
     def len(cls):
+        """
+        Returns the number of bits of the descripted struct.
+        :return: number of bits
+        """
         cls._check_wellformness()
         length = 0
         for _, value in cls._get_props().items():
@@ -96,6 +131,11 @@ class StructDescription(metaclass=_LengthMetaclass):
 
     @classmethod
     def create_read_instance(cls, data: SignalType) -> PackedReadStruct:
+        """
+        Creates a read instance of a described structure.
+        :param data: raw data to be mapped on struct
+        :return: nested struct following the described structure
+        """
         if not isinstance(data, SignalType) or not isinstance(data.val, intbv):
             raise Exception('PackedReadStruct data must be of type intbv.')
         cls._check_wellformness()
@@ -106,6 +146,10 @@ class StructDescription(metaclass=_LengthMetaclass):
 
     @classmethod
     def create_write_instance(cls) -> PackedWriteStruct:
+        """
+        Creates a written instance of the a described structure.
+        :return: nested struct following the described structure
+        """
         cls._check_wellformness()
 
         return PackedWriteStruct(cls._get_props())
