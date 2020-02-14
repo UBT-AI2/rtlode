@@ -2,4 +2,4 @@ solver.json
 
 ccip_interface_reg.sv
 ccip_std_afu.sv
-../out/afu.v
+../out/solver.v
