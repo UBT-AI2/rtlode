@@ -155,9 +155,9 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
                         if y_addr == index:
                             af2cp.c2.data.next = rk_interface.y[index][64:]
                 elif mmio_hdr.address == csr_address_enb:
-                    af2cp.c2.data.next = rk_interface.flow.enb[1:]
+                    af2cp.c2.data.next = rk_interface.flow.enb
                 elif mmio_hdr.address == csr_address_fin:
-                    af2cp.c2.data.next = rk_interface.flow.fin[1:]
+                    af2cp.c2.data.next = rk_interface.flow.fin
                 # Catch all
                 else:
                     af2cp.c2.data.next = intbv(0)[64:]
