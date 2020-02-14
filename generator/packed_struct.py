@@ -32,8 +32,7 @@ class PackedReadStruct(_PackedStruct):
                 raise Exception('PackedReadStruct trying to access data below lower limit.')
 
             if isinstance(value, BitVector):
-                data_slice = data(high_index, low_index)
-                fields[name] = data_slice
+                fields[name] = data(high_index, low_index)
             elif issubclass(value, StructDescription):
                 fields[name] = value.create_read_instance(data, high_index, low_index)
 

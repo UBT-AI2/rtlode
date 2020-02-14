@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from myhdl import block, SignalType, always_seq, instances, Signal, intbv, always_comb
+from myhdl import block, SignalType, always_seq, instances, Signal, intbv, always_comb, concat
 
 from generator import num
 from generator.ccip import CcipRx, CcipTx, CcipC0ReqMmioHdr
@@ -58,21 +58,21 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
     def handle_writes():
         if cp2af.c0.mmioWrValid:
             if mmio_hdr.address == csr_address_h:
-                rk_interface.h.next = cp2af.c0.data[64:]
+                rk_interface.h.next = concat(cp2af.c0.data)[64:]
             elif mmio_hdr.address == csr_address_n:
-                rk_interface.n.next = cp2af.c0.data[32:]
+                rk_interface.n.next = concat(cp2af.c0.data)[32:]
             elif mmio_hdr.address == csr_address_x_start:
-                rk_interface.x_start.next = cp2af.c0.data[64:]
+                rk_interface.x_start.next = concat(cp2af.c0.data)[64:]
             elif mmio_hdr.address == csr_address_y_start_addr:
-                y_start_addr.next = cp2af.c0.data[32:]
+                y_start_addr.next = concat(cp2af.c0.data)[32:]
             elif mmio_hdr.address == csr_address_y_start_val:
                 for index in range(config.system_size):
                     if y_start_addr == index:
-                        rk_interface.y_start[index].next = cp2af.c0.data[64:]
+                        rk_interface.y_start[index].next = concat(cp2af.c0.data)[64:]
             elif mmio_hdr.address == csr_address_y_addr:
-                y_addr.next = cp2af.c0.data[32:]
+                y_addr.next = concat(cp2af.c0.data)[32:]
             elif mmio_hdr.address == csr_address_enb:
-                rk_interface.flow.enb.next = cp2af.c0.data[1:]
+                rk_interface.flow.enb.next = concat(cp2af.c0.data)[1:]
 
     af2cp = CcipTx.create_write_instance()
     af2cp_sig = af2cp.packed()
