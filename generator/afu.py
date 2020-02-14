@@ -23,11 +23,15 @@ csr_address_fin = 0x00B0
 
 
 @block
-def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_sRxPort: SignalType, af2cp_sTxPort: SignalType):
+def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalType, af2cp_port: SignalType):
     """
     Wrapper logic to port internally solver interface to external afu interface.
 
     :param config: configuration parameters for the solver
+    :param clk: clk signal
+    :param reset: active high reset signal
+    :param cp2af_port: cci cpu to afu interface
+    :param af2cp_port: cci afu to cpu interface
     :return: myhdl instances of the afu
     """
     rk_interface = RKInterface(
@@ -47,7 +51,7 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_sRxPort: Signa
     y_start_addr = Signal(num.integer())
     y_addr = Signal(num.integer())
 
-    cp2af = CcipRx.create_read_instance(cp2af_sRxPort)
+    cp2af = CcipRx.create_read_instance(cp2af_port)
     mmio_hdr = CcipC0ReqMmioHdr.create_read_instance(cp2af.c0.hdr)
 
     @always_seq(clk.posedge, reset=reset)
@@ -75,7 +79,7 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_sRxPort: Signa
 
     @always_comb
     def assign_af2cp():
-        af2cp_sTxPort.next = af2cp_sig
+        af2cp_port.next = af2cp_sig
 
     @always_seq(clk.posedge, reset=None)
     def handle_reads():
@@ -130,7 +134,7 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_sRxPort: Signa
                 elif mmio_hdr.address == 0x0008:  # DFH_RSVD1
                     af2cp.c2.data.next = intbv(0)[64:]
                 # Custom AFU CSR
-                if mmio_hdr.address == csr_address_h:
+                elif mmio_hdr.address == csr_address_h:
                     af2cp.c2.data.next = rk_interface.h[64:]
                 elif mmio_hdr.address == csr_address_n:
                     af2cp.c2.data.next = rk_interface.n[32:]

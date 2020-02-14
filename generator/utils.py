@@ -1,6 +1,7 @@
-from myhdl import Signal, SignalType
+from myhdl import Signal, SignalType, block, always_seq
 
 from generator import num
+from generator.flow import FlowControl
 
 
 def clone_signal(sig, value=0):
@@ -43,3 +44,11 @@ def bind(func, *args):
     def _bind(*unbind_args, _args=args):
         return func(*args, *unbind_args)
     return _bind
+
+
+@block
+def assign(old: SignalType, new: SignalType, flow: FlowControl):
+    @always_seq(flow.clk_edge(), reset=flow.rst)
+    def _assign():
+        new.next = old
+    return _assign
