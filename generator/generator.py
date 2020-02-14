@@ -6,8 +6,10 @@ import yaml
 from myhdl import Simulation, Signal, ResetSignal, delay
 
 from generator import num
+from generator.ccip import CcipRx, CcipTx
 from generator.config import Config
-from generator.afu import AfuInterface, afu
+from generator.afu import afu
+from generator.packed_struct import BitVector
 from generator.runge_kutta import rk_solver, RKInterface
 from generator.flow import FlowControl
 from utils import slv
@@ -26,7 +28,7 @@ def _load_config(*files):
 
 def simulate(*config_files):
     config = _load_config(*config_files)
-    cfg = Config(config['A'], config['b'], config['c'], config['components'])
+    cfg = Config(config['method']['A'], config['method']['b'], config['method']['c'], config['components'])
 
     clk = Signal(bool(0))
     rst = ResetSignal(False, True, False)
@@ -81,31 +83,14 @@ def convert(*config_files):
 
     clk = Signal(num.bool())
     rst = ResetSignal(False, True, False)
-    enable = Signal(num.bool())
-    finished = Signal(num.bool())
 
-    h = Signal(num.default())
-    n = Signal(num.integer())
-    x_start = Signal(num.default())
-    y_start_addr = Signal(num.integer())
-    y_start_val = Signal(num.default())
-    x = Signal(num.default())
-    y_addr = Signal(num.integer())
-    y_val = Signal(num.default())
-
-    interface = AfuInterface(
-        FlowControl(clk, rst, enable, finished),
-        h,
-        n,
-        x_start,
-        y_start_addr,
-        y_start_val,
-        x,
-        y_addr,
-        y_val
+    wrapper_inst = afu(
+        cfg,
+        clk,
+        rst,
+        BitVector(len(CcipRx)).create_instance(),
+        BitVector(len(CcipTx)).create_instance()
     )
-
-    wrapper_inst = afu(cfg, interface)
     dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'out')
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)

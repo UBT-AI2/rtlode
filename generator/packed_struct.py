@@ -20,17 +20,24 @@ class PackedReadStruct(_PackedStruct):
     """
     Used to describe a read instance of a StructDescription.
     """
-    def __init__(self, fields, data):
-        high_index = len(data)
+    def __init__(self, fields, data, high_lim, low_lim):
+        if isinstance(data, PackedReadStruct):
+            data = data._data
+        self._data = data
+
+        high_index = high_lim
         for name, value in fields.items():
             low_index = high_index - len(value)
-            data_slice = data(high_index, low_index)
-            high_index = low_index
+            if low_index < low_lim:
+                raise Exception('PackedReadStruct trying to access data below lower limit.')
 
             if isinstance(value, BitVector):
+                data_slice = data(high_index, low_index)
                 fields[name] = data_slice
             elif issubclass(value, StructDescription):
-                fields[name] = value.create_read_instance(data_slice)
+                fields[name] = value.create_read_instance(data, high_index, low_index)
+
+            high_index = low_index
         super().__init__(fields)
 
 
@@ -47,6 +54,16 @@ class PackedWriteStruct(_PackedStruct):
         super().__init__(fields)
 
     def packed(self):
+        bitvector = self._packed()
+
+        if len(bitvector) == 0:
+            raise Exception('Empty PackedSignals obj.')
+        elif len(bitvector) == 1:
+            return bitvector[0]
+        else:
+            return ConcatSignal(*bitvector)
+
+    def _packed(self):
         """
         Returns a ConcatSignal following the signals of the struct.
         :return: concatted signal
@@ -56,12 +73,10 @@ class PackedWriteStruct(_PackedStruct):
             if isinstance(value, SignalType):
                 bitvector.append(value)
             elif isinstance(value, PackedWriteStruct):
-                bitvector.append(value.packed())
+                bitvector.extend(value._packed())
             else:
                 raise Exception('Unsupported field type in PackedWriteStruct obj.')
-        if len(bitvector) == 0:
-            raise Exception('Empty PackedSignals obj.')
-        return ConcatSignal(*bitvector)
+        return bitvector
 
 
 class BitVector:
@@ -130,19 +145,27 @@ class StructDescription(metaclass=_LengthMetaclass):
         return True
 
     @classmethod
-    def create_read_instance(cls, data: SignalType) -> PackedReadStruct:
+    def create_read_instance(cls, data: SignalType, high_lim=None, low_lim=None) -> PackedReadStruct:
         """
         Creates a read instance of a described structure.
         :param data: raw data to be mapped on struct
+        :param high_lim: Upper limit for data access
+        :param low_lim: Lower limit for data access
         :return: nested struct following the described structure
         """
-        if not isinstance(data, SignalType) or not isinstance(data.val, intbv):
+        if not isinstance(data, PackedReadStruct)\
+                and (not isinstance(data, SignalType) or not isinstance(data.val, intbv)):
             raise Exception('PackedReadStruct data must be of type intbv.')
         cls._check_wellformness()
 
-        if len(data) != len(cls):
+        if not high_lim:
+            high_lim = len(data)
+        if not low_lim:
+            low_lim = 0
+
+        if high_lim - low_lim != len(cls):
             raise Exception('PackedReadStruct data must be the size of StructDescription.')
-        return PackedReadStruct(cls._get_props(), data)
+        return PackedReadStruct(cls._get_props(), data, high_lim, low_lim)
 
     @classmethod
     def create_write_instance(cls) -> PackedWriteStruct:

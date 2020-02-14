@@ -114,7 +114,7 @@ class CcipC2RspMmioHdr(StructDescription):
 
 
 class CcipC0Tx(StructDescription):
-    hrd = CcipC0ReqMemHdr
+    hdr = CcipC0ReqMemHdr
     valid = BitVector(1)
 
 
