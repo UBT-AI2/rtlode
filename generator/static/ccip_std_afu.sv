@@ -93,8 +93,8 @@ module ccip_std_afu
         .clk            (pClk),
         .reset          (pck_cp2af_softReset_T1),
 
-        .cp2af_sRxPort  (pck_cp2af_sRx_T1),
-        .af2cp_sTxPort  (pck_af2cp_sTx_T0)
+        .cp2af_port  (pck_cp2af_sRx_T1),
+        .af2cp_port  (pck_af2cp_sTx_T0)
         );
 
 endmodule
