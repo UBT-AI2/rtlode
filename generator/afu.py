@@ -9,17 +9,18 @@ from generator.runge_kutta import rk_solver, RKInterface
 from generator.utils import clone_signal
 from generator.flow import FlowControl
 
-
-csr_address_h = 0x0020
-csr_address_n = 0x0030
-csr_address_x_start = 0x0040
-csr_address_y_start_addr = 0x0050
-csr_address_y_start_val = 0x0060
-csr_address_x = 0x0070
-csr_address_y_addr = 0x0080
-csr_address_y_val = 0x0090
-csr_address_enb = 0x00A0
-csr_address_fin = 0x00B0
+csr_addresses = {
+    'h': 0x0020,
+    'n': 0x0030,
+    'x_start': 0x0040,
+    'y_start_addr': 0x0050,
+    'y_start_val': 0x0060,
+    'x': 0x0070,
+    'y_addr': 0x0080,
+    'y_val': 0x0090,
+    'enb': 0x00A0,
+    'fin': 0x00B0
+}
 
 
 @block
@@ -34,6 +35,17 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
     :param af2cp_port: cci afu to cpu interface
     :return: myhdl instances of the afu
     """
+    csr_address_h = csr_addresses['h']
+    csr_address_n = csr_addresses['n']
+    csr_address_x_start = csr_addresses['x_start']
+    csr_address_y_start_addr = csr_addresses['y_start_addr']
+    csr_address_y_start_val = csr_addresses['y_start_val']
+    csr_address_x = csr_addresses['x']
+    csr_address_y_addr = csr_addresses['y_addr']
+    csr_address_y_val = csr_addresses['y_val']
+    csr_address_enb = csr_addresses['enb']
+    csr_address_fin = csr_addresses['fin']
+
     rk_interface = RKInterface(
         FlowControl(
             clk,

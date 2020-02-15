@@ -8,7 +8,7 @@ from myhdl import Simulation, Signal, ResetSignal, delay
 from generator import num
 from generator.ccip import CcipRx, CcipTx
 from generator.config import Config
-from generator.afu import afu
+from generator.afu import afu, csr_addresses
 from generator.packed_struct import BitVector
 from generator.runge_kutta import rk_solver, RKInterface
 from generator.flow import FlowControl
@@ -24,6 +24,15 @@ def _load_config(*files):
             except yaml.YAMLError as exc:
                 raise exc
     return config
+
+
+def _build_info():
+    return {
+        'build_info': {
+            'version': subprocess.check_output(["git", "describe"]).strip(),
+            'csr_addresses': csr_addresses
+        }
+    }
 
 
 def simulate(*config_files):
@@ -132,6 +141,7 @@ def build(*config_files, name=None):
     if not os.path.isfile(gbs_path):
         raise Exception('solver.gbs output file from synthesis could not be found.')
     config = _load_config(*config_files)
+    config.update(_build_info())
     slv.pack(gbs_path, config, out_path)
 
     # 5. Clean up build directories.
