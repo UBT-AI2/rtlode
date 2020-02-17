@@ -33,11 +33,11 @@ class Solver:
     @property
     def n(self):
         # TODO use addresses of config
-        return num.to_float(self._handle.read_csr64(0x30 << 2))
+        return self._handle.read_csr64(0x30 << 2)
 
     @n.setter
     def n(self, value):
-        self._handle.write_csr64(0x30 << 2, num.from_float(value))
+        self._handle.write_csr64(0x30 << 2, value)
 
     @property
     def x_start(self):
