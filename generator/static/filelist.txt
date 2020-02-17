@@ -1,4 +1,4 @@
-solver.json
+../out/solver.json
 
 ccip_interface_reg.sv
 ccip_std_afu.sv
