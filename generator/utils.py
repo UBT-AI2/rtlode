@@ -50,5 +50,7 @@ def bind(func, *args):
 def assign(old: SignalType, new: SignalType, flow: FlowControl):
     @always_seq(flow.clk_edge(), reset=flow.rst)
     def _assign():
-        new.next = old
+        if flow.enb:
+            new.next = old
+            flow.fin.next = True
     return _assign
