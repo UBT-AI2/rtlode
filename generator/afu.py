@@ -1,3 +1,4 @@
+import uuid
 from dataclasses import dataclass
 
 from myhdl import block, SignalType, always_seq, instances, Signal, intbv, always_comb, concat
@@ -45,6 +46,10 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
     csr_address_y_val = csr_addresses['y_val']
     csr_address_enb = csr_addresses['enb']
     csr_address_fin = csr_addresses['fin']
+
+    afu_id = uuid.UUID(config.uuid)
+    afu_id_h = afu_id[0:8]
+    afu_id_l = afu_id[8:16]
 
     rk_interface = RKInterface(
         FlowControl(
@@ -138,9 +143,9 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
                     feature_header[12:0] = 0b0  # feature ID = 0
                     af2cp.c2.data.next = feature_header
                 elif mmio_hdr.address == 0x0002:  # AFU_ID_L
-                    af2cp.c2.data.next = 0x9865c0c8e45e3ec7  # TODO load AFU ID from config
+                    af2cp.c2.data.next = afu_id_l
                 elif mmio_hdr.address == 0x0004:  # AFU_ID_H
-                    af2cp.c2.data.next = 0x2280d43c553d4c44
+                    af2cp.c2.data.next = afu_id_h
                 elif mmio_hdr.address == 0x0006:  # DFH_RSVD0
                     af2cp.c2.data.next = intbv(0)[64:]
                 elif mmio_hdr.address == 0x0008:  # DFH_RSVD1

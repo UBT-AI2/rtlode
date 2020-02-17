@@ -9,6 +9,7 @@ class Config:
     b: List[float]
     c: List[float]
     components: List[str]
+    uuid: bytes = b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
     system_size: int = field(init=False)
 
     def __post_init__(self):
