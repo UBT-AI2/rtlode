@@ -31,7 +31,7 @@ def _load_config(*files):
 def _build_info():
     return {
         'build_info': {
-            'version': subprocess.check_output(["git", "describe"]).strip(),
+            'version': subprocess.check_output(["git", "describe", "--tags"]).strip(),
             'csr_addresses': csr_addresses,
             'uuid': str(uuid.uuid4())
         }
