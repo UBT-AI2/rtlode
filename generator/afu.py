@@ -48,8 +48,8 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
     csr_address_fin = csr_addresses['fin']
 
     afu_id = uuid.UUID(config.uuid).bytes
-    afu_id_h = intbv(int.from_bytes(afu_id[0:8], 'big'))[64:0]
-    afu_id_l = intbv(int.from_bytes(afu_id[8:16], 'big'))[64:0]
+    afu_id_h = int.from_bytes(afu_id[0:8], 'big')
+    afu_id_l = int.from_bytes(afu_id[8:16], 'big')
 
     rk_interface = RKInterface(
         FlowControl(
