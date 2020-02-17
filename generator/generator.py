@@ -165,11 +165,11 @@ def build(*config_files, name=None, config=None):
 
     # 1. Load and enrich config
     loaded_config = _load_config(*config_files)
+    loaded_config.update(_build_info())
     if config is not None:
-        config.update(loaded_config)
+        config = loaded_config.update(config)
     else:
         config = loaded_config
-    config.update(_build_info())
 
     # 2. Invokes :func:`convert` to get generated solver in verilog.
     convert(config)
