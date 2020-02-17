@@ -16,6 +16,11 @@ class TestB(StructDescription):
     c = TestA
 
 
+class TestC(StructDescription):
+    a = BitVector(2)
+    b = BitVector(3)
+
+
 class TestMalformed(StructDescription):
     a = 4
 
@@ -83,3 +88,14 @@ class TestStructDescription(TestCase):
         self.assertEqual(0, write_sig[7:6])
         self.assertEqual(1, write_sig[6:5])
         self.assertEqual(6, write_sig[5:0])
+
+    def test_create_read_instace_nested(self):
+        data = intbv(0)[6:0]
+        data[6:5] = 1
+        data[5:3] = 2
+        data[3:0] = 5
+        read_a_inst = TestA.create_read_instance(Signal(data))
+        read_c_inst = TestC.create_read_instance(read_a_inst.b)
+
+        self.assertEqual(2, read_c_inst.a)
+        self.assertEqual(5, read_c_inst.b)

@@ -24,6 +24,8 @@ class PackedReadStruct(_PackedStruct):
         if isinstance(data, PackedReadStruct):
             data = data._data
         self._data = data
+        self._high_lim = high_lim
+        self._low_lim = low_lim
 
         high_index = high_lim
         for name, value in fields.items():
@@ -38,6 +40,12 @@ class PackedReadStruct(_PackedStruct):
 
             high_index = low_index
         super().__init__(fields)
+
+    def high_lim(self):
+        return self._high_lim
+
+    def low_lim(self):
+        return self._low_lim
 
 
 class PackedWriteStruct(_PackedStruct):
@@ -158,9 +166,15 @@ class StructDescription(metaclass=_LengthMetaclass):
         cls._check_wellformness()
 
         if not high_lim:
-            high_lim = len(data)
+            if isinstance(data, PackedReadStruct):
+                high_lim = data.high_lim()
+            else:
+                high_lim = len(data)
         if not low_lim:
-            low_lim = 0
+            if isinstance(data, PackedReadStruct):
+                low_lim = data.low_lim()
+            else:
+                low_lim = 0
 
         if high_lim - low_lim != len(cls):
             raise Exception('PackedReadStruct data must be the size of StructDescription.')
