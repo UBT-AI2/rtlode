@@ -54,7 +54,7 @@ def run(slv_path: str, runtime_config=None):
             sleep(0.1)
         timing_end = time.time()
         print('Solver finished in: %s' % (timing_end - timing_start))
-        print(solver.x)
+        print('x = %s' % solver.x)
         for i, y in enumerate(config['y']):
             solver.y_addr = i
-            print(solver.y_val)
+            print('y[%s] = %s' % (i, solver.y_val))
