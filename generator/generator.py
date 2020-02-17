@@ -7,14 +7,13 @@ import uuid
 import yaml
 from myhdl import Simulation, Signal, ResetSignal, delay
 
-from generator import num
 from generator.ccip import CcipRx, CcipTx
 from generator.config import Config
 from generator.afu import afu, csr_addresses
 from generator.packed_struct import BitVector
 from generator.runge_kutta import rk_solver, RKInterface
 from generator.flow import FlowControl
-from utils import slv
+from utils import slv, num
 
 
 def _load_config(*files):

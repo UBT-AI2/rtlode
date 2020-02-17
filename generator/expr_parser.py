@@ -3,7 +3,8 @@ import typing
 from myhdl import block, always_seq, Signal, always_comb, SignalType
 from pyparsing import *
 
-from generator import num
+import generator.calc
+from utils import num
 from generator.utils import clone_signal
 from generator.flow import FlowControl
 from generator.vector_utils import reduce_and
@@ -93,17 +94,17 @@ def expr(expression: str,
 
                     subflow = expr_flow.create_subflow(enb=expr_flow.enb)
                     rhs = generate_logic(parse_tree[1], val, subflow)
-                    inst = num.sub_flow(zero, val, out, expr_flow.create_subflow(enb=subflow.fin, fin=expr_flow.fin))
+                    inst = generator.calc.sub_flow(zero, val, out, expr_flow.create_subflow(enb=subflow.fin, fin=expr_flow.fin))
                     return [rhs] + [inst]
                 else:
                     raise ExprParserException('Unhandled sign operator found: %s' % parse_tree['sign'])
             elif 'op' in parse_tree and len(parse_tree) >= 3:
                 if parse_tree['op'] == '+':
-                    mod = num.add_flow
+                    mod = generator.calc.add_flow
                 elif parse_tree['op'] == '-':
-                    mod = num.sub_flow
+                    mod = generator.calc.sub_flow
                 elif parse_tree['op'] == '*':
-                    mod = num.mul_flow
+                    mod = generator.calc.mul_flow
                 else:
                     raise ExprParserException('Unhandled operator found: %s' % parse_tree['op'])
                 val_lhs = clone_signal(result)

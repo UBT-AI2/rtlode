@@ -1,6 +1,7 @@
 from myhdl import block, Signal, instances, always_comb, always_seq
 
-from generator import num
+import generator.calc
+from utils import num
 from generator.utils import clone_signal
 from generator.flow import FlowControl
 
@@ -88,7 +89,7 @@ def reduce_sum(in_vector, res, clk=None):
     :param clk: optional clk for output assignment
     :return: myhdl instances
     """
-    return reduce(in_vector, num.add, res, clk=clk)
+    return reduce(in_vector, generator.calc.add, res, clk=clk)
 
 
 @block
@@ -116,7 +117,7 @@ def lincomb(in_a, in_b, out_sum, clk=None):
     partial_results = [Signal(num.same_as(out_sum)) for i in range(n_elements)]
 
     for i in range(n_elements):
-        mul_insts[i] = num.mul(in_a[i], in_b[i], partial_results[i], clk=clk)
+        mul_insts[i] = generator.calc.mul(in_a[i], in_b[i], partial_results[i], clk=clk)
 
     reduce_inst = reduce_sum(partial_results, out_sum)
 
@@ -148,7 +149,7 @@ def lincomb_flow(in_a, in_b, out_sum, flow: FlowControl):
     partial_results = [Signal(num.same_as(out_sum)) for _ in range(n_elements)]
 
     for i in range(n_elements):
-        mul_insts[i] = num.mul_flow(in_a[i], in_b[i], partial_results[i], flow=mul_flows[i])
+        mul_insts[i] = generator.calc.mul_flow(in_a[i], in_b[i], partial_results[i], flow=mul_flows[i])
 
     reduce_and_inst = reduce_and([f.fin for f in mul_flows], flow.fin)
     reduce_sum_inst = reduce_sum(partial_results, out_sum)

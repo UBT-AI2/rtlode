@@ -2,7 +2,7 @@ from typing import List
 
 from myhdl import SignalType
 
-from generator import num
+import generator.calc
 from generator.pipeline import Pipeline
 from generator.utils import clone_signal, bind, assign
 from generator.vector_utils import lincomb_flow
@@ -40,5 +40,5 @@ def pipe_calc_step(
                 lincomb_res
             )
         ) \
-        .then(bind(num.mul_flow, h, lincomb_res, mul_res)) \
-        .then(bind(num.add_flow, y, mul_res, y_n))
+        .then(bind(generator.calc.mul_flow, h, lincomb_res, mul_res)) \
+        .then(bind(generator.calc.add_flow, y, mul_res, y_n))

@@ -2,7 +2,7 @@ import unittest
 
 from myhdl import Signal, Simulation, ResetSignal, delay
 
-from generator import num
+from utils import num
 from generator.rk_stage import stage
 from generator.config import StageConfig
 

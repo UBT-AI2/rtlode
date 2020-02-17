@@ -1,4 +1,5 @@
 import os
+from time import sleep
 
 from runtime.interface import Solver
 from utils import slv
@@ -36,15 +37,16 @@ def run(slv_path: str, runtime_config=None):
 
     # Access AFU (get Interface Object)
     with Solver(config) as solver:
-        # TODO implement
-        solver.h = 20
-
-        # Set h, n, x_start, y_start
-
-        # Enable solver
-
-        # Wait until finished
-
-        # Read x and y
-
-    pass
+        solver.h = config['h']
+        solver.n = config['n']
+        solver.x_start = 0
+        for i, y in enumerate(config['y']):
+            solver.y_start_addr = i
+            solver.y_start_val = y
+        solver.enb = 1
+        while solver.fin != 1:
+            sleep(1)
+        print(solver.x)
+        for i, y in enumerate(config['y']):
+            solver.y_addr = i
+            print(solver.y_val)

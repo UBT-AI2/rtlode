@@ -2,7 +2,8 @@ import unittest
 
 from myhdl import Simulation, Signal, delay
 
-from generator import num
+import generator.calc
+from utils import num
 
 
 class TestMul(unittest.TestCase):
@@ -70,7 +71,7 @@ class TestMul(unittest.TestCase):
 
     @staticmethod
     def runTest(in_a, in_b, out_sum, test, clk=None):
-        dut = num.mul(in_a, in_b, out_sum, clk=clk)
+        dut = generator.calc.mul(in_a, in_b, out_sum, clk=clk)
         check = test()
         sim = Simulation(dut, check)
         sim.run(quiet=1)

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from myhdl import SignalType, ResetSignal, Signal
 
-from generator import num
+from utils import num
 
 
 @dataclass

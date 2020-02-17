@@ -3,7 +3,7 @@ import unittest
 
 from myhdl import Signal, intbv, delay, Simulation
 
-from generator import num
+from utils import num
 from generator.vector_utils import lincomb, UnequalVectorLength
 
 

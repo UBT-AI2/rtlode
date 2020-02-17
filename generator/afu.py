@@ -2,7 +2,7 @@ import uuid
 
 from myhdl import block, SignalType, always_seq, instances, Signal, intbv, always_comb, concat
 
-from generator import num
+from utils import num
 from generator.ccip import CcipRx, CcipTx, CcipC0ReqMmioHdr
 from generator.config import Config
 from generator.runge_kutta import rk_solver, RKInterface

@@ -1,6 +1,6 @@
 from myhdl import Signal, SignalType, block, always_seq
 
-from generator import num
+from utils import num
 from generator.flow import FlowControl
 
 

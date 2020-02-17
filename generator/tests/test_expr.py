@@ -2,7 +2,7 @@ import unittest
 
 from myhdl import Simulation, Signal, delay, ResetSignal
 
-from generator import num
+from utils import num
 from generator.expr_parser import expr
 from generator.flow import FlowControl
 
