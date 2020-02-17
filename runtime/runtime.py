@@ -1,4 +1,5 @@
 import os
+import time
 from time import sleep
 
 from runtime.interface import Solver
@@ -33,19 +34,26 @@ def run(slv_path: str, runtime_config=None):
         config.update(runtime_config)
 
     # Load bitstream on FPGA
+    print('Loading bitstream on fpga...')
     _load_bitstream(gbs_path)
 
     # Access AFU (get Interface Object)
+    print('Aquire ownership of afu...')
     with Solver(config) as solver:
+        print('Configure solver...')
         solver.h = config['h']
         solver.n = config['n']
         solver.x_start = 0
         for i, y in enumerate(config['y']):
             solver.y_start_addr = i
             solver.y_start_val = y
+        print('Start solver...')
+        timing_start = time.time()
         solver.enb = 1
         while solver.fin != 1:
-            sleep(1)
+            sleep(0.1)
+        timing_end = time.time()
+        print('Solver finished in: %s' % (timing_end - timing_start))
         print(solver.x)
         for i, y in enumerate(config['y']):
             solver.y_addr = i
