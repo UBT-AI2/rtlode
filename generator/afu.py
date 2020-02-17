@@ -1,5 +1,4 @@
 import uuid
-from dataclasses import dataclass
 
 from myhdl import block, SignalType, always_seq, instances, Signal, intbv, always_comb, concat
 

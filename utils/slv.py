@@ -35,7 +35,7 @@ def unpack(slv_path, gbs_path=None):
 
     config = {}
     if header_len != 0:
-        config = json.loads(slv[header_begin:(header_begin + header_len)])
+        config = json.loads(slv[header_begin:(header_begin + header_len)].decode('utf-8'))
 
     gbs_begin = header_begin + header_len
     if gbs_path is not None:

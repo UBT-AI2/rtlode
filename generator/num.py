@@ -11,7 +11,7 @@ DOUBLE_MAX_VALUE = 2 ** (2 * INTEGER_SIZE + 2 * FRACTION_SIZE) - 1
 DOUBLE_MIN_VALUE = - DOUBLE_MAX_VALUE
 
 
-def integer(val=0, max=2 ** 32 - 1):
+def integer(val=0, max=2 ** 32):
     return intbv(val, min=0, max=max)
 
 

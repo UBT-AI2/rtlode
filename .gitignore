@@ -1,3 +1,6 @@
 .idea
 venv
 generator/out
+__pycache__
+*.pyc
+*.slv
