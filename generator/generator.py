@@ -145,7 +145,7 @@ def convert(config):
     wrapper_inst.convert(hdl='Verilog', testbench=False, name='solver', path=dir_path)
 
 
-def build(*config_files, name=None, config=None):
+def build(*config_files, name=None, config=None, cleanup=True):
     """
     Create solver file for given cofiguration.
 
@@ -192,4 +192,5 @@ def build(*config_files, name=None, config=None):
     slv.pack(gbs_path, config, out_path)
 
     # 6. Clean up build directories.
-    shutil.rmtree(build_path)
+    if cleanup:
+        shutil.rmtree(build_path)
