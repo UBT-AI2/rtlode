@@ -3,7 +3,7 @@ from random import randrange
 
 from myhdl import Signal, intbv, Simulation, delay
 
-from generator.vector_utils import reduce_sum
+from generator.vector_utils.reduce import reduce_sum
 
 
 class TestReduce(unittest.TestCase):

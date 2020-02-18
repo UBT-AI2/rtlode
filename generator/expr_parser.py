@@ -7,7 +7,7 @@ import generator.calc
 from utils import num
 from generator.utils import clone_signal
 from generator.flow import FlowControl
-from generator.vector_utils import reduce_and
+from generator.vector_utils.reduce import reduce_and
 
 
 class ExprParserException(Exception):

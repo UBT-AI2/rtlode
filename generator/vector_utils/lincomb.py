@@ -4,7 +4,7 @@ import generator.calc
 from generator.flow import FlowControl
 from generator.pipeline import Pipeline
 from generator.utils import bind
-from generator.vector_utils import reduce_sum_flow
+from generator.vector_utils.reduce import reduce_sum
 from utils import num
 
 
@@ -36,6 +36,6 @@ def lincomb_flow(in_a, in_b, out_sum, flow: FlowControl):
 
     pipe = Pipeline()
     pipe.then([bind(generator.calc.mul_flow, in_a[i], in_b[i], partial_results[i]) for i in range(n_elements)])
-    pipe.then(bind(reduce_sum_flow, partial_results, out_sum))
+    pipe.then(bind(reduce_sum, partial_results, out_sum))
 
     return pipe.create(flow)
