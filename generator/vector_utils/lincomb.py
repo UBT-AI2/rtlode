@@ -13,7 +13,7 @@ class UnequalVectorLength(Exception):
 
 
 @block
-def lincomb_flow(in_a, in_b, out_sum, flow: FlowControl):
+def lincomb(in_a, in_b, out_sum, flow: FlowControl):
     """
     Calculates the linear combination of vector a and b.
     If clk is provided the internal multiplications use sequential

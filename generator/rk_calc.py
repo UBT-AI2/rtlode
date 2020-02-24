@@ -5,7 +5,7 @@ from myhdl import SignalType
 import generator.calc
 from generator.pipeline import Pipeline
 from generator.utils import clone_signal, bind, assign
-from generator.vector_utils.lincomb import lincomb_flow
+from generator.vector_utils.lincomb import lincomb
 
 
 def pipe_calc_step(
@@ -34,7 +34,7 @@ def pipe_calc_step(
     return Pipeline() \
         .then(
             bind(
-                lincomb_flow,
+                lincomb,
                 f,
                 y_i,
                 lincomb_res
