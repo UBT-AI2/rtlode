@@ -40,5 +40,5 @@ def pipe_calc_step(
                 lincomb_res
             )
         ) \
-        .then(bind(generator.calc.mul_flow, h, lincomb_res, mul_res)) \
-        .then(bind(generator.calc.add_flow, y, mul_res, y_n))
+        .then(bind(generator.calc.mul, h, lincomb_res, mul_res)) \
+        .then(bind(generator.calc.add, y, mul_res, y_n))

@@ -21,7 +21,6 @@ def reduce(in_vector, op, out, flow: FlowControl = None, default=0):
     :return: myhdl instances
     """
     n_elements = len(in_vector)
-    enable = flow.enb if flow is not None else True
 
     partial_results = [clone_signal(out) for i in range(max(n_elements - 1, 0))]
     op_insts = [None for i in range(max(n_elements - 1, 0))]
@@ -40,7 +39,7 @@ def reduce(in_vector, op, out, flow: FlowControl = None, default=0):
 
     if flow is not None:
         def assign_out():
-            if enable:
+            if flow.enb:
                 out.next = result
                 flow.fin.next = True
         calc = always_seq(flow.clk_edge(), flow.rst)(assign_out)

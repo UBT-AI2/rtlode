@@ -35,7 +35,7 @@ def lincomb_flow(in_a, in_b, out_sum, flow: FlowControl):
     partial_results = [Signal(num.same_as(out_sum)) for _ in range(n_elements)]
 
     pipe = Pipeline()
-    pipe.then([bind(generator.calc.mul_flow, in_a[i], in_b[i], partial_results[i]) for i in range(n_elements)])
+    pipe.then([bind(generator.calc.mul, in_a[i], in_b[i], partial_results[i]) for i in range(n_elements)])
     pipe.then(bind(reduce_sum, partial_results, out_sum))
 
     return pipe.create(flow)

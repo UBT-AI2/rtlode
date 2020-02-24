@@ -1,8 +1,9 @@
 import unittest
 
-from myhdl import Simulation, Signal, delay
+from myhdl import Simulation, Signal, delay, ResetSignal
 
 import generator.calc
+from generator.flow import FlowControl
 from utils import num
 
 
@@ -29,19 +30,27 @@ class TestMul(unittest.TestCase):
         in_a = Signal(num.from_float(a))
         in_b = Signal(num.from_float(b))
         out_c = Signal(num.default())
-        clk = Signal(bool(0))
+        flow = FlowControl(
+            Signal(bool(0)),
+            ResetSignal(True, False, True),
+            Signal(bool(1)),
+            Signal(bool(0))
+        )
 
         def test():
-            yield delay(10)
-            clk.next = not clk  # High
-            yield delay(10)
-            clk.next = not clk
-            yield delay(10)
-            clk.next = not clk  # High
-            yield delay(10)
+            clks = 0
+            while not flow.fin:
+                yield delay(10)
+                flow.clk.next = not flow.clk
+                clks += 1
+                yield delay(10)
+                flow.clk.next = not flow.clk
+
+            print("Finished after %i clock cycles." % clks)
+
             self.assertEqual(num.from_float(a * b), out_c)
 
-        self.runTest(in_a, in_b, out_c, test, clk=clk)
+        self.runTest(in_a, in_b, out_c, test, flow=flow)
 
     def test_mul_negative_result(self):
         """Check signed multiplication."""
@@ -70,8 +79,8 @@ class TestMul(unittest.TestCase):
         self.runTest(in_a, in_b, out_sum, test)
 
     @staticmethod
-    def runTest(in_a, in_b, out_sum, test, clk=None):
-        dut = generator.calc.mul(in_a, in_b, out_sum, clk=clk)
+    def runTest(in_a, in_b, out_sum, test, flow=None):
+        dut = generator.calc.mul(in_a, in_b, out_sum, flow=flow)
         check = test()
         sim = Simulation(dut, check)
         sim.run(quiet=1)

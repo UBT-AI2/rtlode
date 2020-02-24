@@ -52,7 +52,7 @@ def rk_solver(config: Config, interface: RKInterface):
             lambda flow, cfg=config.get_stage_config(si):
             stage(cfg, flow, interface.h, interface.x, interface.y, v)
         )
-    pipe.then([stage_pipe, bind(generator.calc.add_flow, interface.x, interface.h, x_n)])
+    pipe.then([stage_pipe, bind(generator.calc.add, interface.x, interface.h, x_n)])
 
     pipe.then([pipe_calc_step(
         [clone_signal(y_n[i], value=num.from_float(el)) for el in config.b],

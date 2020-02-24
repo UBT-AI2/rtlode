@@ -94,17 +94,17 @@ def expr(expression: str,
 
                     subflow = expr_flow.create_subflow(enb=expr_flow.enb)
                     rhs = generate_logic(parse_tree[1], val, subflow)
-                    inst = generator.calc.sub_flow(zero, val, out, expr_flow.create_subflow(enb=subflow.fin, fin=expr_flow.fin))
+                    inst = generator.calc.sub(zero, val, out, expr_flow.create_subflow(enb=subflow.fin, fin=expr_flow.fin))
                     return [rhs] + [inst]
                 else:
                     raise ExprParserException('Unhandled sign operator found: %s' % parse_tree['sign'])
             elif 'op' in parse_tree and len(parse_tree) >= 3:
                 if parse_tree['op'] == '+':
-                    mod = generator.calc.add_flow
+                    mod = generator.calc.add
                 elif parse_tree['op'] == '-':
-                    mod = generator.calc.sub_flow
+                    mod = generator.calc.sub
                 elif parse_tree['op'] == '*':
-                    mod = generator.calc.mul_flow
+                    mod = generator.calc.mul
                 else:
                     raise ExprParserException('Unhandled operator found: %s' % parse_tree['op'])
                 val_lhs = clone_signal(result)
