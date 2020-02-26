@@ -126,7 +126,7 @@ def convert(config):
         config['method']['b'],
         config['method']['c'],
         config['components'],
-        uuid=config['build_info']['uuid']
+        uuid=config['build_info']['uuid'] if 'build_info' in config else 'BEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEF'
     )
 
     clk = Signal(num.bool())

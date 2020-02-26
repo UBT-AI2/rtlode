@@ -93,6 +93,17 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
     af2cp = CcipTx.create_write_instance()
     af2cp_sig = af2cp.packed()
 
+    feature_header = intbv(0)[64:]
+    feature_header[64:60] = 0b0001  # Feature type = AFU
+    feature_header[60:52] = 0b0  # reserved
+    feature_header[52:48] = 0b0  # AFU minor revision = 0
+    feature_header[48:41] = 0b0  # reserved
+    feature_header[40] = True  # end of DFH list = 1
+    feature_header[40:16] = 0b0  # next DFH offset = 0
+    feature_header[16:12] = 0b0  # afu major revision = 0
+    feature_header[12:0] = 0b0  # feature ID = 0
+    feature_header = int(feature_header)
+
     @always_comb
     def assign_af2cp():
         af2cp_port.next = af2cp_sig
@@ -131,15 +142,6 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
                 af2cp.c2.mmioRdValid.next = 1
                 # Necessary registers
                 if mmio_hdr.address == 0x0000:  # AFU_HEADER
-                    feature_header = intbv(0)[64:]
-                    feature_header[64:60] = 0b0001  # Feature type = AFU
-                    feature_header[60:52] = 0b0  # reserved
-                    feature_header[52:48] = 0b0  # AFU minor revision = 0
-                    feature_header[48:41] = 0b0  # reserved
-                    feature_header[40] = True  # end of DFH list = 1
-                    feature_header[40:16] = 0b0  # next DFH offset = 0
-                    feature_header[16:12] = 0b0  # afu major revision = 0
-                    feature_header[12:0] = 0b0  # feature ID = 0
                     af2cp.c2.data.next = feature_header
                 elif mmio_hdr.address == 0x0002:  # AFU_ID_L
                     af2cp.c2.data.next = afu_id_l
