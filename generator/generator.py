@@ -39,24 +39,31 @@ def _build_info():
 
 def _get_build_config(config):
     return {
-       "version": 1,
-       "afu-image": {
-          "power": 0,
-          "clock-frequency-high": "auto",
-          "clock-frequency-low": "auto",
-          "afu-top-interface":
-             {
-                "class": "ccip_std_afu"
-             },
-          "accelerator-clusters":
-             [
-                {
-                   "name": "solver",
-                   "total-contexts": 1,
-                   "accelerator-type-uuid": config['build_info']['uuid']
-                }
-             ]
-       }
+        "version": 1,
+        "afu-image": {
+            "power": 0,
+            "clock-frequency-high": "auto",
+            "clock-frequency-low": "auto",
+            "afu-top-interface": {
+                "class": "ccip_std_afu",
+                "module-ports": [
+                    {
+                        "class": "cci-p",
+                        "params": {
+                            "clock": "pClk"
+                        }
+                    }
+                ]
+            },
+            "accelerator-clusters":
+                [
+                    {
+                        "name": "solver",
+                        "total-contexts": 1,
+                        "accelerator-type-uuid": config['build_info']['uuid']
+                    }
+                ]
+        }
     }
 
 
