@@ -24,12 +24,14 @@ csr_addresses = {
 
 
 @block
-def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalType, af2cp_port: SignalType):
+def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType, cp2af_port: SignalType,
+        af2cp_port: SignalType):
     """
     Wrapper logic to port internally solver interface to external afu interface.
 
     :param config: configuration parameters for the solver
-    :param clk: clk signal
+    :param clk: clk signal for cci-p
+    :param usr_clk: clk signal for logic
     :param reset: active high reset signal
     :param cp2af_port: cci cpu to afu interface
     :param af2cp_port: cci afu to cpu interface
@@ -52,7 +54,7 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
 
     rk_interface = RKInterface(
         FlowControl(
-            clk,
+            usr_clk,
             reset,
             Signal(bool(0)),
             Signal(bool(0))
@@ -66,6 +68,15 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
     )
     y_start_addr = Signal(num.integer())
     y_addr = Signal(num.integer())
+
+    # Clock Crossing needed because ccip clock could be faster than usr clk
+    cc_fin_metastable = clone_signal(rk_interface.flow.fin)
+    cc_fin_stable = clone_signal(rk_interface.flow.fin)
+
+    @always_seq(clk.posedge, reset=reset)
+    def clock_crossing():
+        cc_fin_metastable.next = rk_interface.flow.fin
+        cc_fin_stable.next = cc_fin_metastable
 
     cp2af = CcipRx.create_read_instance(cp2af_port)
     mmio_hdr = CcipC0ReqMmioHdr.create_read_instance(cp2af.c0.hdr)
@@ -175,7 +186,7 @@ def afu(config: Config, clk: SignalType, reset: SignalType, cp2af_port: SignalTy
                 elif mmio_hdr.address == csr_address_enb:
                     af2cp.c2.data.next = rk_interface.flow.enb
                 elif mmio_hdr.address == csr_address_fin:
-                    af2cp.c2.data.next = rk_interface.flow.fin
+                    af2cp.c2.data.next = cc_fin_stable
                 # Catch all
                 else:
                     af2cp.c2.data.next = intbv(0)[64:]

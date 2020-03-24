@@ -42,6 +42,8 @@ def _get_build_config(config):
        "version": 1,
        "afu-image": {
           "power": 0,
+          "clock-frequency-high": "auto",
+          "clock-frequency-low": "auto",
           "afu-top-interface":
              {
                 "class": "ccip_std_afu"
@@ -130,11 +132,13 @@ def convert(config):
     )
 
     clk = Signal(num.bool())
+    usr_clk = Signal(num.bool())
     rst = ResetSignal(False, True, False)
 
-    wrapper_inst = afu(
+    afu_inst = afu(
         cfg,
         clk,
+        usr_clk,
         rst,
         BitVector(len(CcipRx)).create_instance(),
         BitVector(len(CcipTx)).create_instance()
@@ -142,7 +146,7 @@ def convert(config):
     dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'out')
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
-    wrapper_inst.convert(hdl='Verilog', testbench=False, name='solver', path=dir_path)
+    afu_inst.convert(hdl='Verilog', testbench=False, name='solver', path=dir_path)
 
 
 def build(*config_files, name=None, config=None, cleanup=True):

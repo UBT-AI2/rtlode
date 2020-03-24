@@ -9,9 +9,9 @@ from generator.flow import FlowControl
 def reduce(in_vector, op, out, flow: FlowControl = None, default=0):
     """
     Reduces vector with given operator.
-    If clk is provided the propagation delay is 1 clk cycle.
-    Only the output is latched, the internal operators are still
-    working combinatorical.
+    Even if flow is provided the op is not flow controlled. Only the output is latched.
+
+    TODO: Implement tree structure instead of sequential line
 
     :param in_vector: vector of elements
     :param op: the operation to be applied to each value pair
@@ -55,9 +55,6 @@ def reduce(in_vector, op, out, flow: FlowControl = None, default=0):
 def reduce_and(in_vector, res, flow: FlowControl = None):
     """
     Checks if all elements of the vector are true.
-    If clk is provided the propagation delay is 1 clk cycle.
-    Only the output is latched, the internal and logic is still
-    working combinatorical.
 
     :param in_vector: vector of elements
     :param res: sum off all vector elements
@@ -78,9 +75,6 @@ def reduce_and(in_vector, res, flow: FlowControl = None):
 def reduce_sum(in_vector, res, flow: FlowControl = None):
     """
     Computes the sum of all in_vector elements.
-    If clk is provided the propagation delay is 1 clk cycle.
-    Only the output is latched, the internal adder are still
-    working combinatorical.
 
     :param in_vector: vector of elements
     :param res: sum off all vector elements

@@ -51,6 +51,18 @@ module ccip_std_afu
     output t_if_ccip_Tx pck_af2cp_sTx         // CCI-P Tx Port
     );
 
+    // ====================================================================
+    // Pick the proper clk and reset, as chosen by the AFU's JSON file
+    // ====================================================================
+
+    // The platform may transform the CCI-P clock from pClk to a clock
+    // chosen in the AFU's JSON file.
+    logic clk;
+    assign clk = `PLATFORM_PARAM_CCI_P_CLOCK;
+
+    logic reset;
+    assign reset = `PLATFORM_PARAM_CCI_P_RESET;
+
     // =============================================================
     // Register SR <--> PR signals at interface before consuming it
     // =============================================================
@@ -90,8 +102,9 @@ module ccip_std_afu
 
     solver solver
        (
-        .clk            (pClk),
-        .reset          (pck_cp2af_softReset_T1),
+        .clk            (clk),
+        .usr_clk        (uClk_usr),
+        .reset          (reset),
 
         .cp2af_port  (pck_cp2af_sRx_T1),
         .af2cp_port  (pck_af2cp_sTx_T0)

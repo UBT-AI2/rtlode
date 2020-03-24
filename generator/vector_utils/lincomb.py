@@ -16,9 +16,6 @@ class UnequalVectorLength(Exception):
 def lincomb(in_a, in_b, out_sum, flow: FlowControl):
     """
     Calculates the linear combination of vector a and b.
-    If clk is provided the internal multiplications use sequential
-    logic while the reduce sum calculation is still combinatorical.
-    The resulting propagation delay is 1 clk cycle.
 
     :param in_a: input vector a
     :param in_b: input vector b
