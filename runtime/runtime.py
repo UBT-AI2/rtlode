@@ -51,6 +51,8 @@ def run(slv_path: str, runtime_config=None):
             val_bytes = int(num.from_float(y)).to_bytes(8, byteorder='little', signed=True)
             for bi, b in enumerate(val_bytes):
                 solver.y_start[i*8+bi] = b
+        for i in range(512):
+            print('y_start[%s]: %s' % (i, solver.y_start[i]))
 
         print('Start solver...')
         timing_start = time.time()
@@ -66,3 +68,6 @@ def run(slv_path: str, runtime_config=None):
         for i, _ in enumerate(config['y']):
             val = int.from_bytes(solver.y[i*8:(i+1)*8], byteorder='little', signed=True)
             print('y[%s]: %s' % (i, num.to_float(val)))
+
+        for i in range(512):
+            print('y[%s]: %s' % (i, solver.y[i]))
