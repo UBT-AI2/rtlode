@@ -1,7 +1,8 @@
 import uuid
 
-from myhdl import block, SignalType, always_seq, instances, Signal, intbv, always_comb, concat
+from myhdl import block, SignalType, always_seq, instances, Signal, intbv, always_comb, concat, ResetSignal
 
+from generator.cdc_utils import ff_synchronizer, areset_synchronizer
 from utils import num
 from generator.ccip import CcipRx, CcipTx, CcipC0ReqMmioHdr
 from generator.config import Config
@@ -55,7 +56,7 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     rk_interface = RKInterface(
         FlowControl(
             usr_clk,
-            reset,
+            ResetSignal(True, True, False),
             Signal(bool(0)),
             Signal(bool(0))
         ),
@@ -70,13 +71,11 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     y_addr = Signal(num.integer())
 
     # Clock Crossing needed because ccip clock could be faster than usr clk
-    cc_fin_metastable = clone_signal(rk_interface.flow.fin)
-    cc_fin_stable = clone_signal(rk_interface.flow.fin)
-
-    @always_seq(clk.posedge, reset=reset)
-    def clock_crossing():
-        cc_fin_metastable.next = rk_interface.flow.fin
-        cc_fin_stable.next = cc_fin_metastable
+    cdc_fin_stable = clone_signal(rk_interface.flow.fin)
+    cdc_fin_inst = ff_synchronizer(clk, reset, cdc_fin_stable, rk_interface.flow.fin)
+    cdc_reset_inst = areset_synchronizer(usr_clk, reset, rk_interface.flow.rst)
+    cdc_enb = clone_signal(rk_interface.flow.enb)
+    cdc_fin_inst = ff_synchronizer(usr_clk, rk_interface.flow.rst, rk_interface.flow.enb, cdc_enb)
 
     cp2af = CcipRx.create_read_instance(cp2af_port)
     mmio_hdr = CcipC0ReqMmioHdr.create_read_instance(cp2af.c0.hdr)
@@ -99,7 +98,7 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
             elif mmio_hdr.address == csr_address_y_addr:
                 y_addr.next = concat(cp2af.c0.data)[32:]
             elif mmio_hdr.address == csr_address_enb:
-                rk_interface.flow.enb.next = concat(cp2af.c0.data)[1:]
+                cdc_enb.next = concat(cp2af.c0.data)[1:]
 
     af2cp = CcipTx.create_write_instance()
     af2cp_sig = af2cp.packed()
@@ -184,9 +183,9 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
                         if y_addr == index:
                             af2cp.c2.data.next = rk_interface.y[index][64:]
                 elif mmio_hdr.address == csr_address_enb:
-                    af2cp.c2.data.next = rk_interface.flow.enb
+                    af2cp.c2.data.next = cdc_enb
                 elif mmio_hdr.address == csr_address_fin:
-                    af2cp.c2.data.next = cc_fin_stable
+                    af2cp.c2.data.next = cdc_fin_stable
                 # Catch all
                 else:
                     af2cp.c2.data.next = intbv(0)[64:]
