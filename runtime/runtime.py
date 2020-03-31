@@ -3,7 +3,7 @@ import time
 from time import sleep
 
 from runtime.interface import Solver
-from utils import slv
+from utils import slv, num
 
 
 def _load_bitstream(gbs_path: str):
@@ -47,6 +47,11 @@ def run(slv_path: str, runtime_config=None):
         # for i, y in enumerate(config['y']):
         #     solver.y_start_addr = i
         #     solver.y_start_val = y
+        for i, y in enumerate(config['y']):
+            val_bytes = num.from_float(y).to_bytes(8, byteorder='little', signed=True)
+            for bi, b in enumerate(val_bytes):
+                solver.y_start[i*8+bi] = b
+
         print('Start solver...')
         timing_start = time.time()
         solver.enb = 1
@@ -58,5 +63,6 @@ def run(slv_path: str, runtime_config=None):
         # for i, y in enumerate(config['y']):
         #     solver.y_addr = i
         #     print('y[%s] = %s' % (i, solver.y_val))
-        for i in range(512):
-            print('y[%s]: %s' % (i, solver.y[i]))
+        for i, _ in enumerate(config['y']):
+            val = int.from_bytes(solver.y[i*8:(i+1)*8], byteorder='little', signed=True)
+            print('y[%s]: %s' % (i, num.to_float(val)))

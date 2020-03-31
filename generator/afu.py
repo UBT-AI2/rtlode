@@ -1,10 +1,11 @@
 import uuid
 
-from myhdl import block, SignalType, always_seq, instances, Signal, intbv, always_comb, concat, ResetSignal
+from myhdl import block, SignalType, always_seq, instances, Signal, intbv, always_comb, concat, ResetSignal, \
+    ConcatSignal
 
 from generator.cdc_utils import ff_synchronizer, areset_synchronizer
 from utils import num
-from generator.ccip import CcipRx, CcipTx, CcipC0ReqMmioHdr, CcipClAddr
+from generator.ccip import CcipRx, CcipTx, CcipC0ReqMmioHdr, CcipClAddr, CcipClData
 from generator.config import Config
 from generator.runge_kutta import rk_solver, RKInterface
 from generator.utils import clone_signal
@@ -49,6 +50,9 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     afu_id_h = int.from_bytes(afu_id[0:8], 'big')
     afu_id_l = int.from_bytes(afu_id[8:16], 'big')
 
+    # TODO tmp needs reordering
+    afu_enb = Signal(bool(0))
+
     rk_interface = RKInterface(
         FlowControl(
             usr_clk,
@@ -92,7 +96,7 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
             elif mmio_hdr.address == csr_address_y_addr:
                 y_mem_addr.next = concat(cp2af.c0.data)[42:]
             elif mmio_hdr.address == csr_address_enb:
-                cdc_enb.next = concat(cp2af.c0.data)[1:]
+                afu_enb.next = concat(cp2af.c0.data)[1:]
 
     af2cp = CcipTx.create_write_instance()
     af2cp_sig = af2cp.packed()
@@ -115,15 +119,6 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     @always_seq(clk.posedge, reset=None)
     def handle_reads():
         if reset:
-            af2cp.c0.hdr.vc_sel.next = 0
-            af2cp.c0.hdr.rsvd1.next = 0
-            af2cp.c0.hdr.cl_len.next = 0
-            af2cp.c0.hdr.req_type.next = 0
-            af2cp.c0.hdr.rsvd0.next = 0
-            af2cp.c0.hdr.address.next = 0
-            af2cp.c0.hdr.mdata.next = 0
-            af2cp.c0.valid.next = 0
-
             af2cp.c2.hdr.tid.next = 0
             af2cp.c2.mmioRdValid.next = 0
         else:
@@ -157,7 +152,7 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
                 elif mmio_hdr.address == csr_address_y_addr:
                     af2cp.c2.data.next = y_mem_addr[32:]
                 elif mmio_hdr.address == csr_address_enb:
-                    af2cp.c2.data.next = cdc_enb
+                    af2cp.c2.data.next = afu_enb
                 elif mmio_hdr.address == csr_address_fin:
                     af2cp.c2.data.next = cdc_fin
                 # Catch all
@@ -169,6 +164,10 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
 
     # Host Memory Writes
     write_send = Signal(bool(0))
+    if len(rk_interface.y) > 1:
+        write_data = ConcatSignal(*rk_interface.y)
+    else:
+        write_data = rk_interface.y
 
     @always_seq(clk.posedge, reset=None)
     def mem_writes():
@@ -189,10 +188,40 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
         else:
             af2cp.c1.hdr.sop.next = 1
             af2cp.c1.hdr.address.next = y_mem_addr
-            af2cp.c1.data.next = 0xbeefbeefbeefbeef  # TODO
+            af2cp.c1.data.next = write_data
             if cdc_fin and not write_send and not cp2af.c1TxAlmFull:
                 af2cp.c1.valid.next = 1
                 write_send.next = True
+
+    # Host Memory Reads
+    read_request_send = Signal(bool(0))
+
+    @always_seq(clk.posedge, reset=None)
+    def mem_reads_request():
+        if reset:
+            af2cp.c0.hdr.vc_sel.next = 0
+            af2cp.c0.hdr.rsvd1.next = 0
+            af2cp.c0.hdr.cl_len.next = 0
+            af2cp.c0.hdr.req_type.next = 0
+            af2cp.c0.hdr.rsvd0.next = 0
+            af2cp.c0.hdr.address.next = 0
+            af2cp.c0.hdr.mdata.next = 0  # User defined value, returned in response.
+            af2cp.c0.valid.next = 0
+
+            read_request_send.next = False
+        else:
+            af2cp.c0.hdr.address.next = y_start_mem_addr
+            if afu_enb and not read_request_send and not cp2af.c0TxAlmFull:
+                af2cp.c0.valid.next = 1
+                read_request_send.next = True
+
+    @always_seq(clk.posedge, reset=reset)
+    def mem_reads_responses():
+        if cp2af.c0.rspValid:
+            if cp2af.c0.hdr.mdata == 0:
+                for index in range(config.system_size):
+                    rk_interface.y_start[index].next = concat(cp2af.c0.data)[(index + 1) * num.TOTAL_SIZE:index * num.TOTAL_SIZE]
+                cdc_enb.next = True
 
     rk_insts = rk_solver(config, rk_interface)
 
