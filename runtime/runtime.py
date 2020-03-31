@@ -58,4 +58,5 @@ def run(slv_path: str, runtime_config=None):
         # for i, y in enumerate(config['y']):
         #     solver.y_addr = i
         #     print('y[%s] = %s' % (i, solver.y_val))
-        print('Buffer: ' % solver.y[:512])
+        for i in range(len(solver.y)):
+            print('y[%s]: %s' % (i, solver.y[i]))
