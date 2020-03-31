@@ -24,9 +24,9 @@ class Solver:
         self._fpga = fpga.open(tokens[0], fpga.OPEN_SHARED)
         self._handle = self._fpga.__enter__()
 
-        self.y_start = self._fpga.allocate_shared_buffer(self._handle, self._buffer_size)
+        self.y_start = fpga.allocate_shared_buffer(self._handle, self._buffer_size)
         self._handle.write_csr64(self._csr_addresses['y_start_mem_addr'], self.y_start.io_address() >> 6)
-        self.y = self._fpga.allocate_shared_buffer(self._handle, self._buffer_size)
+        self.y = fpga.allocate_shared_buffer(self._handle, self._buffer_size)
         self._handle.write_csr64(self._csr_addresses['y_mem_addr'], self.y.io_address() >> 6)
         return self
 
