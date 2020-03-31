@@ -48,7 +48,7 @@ def run(slv_path: str, runtime_config=None):
         #     solver.y_start_addr = i
         #     solver.y_start_val = y
         for i, y in enumerate(config['y']):
-            val_bytes = num.from_float(y).to_bytes(8, byteorder='little', signed=True)
+            val_bytes = int(num.from_float(y)).to_bytes(8, byteorder='little', signed=True)
             for bi, b in enumerate(val_bytes):
                 solver.y_start[i*8+bi] = b
 
