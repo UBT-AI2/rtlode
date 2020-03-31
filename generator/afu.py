@@ -167,7 +167,7 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     if len(rk_interface.y) > 1:
         write_data = ConcatSignal(*rk_interface.y)
     else:
-        write_data = rk_interface.y
+        write_data = rk_interface.y[0]
 
     @always_seq(clk.posedge, reset=None)
     def mem_writes():
