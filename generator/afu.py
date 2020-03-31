@@ -75,7 +75,7 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     cdc_fin_inst = ff_synchronizer(clk, reset, cdc_fin_stable, rk_interface.flow.fin)
     cdc_reset_inst = areset_synchronizer(usr_clk, reset, rk_interface.flow.rst)
     cdc_enb = clone_signal(rk_interface.flow.enb)
-    cdc_fin_inst = ff_synchronizer(usr_clk, rk_interface.flow.rst, rk_interface.flow.enb, cdc_enb)
+    cdc_enb_inst = ff_synchronizer(usr_clk, rk_interface.flow.rst, rk_interface.flow.enb, cdc_enb)
 
     cp2af = CcipRx.create_read_instance(cp2af_port)
     mmio_hdr = CcipC0ReqMmioHdr.create_read_instance(cp2af.c0.hdr)
