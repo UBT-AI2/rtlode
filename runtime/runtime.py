@@ -39,14 +39,14 @@ def run(slv_path: str, runtime_config=None):
 
     # Access AFU (get Interface Object)
     print('Aquire ownership of afu...')
-    with Solver(config) as solver:
+    with Solver(config, 4096) as solver:
         print('Configure solver...')
         solver.h = config['h']
         solver.n = config['n']
         solver.x_start = 0
-        for i, y in enumerate(config['y']):
-            solver.y_start_addr = i
-            solver.y_start_val = y
+        # for i, y in enumerate(config['y']):
+        #     solver.y_start_addr = i
+        #     solver.y_start_val = y
         print('Start solver...')
         timing_start = time.time()
         solver.enb = 1
@@ -55,6 +55,7 @@ def run(slv_path: str, runtime_config=None):
         timing_end = time.time()
         print('Solver finished in: %s' % (timing_end - timing_start))
         print('x = %s' % solver.x)
-        for i, y in enumerate(config['y']):
-            solver.y_addr = i
-            print('y[%s] = %s' % (i, solver.y_val))
+        # for i, y in enumerate(config['y']):
+        #     solver.y_addr = i
+        #     print('y[%s] = %s' % (i, solver.y_val))
+        print('Buffer: ' % solver.y[:512])
