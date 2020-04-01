@@ -192,6 +192,8 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
             if cdc_fin and not write_send and not cp2af.c1TxAlmFull:
                 af2cp.c1.valid.next = 1
                 write_send.next = True
+            else:
+                af2cp.c1.valid.next = 0
 
     # Host Memory Reads
     read_request_send = Signal(bool(0))
@@ -214,6 +216,8 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
             if afu_enb and not read_request_send and not cp2af.c0TxAlmFull:
                 af2cp.c0.valid.next = 1
                 read_request_send.next = True
+            else:
+                af2cp.c0.valid.next = 0
 
     @always_seq(clk.posedge, reset=reset)
     def mem_reads_responses():
