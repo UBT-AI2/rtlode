@@ -167,7 +167,7 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     if len(rk_interface.y) > 1:
         write_data = ConcatSignal(*rk_interface.y)
     else:
-        write_data = 0xBEEFBEEFBEEFBEEF
+        write_data = rk_interface.y[0]
 
     @always_seq(clk.posedge, reset=None)
     def mem_writes():
@@ -224,7 +224,7 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
         if cp2af.c0.rspValid:
             if cp2af.c0.hdr.mdata == 0:
                 for index in range(config.system_size):
-                    rk_interface.y_start[index].next = 281474976710656  #concat(cp2af.c0.data)[(index + 1) * num.TOTAL_SIZE:index * num.TOTAL_SIZE]
+                    rk_interface.y_start[index].next = concat(cp2af.c0.data)[(index + 1) * num.TOTAL_SIZE:index * num.TOTAL_SIZE]
                 cdc_enb.next = True
 
     rk_insts = rk_solver(config, rk_interface)
