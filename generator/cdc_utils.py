@@ -116,9 +116,8 @@ def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
     p_rd_addr_gray = clone_signal(c_rd_addr_gray)
 
     @always_comb
-    def internal_signals():
+    def wr_signal():
         do_write.next = p.wr and not p.full
-        do_read.next = c.rd and not c.empty
 
     @always_seq(p.clk, reset=p.rst)
     def wr_pointer():
@@ -140,6 +139,10 @@ def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
     def check_if_full():
         p.full.next = (p_wr_addr_gray[:buffer_size_bits - 1] == ~p_rd_addr_gray[:buffer_size_bits - 1])\
                       and (p_wr_addr_gray[buffer_size_bits - 1:] == p_rd_addr_gray[buffer_size_bits - 1:])
+
+    @always_comb
+    def rd_signal():
+        do_read.next = c.rd and not c.empty
 
     @always_seq(c.clk, reset=c.rst)
     def rd_pointer():
