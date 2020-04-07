@@ -20,6 +20,22 @@ class PackedReadStruct(_PackedStruct):
     """
     Used to describe a read instance of a StructDescription.
     """
+    @staticmethod
+    def _definition_to_signal(definition, data, high_index, low_index):
+        if isinstance(definition, BitVector):
+            return data(high_index, low_index)
+        elif isinstance(definition, List):
+            vector = []
+            for el in definition.as_list():
+                low_index = high_index - len(el)
+                vector.append(
+                    PackedReadStruct._definition_to_signal(el, data, high_index, low_index)
+                )
+                high_index = low_index
+            return vector
+        elif issubclass(definition, StructDescription):
+            return definition.create_read_instance(data, high_index, low_index)
+
     def __init__(self, fields, data, high_lim, low_lim):
         if isinstance(data, PackedReadStruct):
             data = data._data
@@ -32,12 +48,7 @@ class PackedReadStruct(_PackedStruct):
             low_index = high_index - len(value)
             if low_index < low_lim:
                 raise Exception('PackedReadStruct trying to access data below lower limit.')
-
-            if isinstance(value, BitVector):
-                fields[name] = data(high_index, low_index)
-            elif issubclass(value, StructDescription):
-                fields[name] = value.create_read_instance(data, high_index, low_index)
-
+            fields[name] = PackedReadStruct._definition_to_signal(value, data, high_index, low_index)
             high_index = low_index
         super().__init__(fields)
 
@@ -52,15 +63,40 @@ class PackedWriteStruct(_PackedStruct):
     """
     Used to describe a write instance of a StructDescription.
     """
+    @staticmethod
+    def _definition_to_field(value):
+        if isinstance(value, BitVector):
+            return value.create_instance()
+        elif isinstance(value, List):
+            return [PackedWriteStruct._definition_to_field(el) for el in value.as_list()]
+        elif issubclass(value, StructDescription):
+            return value.create_write_instance()
+        raise Exception('Unsupported field type in StructDescription.')
+
+    @staticmethod
+    def _field_to_signal(value):
+        if isinstance(value, SignalType):
+            return [value]
+        elif isinstance(value, list):
+            vector = []
+            for el in value:
+                vector.extend(PackedWriteStruct._field_to_signal(el))
+            return vector
+        elif isinstance(value, PackedWriteStruct):
+            return value._packed()
+        else:
+            raise Exception('Unsupported field type in PackedWriteStruct obj.')
+
     def __init__(self, fields):
         for name, value in fields.items():
-            if isinstance(value, BitVector):
-                fields[name] = value.create_instance()
-            elif issubclass(value, StructDescription):
-                fields[name] = value.create_write_instance()
+            fields[name] = PackedWriteStruct._definition_to_field(value)
         super().__init__(fields)
 
     def packed(self):
+        """
+        Returns a ConcatSignal following the signals of the struct.
+        :return: concatted signal
+        """
         bitvector = self._packed()
 
         if len(bitvector) == 0:
@@ -71,18 +107,9 @@ class PackedWriteStruct(_PackedStruct):
             return ConcatSignal(*bitvector)
 
     def _packed(self):
-        """
-        Returns a ConcatSignal following the signals of the struct.
-        :return: concatted signal
-        """
         bitvector = []
         for name, value in self._fields.items():
-            if isinstance(value, SignalType):
-                bitvector.append(value)
-            elif isinstance(value, PackedWriteStruct):
-                bitvector.extend(value._packed())
-            else:
-                raise Exception('Unsupported field type in PackedWriteStruct obj.')
+            bitvector.extend(PackedWriteStruct._field_to_signal(value))
         return bitvector
 
 
@@ -102,6 +129,25 @@ class BitVector:
         :return: signal representation
         """
         return Signal(intbv(0)[self._nbr_bits:0])
+
+
+class List:
+    """
+    Can be used to describe a list in a StructDescription.
+    """
+    def __init__(self, size, inner_type):
+        self._size = size
+        self._inner_type = inner_type
+
+    def __len__(self):
+        return self._size * len(self._inner_type)
+
+    def as_list(self):
+        """
+        Unfolds list descriptopn to a list with description elements.
+        :return: list of description elements
+        """
+        return [self._inner_type for _ in range(self._size)]
 
 
 class _LengthMetaclass(type):
@@ -144,6 +190,8 @@ class StructDescription(metaclass=_LengthMetaclass):
     def _check_wellformness(cls):
         for name, value in cls._get_props().items():
             if isinstance(value, BitVector):
+                continue
+            elif isinstance(value, List):
                 continue
             elif inspect.isclass(value) and issubclass(value, StructDescription):
                 continue
