@@ -63,11 +63,11 @@ class Solver:
         assert len(y_start) == system_size
         for i in range(system_size):
             input_data.y_start[i].next = num.from_float(y_start[i])
-        input_data.h.next = h
-        input_data.n.next = n
+        input_data.h.next = int(h)
+        input_data.n.next = int(n)
 
         self._curent_input_id = self._curent_input_id + 1
-        input_data.id.next = self._curent_input_id
+        input_data.id.next = int(self._curent_input_id)
 
         input_data.update()
 
