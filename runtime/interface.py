@@ -88,6 +88,9 @@ class Solver:
         output_raw.next = int.from_bytes(self._output_buffer[0:int(len(output_desc) / 8)], byteorder='little')
         output_raw._update()
 
+        for i, val in enumerate(self._output_buffer[0:int(len(output_desc) / 8)]):
+            print('y_raw[%s] = %s' % (i, val))
+
         output_data = output_desc.create_read_instance(output_raw)
         if output_data.id > self.output_ack_id:
             # New data available
