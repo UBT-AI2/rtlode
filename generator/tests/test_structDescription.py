@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from myhdl import intbv, Signal
 
-from generator.packed_struct import StructDescription, BitVector, List
+from common.packed_struct import StructDescription, BitVector, List
 
 
 class TestA(StructDescription):
@@ -107,6 +107,20 @@ class TestStructDescription(TestCase):
         self.assertEqual(0, write_sig[11:10])
         self.assertEqual(1, write_sig[10:9])
         self.assertEqual(6, write_sig[9:4])
+        self.assertEqual(1, write_sig[4:2])
+        self.assertEqual(2, write_sig[2:0])
+
+    def test_write_update(self):
+        write_inst = TestA.create_write_instance()
+        write_inst.a.next = 1
+        write_inst.b.next = 5
+        write_inst.c[0].next = 1
+        write_inst.c[1].next = 2
+        write_inst.update()
+        write_sig = write_inst.packed()
+
+        self.assertEqual(1, write_sig[10:9])
+        self.assertEqual(5, write_sig[9:4])
         self.assertEqual(1, write_sig[4:2])
         self.assertEqual(2, write_sig[2:0])
 

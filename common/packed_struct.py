@@ -87,6 +87,18 @@ class PackedWriteStruct(_PackedStruct):
         else:
             raise Exception('Unsupported field type in PackedWriteStruct obj.')
 
+    @staticmethod
+    def _update_field(value):
+        if isinstance(value, SignalType):
+            value._update()
+        elif isinstance(value, list):
+            for el in value:
+                PackedWriteStruct._update_field(el)
+        elif isinstance(value, PackedWriteStruct):
+            value.update()
+        else:
+            raise Exception('Unsupported field type in PackedWriteStruct obj.')
+
     def __init__(self, fields):
         for name, value in fields.items():
             fields[name] = PackedWriteStruct._definition_to_field(value)
@@ -108,9 +120,18 @@ class PackedWriteStruct(_PackedStruct):
 
     def _packed(self):
         bitvector = []
-        for name, value in self._fields.items():
+        for _, value in self._fields.items():
             bitvector.extend(PackedWriteStruct._field_to_signal(value))
         return bitvector
+
+    def update(self):
+        """
+        Updates all internal Signals.
+        :return:
+        """
+        for _, value in self._fields.items():
+            PackedWriteStruct._update_field(value)
+
 
 
 class BitVector:
