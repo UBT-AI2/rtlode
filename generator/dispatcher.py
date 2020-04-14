@@ -2,7 +2,7 @@ from myhdl import block, always_seq, enum, Signal, instances, always_comb
 
 from generator.cdc_utils import FifoConsumer, FifoProducer
 from generator.flow import FlowControl
-from generator.hram import get_input_desc, get_output_desc
+from common.data_desc import get_input_desc, get_output_desc
 from generator.runge_kutta import SolverInterface, rk_solver
 from utils import num
 

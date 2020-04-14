@@ -5,7 +5,8 @@ from generator.csr import csr_handler, CsrHeader, CsrSignals
 from generator.ccip import CcipRx, CcipTx
 from generator.config import Config
 from generator.dispatcher import dispatcher
-from generator.hram import hram_handler, get_input_desc, get_output_desc
+from generator.hram import hram_handler
+from common.data_desc import get_input_desc, get_output_desc
 from generator.packed_struct import BitVector
 
 
