@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from myhdl import SignalType, ResetSignal, Signal
 
@@ -7,10 +7,10 @@ from utils import num
 
 @dataclass
 class FlowControl:
-    clk: SignalType
-    rst: ResetSignal
-    enb: SignalType
-    fin: SignalType
+    clk: SignalType = field(default_factory=lambda: Signal(bool(0)))
+    rst: ResetSignal = field(default_factory=lambda: ResetSignal(True, True, False))
+    enb: SignalType = field(default_factory=lambda: Signal(bool(0)))
+    fin: SignalType = field(default_factory=lambda: Signal(bool(0)))
 
     def clk_edge(self):
         return self.clk.posedge
