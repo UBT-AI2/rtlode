@@ -100,10 +100,14 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
                 # Custom AFU CSR
                 if mmio_hdr.address == csr_address_input_addr:
                     af2cp.c2.data.next = data.input_addr
+                elif mmio_hdr.address == csr_address_input_ack_id:
+                    af2cp.c2.data.next = data.input_ack_id
                 elif mmio_hdr.address == csr_address_output_addr:
                     af2cp.c2.data.next = data.output_addr
+                elif mmio_hdr.address == csr_address_output_ack_id:
+                    af2cp.c2.data.next = data.output_ack_id
                 elif mmio_hdr.address == csr_address_enb:
-                    af2cp.c2.data.next = data.enb  # TODO ack_id's missing
+                    af2cp.c2.data.next = data.enb
                 # Catch all
                 else:
                     af2cp.c2.data.next = intbv(0)[64:]
