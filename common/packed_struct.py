@@ -133,7 +133,6 @@ class PackedWriteStruct(_PackedStruct):
             PackedWriteStruct._update_field(value)
 
 
-
 class BitVector:
     """
     Can be used to describe a bitfield in a StructDescription.

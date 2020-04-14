@@ -80,7 +80,9 @@ class Solver:
         return self._curent_input_id
 
     def fetch_output(self) -> Union[None, Dict]:
-        output_desc = data_desc.get_output_desc(self._config)
+        system_size = len(self._config['y'])
+
+        output_desc = data_desc.get_output_desc(system_size)
         output_raw = BitVector(len(output_desc)).create_instance()
         assert (len(output_desc) / 8).is_integer()
         output_raw.next = int.from_bytes(self._output_buffer[0:int(len(output_desc) / 8)], byteorder='little')
