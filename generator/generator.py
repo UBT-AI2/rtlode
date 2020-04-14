@@ -9,9 +9,10 @@ from myhdl import Simulation, Signal, ResetSignal, delay
 
 from generator.ccip import CcipRx, CcipTx
 from generator.config import Config
-from generator.afu import afu, csr_addresses
+from generator.afu import afu
+from generator.csr import csr_addresses
 from generator.packed_struct import BitVector
-from generator.runge_kutta import rk_solver, RKInterface
+from generator.runge_kutta import rk_solver, SolverInterface
 from generator.flow import FlowControl
 from utils import slv, num
 
@@ -94,7 +95,7 @@ def simulate(*config_files):
     x = Signal(num.default())
     y = [Signal(num.default()) for _ in range(cfg.system_size)]
 
-    interface = RKInterface(FlowControl(clk, rst, enable, finished), h, n, x_start, y_start, x, y)
+    interface = SolverInterface(FlowControl(clk, rst, enable, finished), h, n, x_start, y_start, x, y)
 
     def test():
         rst.next = True

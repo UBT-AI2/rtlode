@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field, InitVar
 from typing import List
 
-from myhdl import block, instances, ResetSignal, SignalType, always
+from myhdl import block, instances, ResetSignal, SignalType, always, Signal
 
 import generator.calc
 from utils import num
@@ -14,21 +14,28 @@ from generator.pipeline import Pipeline
 
 
 @dataclass
-class RKInterface:
+class SolverInterface:
     """
     Internal runge kutta interface used by the solver.
     """
-    flow: FlowControl
-    h: SignalType
-    n: SignalType
-    x_start: SignalType
-    y_start: List[SignalType]
-    x: SignalType
-    y: List[SignalType]
+    system_size: InitVar[int]
+    flow: FlowControl = field(default_factory=FlowControl)
+    h: SignalType = field(default_factory=lambda: Signal(num.default()))
+    n: SignalType = field(default_factory=lambda: Signal(num.integer()))
+    x_start: SignalType = field(default_factory=lambda: Signal(num.default()))
+    y_start: List[SignalType] = field(default=None)
+    x: SignalType = field(default_factory=lambda: Signal(num.default()))
+    y: List[SignalType] = field(default=None)
+
+    def __post_init__(self, system_size):
+        if self.y_start is None:
+            self.y_start = [Signal(num.default()) for _ in range(system_size)]
+        if self.y is None:
+            self.y = [Signal(num.default()) for _ in range(system_size)]
 
 
 @block
-def rk_solver(config: Config, interface: RKInterface):
+def rk_solver(config: Config, interface: SolverInterface):
     """
     Implements logic for a rk solver.
 
@@ -42,7 +49,8 @@ def rk_solver(config: Config, interface: RKInterface):
     v = [clone_signal_structure(y_n) for _ in range(config.stages)]
 
     pipe_reset = ResetSignal(False, True, False)
-    pipe_flow = interface.flow.create_subflow(rst=pipe_reset, enb=interface.flow.enb)
+    pipe_enb = Signal(bool(0))
+    pipe_flow = interface.flow.create_subflow(rst=pipe_reset, enb=pipe_enb)
     pipe = Pipeline()
 
     stage_pipe = Pipeline()
@@ -68,38 +76,41 @@ def rk_solver(config: Config, interface: RKInterface):
     def calc_final():
         if interface.flow.rst == interface.flow.rst.active:
             pipe_reset.next = True
+            pipe_enb.next = False
             interface.flow.fin.next = False
             step_counter.next = 0
         else:
-            if interface.flow.fin:
+            if not interface.flow.enb or interface.flow.fin:
                 pass
-            elif pipe_reset:
-                pipe_reset.next = False
-            elif not interface.flow.enb:
-                interface.x.next = interface.x_start
-                for i in range(config.system_size):
-                    interface.y[i].next = interface.y_start[i]
-            elif pipe_flow.fin:
-                # Copy calculated values to working ones
-                interface.x.next = x_n
-                for i in range(config.system_size):
-                    interface.y[i].next = y_n[i]
-                # Increase step counter
-                step_counter.next = step_counter + 1
-                # Reset all stages
-                pipe_reset.next = True
-
-                # Print debug informations
-                if __debug__:
+            else:
+                if not pipe_enb:
+                    interface.x.next = interface.x_start
                     for i in range(config.system_size):
-                        print('%d %f: %s : %f' % (
-                            i,
-                            num.to_float(x_n),
-                            list(map(num.to_float, [el[i] for el in v])),
-                            num.to_float(y_n[i])
-                        ))
+                        interface.y[i].next = interface.y_start[i]
+                    pipe_enb.next = True
+                elif pipe_flow.fin:
+                    # Copy calculated values to working ones
+                    interface.x.next = x_n
+                    for i in range(config.system_size):
+                        interface.y[i].next = y_n[i]
+                    # Increase step counter
+                    step_counter.next = step_counter + 1
+                    # Reset all stages
+                    pipe_reset.next = True
 
-                if step_counter + 1 >= interface.n:
-                    interface.flow.fin.next = True
+                    # Print debug informations
+                    if __debug__:
+                        for i in range(config.system_size):
+                            print('%d %f: %s : %f' % (
+                                i,
+                                num.to_float(x_n),
+                                list(map(num.to_float, [el[i] for el in v])),
+                                num.to_float(y_n[i])
+                            ))
+
+                    if step_counter + 1 >= interface.n:
+                        interface.flow.fin.next = True
+                else:
+                    pipe_reset.next = False
 
     return instances()

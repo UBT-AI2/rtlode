@@ -1,26 +1,12 @@
-import uuid
+from myhdl import block, SignalType, instances, always_comb, ResetSignal
 
-from myhdl import block, SignalType, always_seq, instances, Signal, intbv, always_comb, concat, ResetSignal, \
-    ConcatSignal
-
-from generator.cdc_utils import ff_synchronizer, areset_synchronizer
-from utils import num
-from generator.ccip import CcipRx, CcipTx, CcipC0ReqMmioHdr, CcipClAddr, CcipClData
+from generator.cdc_utils import async_fifo, FifoProducer, FifoConsumer, areset_synchronizer
+from generator.csr import csr_handler, CsrHeader, CsrSignals
+from generator.ccip import CcipRx, CcipTx
 from generator.config import Config
-from generator.runge_kutta import rk_solver, RKInterface
-from generator.utils import clone_signal
-from generator.flow import FlowControl
-
-csr_addresses = {
-    'h': 0x0020,
-    'n': 0x0030,
-    'x_start': 0x0040,
-    'y_start_mem_addr': 0x0050,
-    'x': 0x0070,
-    'y_mem_addr': 0x0080,
-    'enb': 0x00A0,
-    'fin': 0x00B0
-}
+from generator.dispatcher import dispatcher
+from generator.hram import hram_handler, get_input_desc, get_output_desc
+from generator.packed_struct import BitVector
 
 
 @block
@@ -37,196 +23,36 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     :param af2cp_port: cci afu to cpu interface
     :return: myhdl instances of the afu
     """
-    csr_address_h = csr_addresses['h']
-    csr_address_n = csr_addresses['n']
-    csr_address_x_start = csr_addresses['x_start']
-    csr_address_y_start_addr = csr_addresses['y_start_mem_addr']
-    csr_address_x = csr_addresses['x']
-    csr_address_y_addr = csr_addresses['y_mem_addr']
-    csr_address_enb = csr_addresses['enb']
-    csr_address_fin = csr_addresses['fin']
-
-    afu_id = uuid.UUID(config.uuid).bytes
-    afu_id_h = int.from_bytes(afu_id[0:8], 'big')
-    afu_id_l = int.from_bytes(afu_id[8:16], 'big')
-
-    # TODO tmp needs reordering
-    afu_enb = Signal(bool(0))
-
-    rk_interface = RKInterface(
-        FlowControl(
-            usr_clk,
-            ResetSignal(True, True, False),
-            Signal(bool(0)),
-            Signal(bool(0))
-        ),
-        Signal(num.default()),
-        Signal(num.integer()),
-        Signal(num.default()),
-        [clone_signal(Signal(num.default())) for _ in range(config.system_size)],
-        Signal(num.default()),
-        [clone_signal(Signal(num.default())) for _ in range(config.system_size)]
-    )
-
-    # Host memory addresses
-    y_start_mem_addr = CcipClAddr.create_instance()
-    y_mem_addr = CcipClAddr.create_instance()
-
-    # Clock Crossing needed because ccip clock could be faster than usr clk
-    cdc_fin = clone_signal(rk_interface.flow.fin)
-    cdc_fin_inst = ff_synchronizer(clk, reset, cdc_fin, rk_interface.flow.fin)
-    cdc_reset_inst = areset_synchronizer(usr_clk, reset, rk_interface.flow.rst)
-    cdc_enb = clone_signal(rk_interface.flow.enb)
-    cdc_enb_inst = ff_synchronizer(usr_clk, rk_interface.flow.rst, rk_interface.flow.enb, cdc_enb)
-
+    # Initiating of ccip ports
     cp2af = CcipRx.create_read_instance(cp2af_port)
-    mmio_hdr = CcipC0ReqMmioHdr.create_read_instance(cp2af.c0.hdr)
-
-    @always_seq(clk.posedge, reset=reset)
-    def handle_writes():
-        if cp2af.c0.mmioWrValid:
-            if mmio_hdr.address == csr_address_h:
-                rk_interface.h.next = concat(cp2af.c0.data)[64:]
-            elif mmio_hdr.address == csr_address_n:
-                rk_interface.n.next = concat(cp2af.c0.data)[32:]
-            elif mmio_hdr.address == csr_address_x_start:
-                rk_interface.x_start.next = concat(cp2af.c0.data)[64:]
-            elif mmio_hdr.address == csr_address_y_start_addr:
-                y_start_mem_addr.next = concat(cp2af.c0.data)[42:]
-            elif mmio_hdr.address == csr_address_y_addr:
-                y_mem_addr.next = concat(cp2af.c0.data)[42:]
-            elif mmio_hdr.address == csr_address_enb:
-                afu_enb.next = concat(cp2af.c0.data)[1:]
-
     af2cp = CcipTx.create_write_instance()
     af2cp_sig = af2cp.packed()
-
-    feature_header = intbv(0)[64:]
-    feature_header[64:60] = 0b0001  # Feature type = AFU
-    feature_header[60:52] = 0b0  # reserved
-    feature_header[52:48] = 0b0  # AFU minor revision = 0
-    feature_header[48:41] = 0b0  # reserved
-    feature_header[40] = True  # end of DFH list = 1
-    feature_header[40:16] = 0b0  # next DFH offset = 0
-    feature_header[16:12] = 0b0  # afu major revision = 0
-    feature_header[12:0] = 0b0  # feature ID = 0
-    feature_header = int(feature_header)
 
     @always_comb
     def assign_af2cp():
         af2cp_port.next = af2cp_sig
 
-    @always_seq(clk.posedge, reset=None)
-    def handle_reads():
-        if reset:
-            af2cp.c2.hdr.tid.next = 0
-            af2cp.c2.mmioRdValid.next = 0
-        else:
-            if cp2af.c0.mmioRdValid:
-                # Copy tid for request response mapping
-                af2cp.c2.hdr.tid.next = mmio_hdr.tid
-                # Send response
-                af2cp.c2.mmioRdValid.next = 1
-                # Necessary registers
-                if mmio_hdr.address == 0x0000:  # AFU_HEADER
-                    af2cp.c2.data.next = feature_header
-                elif mmio_hdr.address == 0x0002:  # AFU_ID_L
-                    af2cp.c2.data.next = afu_id_l
-                elif mmio_hdr.address == 0x0004:  # AFU_ID_H
-                    af2cp.c2.data.next = afu_id_h
-                elif mmio_hdr.address == 0x0006:  # DFH_RSVD0
-                    af2cp.c2.data.next = intbv(0)[64:]
-                elif mmio_hdr.address == 0x0008:  # DFH_RSVD1
-                    af2cp.c2.data.next = intbv(0)[64:]
-                # Custom AFU CSR
-                elif mmio_hdr.address == csr_address_h:
-                    af2cp.c2.data.next = rk_interface.h[64:]
-                elif mmio_hdr.address == csr_address_n:
-                    af2cp.c2.data.next = rk_interface.n[32:]
-                elif mmio_hdr.address == csr_address_x_start:
-                    af2cp.c2.data.next = rk_interface.x_start[64:]
-                elif mmio_hdr.address == csr_address_y_start_addr:
-                    af2cp.c2.data.next = y_start_mem_addr[32:]
-                elif mmio_hdr.address == csr_address_x:
-                    af2cp.c2.data.next = rk_interface.x[64:]
-                elif mmio_hdr.address == csr_address_y_addr:
-                    af2cp.c2.data.next = y_mem_addr[32:]
-                elif mmio_hdr.address == csr_address_enb:
-                    af2cp.c2.data.next = afu_enb
-                elif mmio_hdr.address == csr_address_fin:
-                    af2cp.c2.data.next = cdc_fin
-                # Catch all
-                else:
-                    af2cp.c2.data.next = intbv(0)[64:]
-            else:
-                # Reset valid marker from previous response
-                af2cp.c2.mmioRdValid.next = 0
+    csr = CsrSignals()
+    csr_inst = csr_handler(CsrHeader(config.uuid), clk, reset, cp2af, af2cp, csr)
 
-    # Host Memory Writes
-    write_send = Signal(bool(0))
-    if len(rk_interface.y) > 1:
-        write_data = ConcatSignal(*rk_interface.y)
-    else:
-        write_data = rk_interface.y[0]
+    usr_reset = ResetSignal(True, True, False)
+    cdc_usr_reset = areset_synchronizer(usr_clk, reset, usr_reset)
 
-    @always_seq(clk.posedge, reset=None)
-    def mem_writes():
-        if reset:
-            af2cp.c1.hdr.rsvd2.next = 0
-            af2cp.c1.hdr.vc_sel.next = 0
-            af2cp.c1.hdr.sop.next = 0
-            af2cp.c1.hdr.rsvd1.next = 0
-            af2cp.c1.hdr.cl_len.next = 0
-            af2cp.c1.hdr.req_type.next = 0
-            af2cp.c1.hdr.rsvd0.next = 0
-            af2cp.c1.hdr.address.next = 0
-            af2cp.c1.hdr.mdata.next = 0
-            af2cp.c1.data.next = 0
-            af2cp.c1.valid.next = 0
+    input_desc_vec = BitVector(len(get_input_desc(config)))
+    output_desc_vec = BitVector(len(get_output_desc(config)))
 
-            write_send.next = False
-        else:
-            af2cp.c1.hdr.sop.next = 1
-            af2cp.c1.hdr.address.next = y_mem_addr
-            af2cp.c1.data.next = write_data
-            if cdc_fin and not write_send and not cp2af.c1TxAlmFull:
-                af2cp.c1.valid.next = 1
-                write_send.next = True
-            else:
-                af2cp.c1.valid.next = 0
+    in_fifo_p = FifoProducer(clk, reset, input_desc_vec.create_instance())
+    in_fifo_c = FifoConsumer(usr_clk, usr_reset, input_desc_vec.create_instance())
+    in_fifo = async_fifo(in_fifo_p, in_fifo_c, buffer_size_bits=4)
 
-    # Host Memory Reads
-    read_request_send = Signal(bool(0))
+    out_fifo_p = FifoProducer(usr_clk, usr_reset, output_desc_vec.create_instance())
+    out_fifo_c = FifoConsumer(clk, reset, output_desc_vec.create_instance())
+    out_fifo = async_fifo(out_fifo_p, out_fifo_c, buffer_size_bits=4)
 
-    @always_seq(clk.posedge, reset=None)
-    def mem_reads_request():
-        if reset:
-            af2cp.c0.hdr.vc_sel.next = 0
-            af2cp.c0.hdr.rsvd1.next = 0
-            af2cp.c0.hdr.cl_len.next = 0
-            af2cp.c0.hdr.req_type.next = 0
-            af2cp.c0.hdr.rsvd0.next = 0
-            af2cp.c0.hdr.address.next = 0
-            af2cp.c0.hdr.mdata.next = 0  # User defined value, returned in response.
-            af2cp.c0.valid.next = 0
+    # hram_handler, running at clk
+    hram_inst = hram_handler(config, cp2af, af2cp, csr, data_out=in_fifo_p, data_in=out_fifo_c)
 
-            read_request_send.next = False
-        else:
-            af2cp.c0.hdr.address.next = y_start_mem_addr
-            if afu_enb and not read_request_send and not cp2af.c0TxAlmFull:
-                af2cp.c0.valid.next = 1
-                read_request_send.next = True
-            else:
-                af2cp.c0.valid.next = 0
-
-    @always_seq(clk.posedge, reset=reset)
-    def mem_reads_responses():
-        if cp2af.c0.rspValid:
-            if cp2af.c0.hdr.mdata == 0:
-                for index in range(config.system_size):
-                    rk_interface.y_start[index].next = concat(cp2af.c0.data)[(index + 1) * num.TOTAL_SIZE:index * num.TOTAL_SIZE]
-                cdc_enb.next = True
-
-    rk_insts = rk_solver(config, rk_interface)
+    # Dispatcher with multiple subsequent solver, running at usr_clk
+    disp_inst = dispatcher(config, data_in=in_fifo_c, data_out=out_fifo_p)
 
     return instances()

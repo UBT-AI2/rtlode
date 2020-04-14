@@ -1,7 +1,7 @@
 from myhdl import block, always_seq, always_comb, Signal, intbv
 
 from generator.flow import FlowControl
-from utils.num import DOUBLE_MIN_VALUE, DOUBLE_MAX_VALUE, INTEGER_SIZE, FRACTION_SIZE
+from utils.num import DOUBLE_MIN_VALUE, DOUBLE_MAX_VALUE, NONFRACTION_SIZE, FRACTION_SIZE
 
 
 @block
@@ -42,7 +42,7 @@ def mul(in_a, in_b, out_c, flow: FlowControl = None):
 
     @always_comb
     def resize():
-        out_c.next = reg[INTEGER_SIZE + FRACTION_SIZE + 1 + FRACTION_SIZE:FRACTION_SIZE].signed()
+        out_c.next = reg[NONFRACTION_SIZE + FRACTION_SIZE + 1 + FRACTION_SIZE:FRACTION_SIZE].signed()
 
     if flow is not None:
         def calc():
