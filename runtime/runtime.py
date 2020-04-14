@@ -41,6 +41,7 @@ def run(slv_path: str, runtime_config=None):
     print('Aquiring ownership of afu...')
     with Solver(config, 4096) as solver:
         print('Starting solver...')
+        solver.enb = True
 
         timing_start = time.time()
 
