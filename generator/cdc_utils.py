@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from myhdl import block, always_seq, always, Signal, ResetSignal, always_comb, intbv, SignalType, instances
 
 from generator.utils import clone_signal
@@ -75,8 +75,8 @@ class FifoProducer:
     clk: SignalType
     rst: SignalType
     data: SignalType
-    wr: SignalType
-    full: SignalType
+    wr: SignalType = field(default_factory=lambda: Signal(bool(0)))
+    full: SignalType = field(default_factory=lambda: Signal(bool(0)))
 
 
 @dataclass
@@ -84,8 +84,8 @@ class FifoConsumer:
     clk: SignalType
     rst: SignalType
     data: SignalType
-    rd: SignalType
-    empty: SignalType
+    rd: SignalType = field(default_factory=lambda: Signal(bool(0)))
+    empty: SignalType = field(default_factory=lambda: Signal(bool(0)))
 
 
 @block
@@ -119,12 +119,12 @@ def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
     def wr_signal():
         do_write.next = p.wr and not p.full
 
-    @always_seq(p.clk, reset=p.rst)
+    @always_seq(p.clk.posedge, reset=p.rst)
     def wr_pointer():
         if do_write:
             p_wr_addr.next = p_wr_addr + 1
 
-    @always_seq(p.clk, reset=None)
+    @always_seq(p.clk.posedge, reset=None)
     def wr():
         if do_write:
             buffer[p_wr_addr[buffer_size_bits:0]].next = p.data
@@ -135,7 +135,7 @@ def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
 
     cdc_rd_addr = ff_synchronizer(p.clk, None, p_rd_addr_gray, c_rd_addr_gray)
 
-    @always_seq(p.clk, reset=p.rst)
+    @always_seq(p.clk.posedge, reset=p.rst)
     def check_if_full():
         p.full.next = (p_wr_addr_gray[:buffer_size_bits - 1] == ~p_rd_addr_gray[:buffer_size_bits - 1])\
                       and (p_wr_addr_gray[buffer_size_bits - 1:] == p_rd_addr_gray[buffer_size_bits - 1:])
@@ -144,7 +144,7 @@ def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
     def rd_signal():
         do_read.next = c.rd and not c.empty
 
-    @always_seq(c.clk, reset=c.rst)
+    @always_seq(c.clk.posedge, reset=c.rst)
     def rd_pointer():
         if do_read:
             c_rd_addr.next = c_rd_addr + 1
@@ -159,7 +159,7 @@ def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
 
     cdc_wr_addr = ff_synchronizer(c.clk, None, c_wr_addr_gray, p_wr_addr_gray)
 
-    @always_seq(c.clk, reset=c.rst)
+    @always_seq(c.clk.posedge, reset=c.rst)
     def check_if_empty():
         c.empty.next = c_wr_addr_gray == c_rd_addr_gray
 
