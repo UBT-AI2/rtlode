@@ -1,4 +1,4 @@
-from generator.packed_struct import StructDescription, BitVector, List
+from common.packed_struct import StructDescription, BitVector, List
 from utils import num
 
 

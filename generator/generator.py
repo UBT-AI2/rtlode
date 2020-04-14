@@ -11,7 +11,7 @@ from generator.ccip import CcipRx, CcipTx
 from generator.config import Config
 from generator.afu import afu
 from generator.csr import csr_addresses
-from generator.packed_struct import BitVector
+from common.packed_struct import BitVector
 from generator.runge_kutta import rk_solver, SolverInterface
 from generator.flow import FlowControl
 from utils import slv, num

@@ -1,6 +1,6 @@
 from myhdl import intbv
 
-from generator.packed_struct import StructDescription, BitVector
+from common.packed_struct import StructDescription, BitVector
 
 CcipClAddr = BitVector(42)
 CcipClData = BitVector(512)
