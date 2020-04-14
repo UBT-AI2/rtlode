@@ -57,8 +57,7 @@ def rk_solver(config: Config, interface: SolverInterface):
     for si in range(config.stages):
         # TODO use parallel stage calc if possible
         stage_pipe.then(
-            lambda flow, cfg=config.get_stage_config(si):
-            stage(cfg, flow, interface.h, interface.x, interface.y, v)
+            bind(stage, config.get_stage_config(si), interface.h, interface.x, interface.y, v)
         )
     pipe.then([stage_pipe, bind(generator.calc.add, interface.x, interface.h, x_n)])
 

@@ -19,11 +19,11 @@ class MethodNotExplicit(Exception):
 @block
 def stage(
         config: StageConfig,
-        flow: FlowControl,
         h: SignalType,
         x: SignalType,
         y: List[SignalType],
-        v: List[List[SignalType]]):
+        v: List[List[SignalType]],
+        flow: FlowControl):
     """
     Implements logic to solve a rk stage.
 
