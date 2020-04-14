@@ -3,7 +3,7 @@ import time
 from time import sleep
 
 from runtime.interface import Solver
-from utils import slv, num
+from utils import slv
 
 
 def _load_bitstream(gbs_path: str):

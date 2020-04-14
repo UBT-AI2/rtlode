@@ -39,8 +39,8 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     usr_reset = ResetSignal(True, True, False)
     cdc_usr_reset = areset_synchronizer(usr_clk, reset, usr_reset)
 
-    input_desc_vec = BitVector(len(get_input_desc(config)))
-    output_desc_vec = BitVector(len(get_output_desc(config)))
+    input_desc_vec = BitVector(len(get_input_desc(config.system_size)))
+    output_desc_vec = BitVector(len(get_output_desc(config.system_size)))
 
     in_fifo_p = FifoProducer(clk, reset, input_desc_vec.create_instance())
     in_fifo_c = FifoConsumer(usr_clk, usr_reset, input_desc_vec.create_instance())

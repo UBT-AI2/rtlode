@@ -19,11 +19,11 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
     clk = data_out.clk
     reset = data_out.rst
 
-    input_desc = get_input_desc(config)
+    input_desc = get_input_desc(config.system_size)
     assert len(input_desc) <= len(CcipClData)
     parsed_input_data = input_desc.create_read_instance(cp2af.c0.data(len(input_desc), 0))
 
-    output_desc = get_output_desc(config)
+    output_desc = get_output_desc(config.system_size)
     assert len(output_desc) <= len(data_in.data)
     parsed_output_data = output_desc.create_read_instance(data_in.data)
 

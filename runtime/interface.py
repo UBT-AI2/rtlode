@@ -3,7 +3,6 @@ from typing import List, Union, Dict
 from opae import fpga
 
 from common import data_desc
-from common.config import Config
 from common.packed_struct import BitVector
 from utils import num
 
@@ -11,8 +10,7 @@ from utils import num
 class Solver:
 
     def __init__(self, config, buffer_size):
-        self._config = Config.from_dict(config)
-        self._config_dict = config
+        self._config = config
         self._csr_addresses = config['build_info']['csr_addresses']
         # Shift all addresses
         for key, val in self._csr_addresses.items():
@@ -56,12 +54,14 @@ class Solver:
         """
         assert not self.input_full()
 
-        input_desc = data_desc.get_input_desc(self._config)
+        system_size = len(self._config['y'])
+
+        input_desc = data_desc.get_input_desc(system_size)
         input_data = input_desc.create_write_instance()
 
         input_data.x_start.next = num.from_float(x_start)
-        assert len(y_start) == self._config.system_size
-        for i in range(self._config.system_size):
+        assert len(y_start) == system_size
+        for i in range(system_size):
             input_data.y_start[i].next = num.from_float(y_start[i])
         input_data.h.next = h
         input_data.n.next = n

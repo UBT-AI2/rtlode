@@ -23,10 +23,10 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
 
     state = Signal(t_state.IDLE)
 
-    solver_input_desc = get_input_desc(config)
+    solver_input_desc = get_input_desc(config.system_size)
     solver_input = solver_input_desc.create_read_instance(data_in.data)
 
-    solver_output_desc = get_output_desc(config)
+    solver_output_desc = get_output_desc(config.system_size)
     solver_output = solver_output_desc.create_write_instance()
     solver_output_packed = solver_output.packed()
 
