@@ -42,7 +42,7 @@ class Solver:
         self._handle = None
 
     def input_full(self):
-        # TODO this method is only working for the CL1 implemnentation
+        # TODO this method is only working for the CL1 implementation
         return self.input_ack_id < self._curent_input_id
 
     def add_input(self, x_start: float, y_start: List[float], h: int, n: int) -> int:

@@ -38,36 +38,29 @@ def run(slv_path: str, runtime_config=None):
     _load_bitstream(gbs_path)
 
     # Access AFU (get Interface Object)
-    print('Aquire ownership of afu...')
+    print('Aquiring ownership of afu...')
     with Solver(config, 4096) as solver:
-        print('Configure solver...')
-        solver.h = config['h']
-        solver.n = config['n']
-        solver.x_start = 0
-        # for i, y in enumerate(config['y']):
-        #     solver.y_start_addr = i
-        #     solver.y_start_val = y
-        for i, y in enumerate(config['y']):
-            val_bytes = int(num.from_float(y)).to_bytes(8, byteorder='little', signed=True)
-            for bi, b in enumerate(val_bytes):
-                solver.y_start[i*8+bi] = b
-        for i in range(512):
-            print('y_start_raw[%s]: %s' % (i, solver.y_start[i]))
+        print('Starting solver...')
 
-        print('Start solver...')
         timing_start = time.time()
-        solver.enb = 1
-        while solver.fin != 1:
+
+        nbr_datasets = 10
+        nbr_results = 0
+        nbr_inputs = 0
+        while nbr_results != nbr_datasets:
+            if not solver.input_full() and nbr_inputs < nbr_datasets:
+                nbr_inputs = nbr_inputs + 1
+                data_id = solver.add_input(0, config['y'], config['h'], config['n'])
+                print('Added new input dataset: %s' % data_id)
+
+            output = solver.fetch_output()
+            if output is not None:
+                nbr_results = nbr_results + 1
+                print('Fetched output dataset: %s' % output['id'])
+                for i, val in enumerate(output['y']):
+                    print('y[%s] = %s' % (i, val))
+
             sleep(0.1)
+
         timing_end = time.time()
         print('Solver finished in: %s' % (timing_end - timing_start))
-        print('x = %s' % solver.x)
-        # for i, y in enumerate(config['y']):
-        #     solver.y_addr = i
-        #     print('y[%s] = %s' % (i, solver.y_val))
-        for i, _ in enumerate(config['y']):
-            val = int.from_bytes(solver.y[i*8:(i+1)*8], byteorder='little', signed=True)
-            print('y[%s]: %s' % (i, num.to_float(val)))
-
-        for i in range(512):
-            print('y_raw[%s]: %s' % (i, solver.y[i]))
