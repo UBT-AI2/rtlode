@@ -5,7 +5,7 @@ from myhdl import block, instances, ResetSignal, SignalType, always, Signal
 
 import generator.calc
 from utils import num
-from generator.config import Config
+from common.config import Config
 from generator.rk_calc import pipe_calc_step
 from generator.rk_stage import stage
 from generator.utils import clone_signal, clone_signal_structure, bind

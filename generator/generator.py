@@ -8,7 +8,7 @@ import yaml
 from myhdl import Simulation, Signal, ResetSignal, delay
 
 from generator.ccip import CcipRx, CcipTx
-from generator.config import Config
+from common.config import Config
 from generator.afu import afu
 from generator.csr import csr_addresses
 from common.packed_struct import BitVector
@@ -131,13 +131,7 @@ def simulate(*config_files):
 
 
 def convert(config):
-    cfg = Config(
-        config['method']['A'],
-        config['method']['b'],
-        config['method']['c'],
-        config['components'],
-        uuid=config['build_info']['uuid'] if 'build_info' in config else 'BEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEF'
-    )
+    cfg = Config.from_dict(config)
 
     clk = Signal(num.bool())
     usr_clk = Signal(num.bool())

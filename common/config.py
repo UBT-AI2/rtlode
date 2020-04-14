@@ -19,6 +19,17 @@ class Config:
     def get_stage_config(self, stage_index):
         return StageConfig(stage_index, self.A[stage_index], self.c[stage_index], self.components)
 
+    @staticmethod
+    def from_dict(config):
+        return Config(
+            config['method']['A'],
+            config['method']['b'],
+            config['method']['c'],
+            config['components'],
+            # Needed if convert is called outside the normal build process.
+            uuid=config['build_info']['uuid'] if 'build_info' in config else 'BEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEF'
+        )
+
 
 @dataclass
 class StageConfig:

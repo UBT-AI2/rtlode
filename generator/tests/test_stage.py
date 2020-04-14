@@ -4,7 +4,7 @@ from myhdl import Signal, Simulation, ResetSignal, delay
 
 from utils import num
 from generator.rk_stage import stage
-from generator.config import StageConfig
+from common.config import StageConfig
 
 # TODO: Reset testen
 from generator.flow import FlowControl
