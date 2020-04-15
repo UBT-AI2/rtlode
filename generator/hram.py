@@ -1,6 +1,7 @@
 from myhdl import block, always_seq, Signal, concat, instances, always_comb
 
 from common.data_desc import get_input_desc, get_output_desc
+from common.packed_struct import BitVector
 from generator.ccip import CcipClData
 from generator.cdc_utils import FifoProducer, FifoConsumer
 from generator.csr import CsrSignals
@@ -21,7 +22,13 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
 
     input_desc = get_input_desc(config.system_size)
     assert len(input_desc) <= len(CcipClData)
-    parsed_input_data = input_desc.create_read_instance(cp2af.c0.data(len(input_desc), 0))
+
+    parsed_input_raw = BitVector(len(input_desc)).create_instance()
+    parsed_input_data = input_desc.create_read_instance(parsed_input_raw)
+
+    @always_comb
+    def assign_input():
+        parsed_input_raw.next = concat(cp2af.c0.data)[len(input_desc):]
 
     output_desc = get_output_desc(config.system_size)
     assert len(output_desc) <= len(data_in.data)
