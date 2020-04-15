@@ -61,6 +61,8 @@ def run(slv_path: str, runtime_config=None):
                 for i, val in enumerate(output['y']):
                     print('y[%s] = %s' % (i, val))
 
+            print('InputAckId = %s' % solver.input_ack_id)
+
             sleep(0.1)
 
         timing_end = time.time()

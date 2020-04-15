@@ -98,7 +98,7 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
                 elif mmio_hdr.address == 0x0008:  # DFH_RSVD1
                     af2cp.c2.data.next = 0
                 # Custom AFU CSR
-                if mmio_hdr.address == csr_address_input_addr:
+                elif mmio_hdr.address == csr_address_input_addr:
                     af2cp.c2.data.next = data.input_addr
                 elif mmio_hdr.address == csr_address_input_ack_id:
                     af2cp.c2.data.next = data.input_ack_id
