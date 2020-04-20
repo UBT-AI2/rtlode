@@ -48,7 +48,7 @@ def run(slv_path: str, runtime_config=None):
         nbr_datasets = 10
         nbr_results = 0
         nbr_inputs = 0
-        while nbr_results != nbr_datasets:
+        while nbr_results != nbr_datasets and (time.time() - timing_start) < 5:
             if not solver.input_full() and nbr_inputs < nbr_datasets:
                 nbr_inputs = nbr_inputs + 1
                 data_id = solver.add_input(0, config['y'], config['h'], config['n'])
