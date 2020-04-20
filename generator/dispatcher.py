@@ -66,7 +66,7 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
                     solver_output.y[i].next = solver.y[i]
                 solver_output.id.next = current_data_id
 
-                if solver.flow.fin:
+                if solver.flow.fin and not data_out.full:
                     data_out.wr.next = True
                     solver.flow.rst.next = True
                     state.next = t_state.IDLE
