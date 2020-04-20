@@ -183,6 +183,7 @@ class StructDescriptionMetaclass(type):
         return collections.OrderedDict()
 
     def __new__(mcs, name, bases, classdict):
+        classdict['__ordered__'] = list(classdict.keys())
         return type.__new__(mcs, name, bases, classdict)
 
 
@@ -212,7 +213,7 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
 
     @classmethod
     def _get_props(cls):
-        return {k: v for k, v in vars(cls).items() if not k.startswith("__")}
+        return collections.OrderedDict([(k, getattr(cls, k)) for k in cls.__ordered__ if not k.startswith("__")])
 
     @classmethod
     def _check_wellformness(cls):
