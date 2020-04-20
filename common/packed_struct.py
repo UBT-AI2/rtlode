@@ -1,5 +1,6 @@
 import inspect
 
+import collections
 from myhdl import Signal, intbv, SignalType, ConcatSignal
 
 
@@ -176,6 +177,13 @@ class _LengthMetaclass(type):
     """
     def __len__(self):
         return self.len()
+
+    @classmethod
+    def __prepare__(self, name, bases):
+        return collections.OrderedDict()
+
+    def __new__(mcs, name, bases, classdict):
+        return type.__new__(mcs, name, bases, classdict)
 
 
 class StructDescription(metaclass=_LengthMetaclass):
