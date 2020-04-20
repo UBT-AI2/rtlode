@@ -52,7 +52,7 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
                 solver.x_start.next = solver_input.x_start
                 for i in range(config.system_size):
                     solver.y_start[i].next = solver_input.y_start[i]
-                current_data_id.next = solver_output.id
+                current_data_id.next = solver_input.id
 
                 if not data_in.empty:
                     data_in.rd.next = True
