@@ -171,7 +171,7 @@ class List:
         return [self._inner_type for _ in range(self._size)]
 
 
-class _LengthMetaclass(type):
+class StructDescriptionMetaclass(type):
     """
     Internal metaclass allowing the use of len() on StructDescription classes.
     """
@@ -186,7 +186,7 @@ class _LengthMetaclass(type):
         return type.__new__(mcs, name, bases, classdict)
 
 
-class StructDescription(metaclass=_LengthMetaclass):
+class StructDescription(metaclass=StructDescriptionMetaclass):
     """
     Used to describe a PackedStructure.
     Class attributes can either be a BitVector or other StructDescriptions.

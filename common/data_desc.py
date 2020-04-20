@@ -1,9 +1,9 @@
-from common.packed_struct import StructDescription, BitVector, List
+from common.packed_struct import StructDescription, BitVector, List, StructDescriptionMetaclass
 from utils import num
 
 
 def get_input_desc(system_size):
-    class InputData(StructDescription):
+    class InputData(StructDescription, metaclass=StructDescriptionMetaclass):
         x_start = BitVector(num.TOTAL_SIZE)
         y_start = List(system_size, BitVector(num.TOTAL_SIZE))
         h = BitVector(num.TOTAL_SIZE)
@@ -14,7 +14,7 @@ def get_input_desc(system_size):
 
 
 def get_output_desc(system_size):
-    class OutputData(StructDescription):
+    class OutputData(StructDescription, metaclass=StructDescriptionMetaclass):
         x = BitVector(num.TOTAL_SIZE)
         y = List(system_size, BitVector(num.TOTAL_SIZE))
         id = BitVector(num.INTEGER_SIZE)
