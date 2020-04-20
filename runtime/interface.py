@@ -19,7 +19,7 @@ class Solver:
         self._buffer_size = buffer_size
         self._input_buffer = None
         self._output_buffer = None
-        self._curent_input_id = 0
+        self._current_input_id = 0
 
     def __enter__(self):
         # TODO enable guid filter if segfault in opae is fixed
@@ -41,7 +41,7 @@ class Solver:
 
     def input_full(self):
         # TODO this method is only working for the CL1 implementation
-        return self.input_ack_id < self._curent_input_id
+        return self.input_ack_id < self._current_input_id
 
     def add_input(self, x_start: float, y_start: List[float], h: int, n: int) -> int:
         """
@@ -66,8 +66,8 @@ class Solver:
         input_data.h.next = int(h)
         input_data.n.next = int(n)
 
-        self._curent_input_id = self._curent_input_id + 1
-        input_data.id.next = int(self._curent_input_id)
+        self._current_input_id = self._current_input_id + 1
+        input_data.id.next = int(self._current_input_id)
 
         input_data.update()
 
@@ -75,12 +75,13 @@ class Solver:
         assert (len(input_desc) / 8).is_integer()
         input_bytes = int(input_packed).to_bytes(int(len(input_desc) / 8), byteorder='little')
         for bi, b in enumerate(input_bytes):
+            print('y_start[%s] = %s' % (bi, b))
             self._input_buffer[bi] = b
 
         for i, val in enumerate(self._input_buffer[0:int(len(input_desc) / 8)]):
             print('y_start[%s] = %s' % (i, val))
 
-        return self._curent_input_id
+        return self._current_input_id
 
     def fetch_output(self) -> Union[None, Dict]:
         system_size = len(self._config['y'])
