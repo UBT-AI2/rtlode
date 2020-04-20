@@ -88,6 +88,7 @@ class FifoConsumer:
     empty: SignalType = field(default_factory=lambda: Signal(bool(0)))
 
 
+# TODO change counter to modbv type
 @block
 def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
     """
@@ -133,7 +134,7 @@ def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
     def wr_pointer_gray():
         p_wr_addr_gray.next = p_wr_addr ^ (p_wr_addr >> 1)
 
-    cdc_rd_addr = ff_synchronizer(p.clk, None, p_rd_addr_gray, c_rd_addr_gray)
+    cdc_rd_addr = ff_synchronizer(p.clk, p.rst, p_rd_addr_gray, c_rd_addr_gray)
 
     @always_seq(p.clk.posedge, reset=p.rst)
     def check_if_full():
@@ -157,7 +158,7 @@ def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
     def rd_pointer_gray():
         c_rd_addr_gray.next = c_rd_addr ^ (c_rd_addr >> 1)
 
-    cdc_wr_addr = ff_synchronizer(c.clk, None, c_wr_addr_gray, p_wr_addr_gray)
+    cdc_wr_addr = ff_synchronizer(c.clk, c.rst, c_wr_addr_gray, p_wr_addr_gray)
 
     @always_seq(c.clk.posedge, reset=c.rst)
     def check_if_empty():

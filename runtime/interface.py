@@ -75,11 +75,7 @@ class Solver:
         assert (len(input_desc) / 8).is_integer()
         input_bytes = int(input_packed).to_bytes(int(len(input_desc) / 8), byteorder='little')
         for bi, b in enumerate(input_bytes):
-            print('y_start[%s] = %s' % (bi, b))
             self._input_buffer[bi] = b
-
-        for i, val in enumerate(self._input_buffer[0:int(len(input_desc) / 8)]):
-            print('y_start[%s] = %s' % (i, val))
 
         return self._current_input_id
 
