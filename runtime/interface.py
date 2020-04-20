@@ -77,6 +77,9 @@ class Solver:
         for bi, b in enumerate(input_bytes):
             self._input_buffer[bi] = b
 
+        for i, val in enumerate(self._input_buffer[0:int(len(input_desc) / 8)]):
+            print('y_start[%s] = %s' % (i, val))
+
         return self._curent_input_id
 
     def fetch_output(self) -> Union[None, Dict]:

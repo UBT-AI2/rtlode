@@ -73,12 +73,11 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
 
     @always_seq(clk.posedge, reset=reset)
     def mem_reads_responses():
-        if cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0:
-            # Handling of an input package
-            if not data_out.full and parsed_input_data.id == next_input_id:
-                data_out.data.next = concat(cp2af.c0.data)[len(input_desc):]
-                data_out.wr.next = True
-                csr.input_ack_id.next = next_input_id
+        if cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0 \
+                and not data_out.full and parsed_input_data.id == next_input_id:
+            data_out.data.next = concat(cp2af.c0.data)[len(input_desc):]
+            data_out.wr.next = True
+            csr.input_ack_id.next = next_input_id
         else:
             data_out.wr.next = False
 
