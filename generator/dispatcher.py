@@ -54,10 +54,12 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
                     solver.y_start[i].next = solver_input.y_start[i]
                 current_data_id.next = solver_input.id
 
-                if not data_in.empty:
-                    data_in.rd.next = True
+                if data_in.rd:
+                    data_in.rd.next = False
                     solver.flow.enb.next = True
                     state.next = t_state.BUSY
+                elif not data_in.empty:
+                    data_in.rd.next = True
             elif state == t_state.BUSY:
                 data_in.rd.next = False
 
@@ -69,6 +71,8 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
                 if solver.flow.fin and not data_out.full:
                     data_out.wr.next = True
                     solver.flow.rst.next = True
+                    if not data_in.empty:
+                        data_in.rd.next = True
                     state.next = t_state.IDLE
 
     @always_comb
