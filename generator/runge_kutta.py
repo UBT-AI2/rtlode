@@ -87,6 +87,8 @@ def rk_solver(config: Config, interface: SolverInterface):
                     for i in range(config.system_size):
                         interface.y[i].next = interface.y_start[i]
                     pipe_enb.next = True
+                elif pipe_reset:
+                    pipe_reset.next = False
                 elif pipe_flow.fin:
                     # Copy calculated values to working ones
                     interface.x.next = x_n
@@ -109,7 +111,5 @@ def rk_solver(config: Config, interface: SolverInterface):
 
                     if step_counter + 1 >= interface.n:
                         interface.flow.fin.next = True
-                else:
-                    pipe_reset.next = False
 
     return instances()
