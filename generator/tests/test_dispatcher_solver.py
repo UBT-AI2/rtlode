@@ -71,7 +71,7 @@ class Test(TestCase):
             def clk_driver():
                 clk.next = not clk
 
-            @always(delay(10))
+            @always(delay(43))
             def usr_clk_driver():
                 usr_clk.next = not usr_clk
 
