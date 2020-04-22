@@ -73,14 +73,16 @@ class Solver:
 
         input_packed = input_data.packed()
         parsed_input_data = data_desc.get_input_desc(system_size).create_read_instance(input_packed)
-        y = []
-        for el in parsed_input_data.y:
-            y.append(num.to_float(el))
+        y_start = []
+        for el in parsed_input_data.y_start:
+            y_start.append(num.to_float(el))
 
         print("Out: %r" % {
-            'x': num.to_float(parsed_input_data.x),
-            'y': y,
-            'id': parsed_input_data.id
+            'x_start': num.to_float(parsed_input_data.x_start),
+            'y_start': y_start,
+            'id': parsed_input_data.id,
+            'h': parsed_input_data.h,
+            'n': parsed_input_data.n,
         })
         print('Input: %s' % input_packed)
 
