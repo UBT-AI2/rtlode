@@ -76,7 +76,7 @@ class FifoProducer:
     rst: SignalType
     data: SignalType
     wr: SignalType = field(default_factory=lambda: Signal(bool(0)))
-    full: SignalType = field(default_factory=lambda: Signal(bool(0)))
+    full: SignalType = field(default_factory=lambda: Signal(bool(1)))
 
 
 @dataclass
@@ -85,7 +85,7 @@ class FifoConsumer:
     rst: SignalType
     data: SignalType
     rd: SignalType = field(default_factory=lambda: Signal(bool(0)))
-    empty: SignalType = field(default_factory=lambda: Signal(bool(0)))
+    empty: SignalType = field(default_factory=lambda: Signal(bool(1)))
 
 
 @block
@@ -109,58 +109,86 @@ def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
     do_read = Signal(bool(0))
 
     p_wr_addr = Signal(modbv(0, min=0, max=addr_max))
+    p_wr_addr_next = clone_signal(p_wr_addr)
     p_wr_addr_gray = clone_signal(p_wr_addr)
+    p_wr_addr_gray_next = clone_signal(p_wr_addr)
     p_rd_addr_gray = clone_signal(p_wr_addr)
+    p_full_next = Signal(bool(1))
     c_rd_addr = Signal(modbv(0, min=0, max=addr_max))
+    c_rd_addr_next = clone_signal(c_rd_addr)
     c_rd_addr_gray = clone_signal(c_rd_addr)
+    c_rd_addr_gray_next = clone_signal(c_rd_addr)
     c_wr_addr_gray = clone_signal(c_rd_addr)
+    c_empty_next = Signal(bool(1))
 
     @always_comb
     def wr_signal():
         do_write.next = p.wr and not p.full
 
+    @always_comb
+    def wr_pointer_next():
+        if do_write:
+            p_wr_addr_next.next = p_wr_addr + 1
+        else:
+            p_wr_addr_next.next = p_wr_addr
+
+    @always_comb
+    def wr_pointer_gray_next():
+        p_wr_addr_gray_next.next = p_wr_addr_next ^ (p_wr_addr_next >> 1)
+
     @always_seq(p.clk.posedge, reset=p.rst)
     def wr_pointer():
-        if do_write:
-            p_wr_addr.next = p_wr_addr + 1
+        p_wr_addr.next = p_wr_addr_next
+        p_wr_addr_gray.next = p_wr_addr_gray_next
 
     @always_seq(p.clk.posedge, reset=None)
     def wr():
         if do_write:
             buffer[p_wr_addr[buffer_size_bits:0]].next = p.data
 
-    @always_comb
-    def wr_pointer_gray():
-        p_wr_addr_gray.next = p_wr_addr ^ (p_wr_addr >> 1)
-
     cdc_rd_addr = ff_synchronizer(p.clk, p.rst, p_rd_addr_gray, c_rd_addr_gray)
 
     @always_comb
-    def check_if_full():
-        p.full.next = (p_wr_addr_gray[:buffer_size_bits - 1] == (p_rd_addr_gray[:buffer_size_bits - 1] ^ 0b11)) \
-                      and (p_wr_addr_gray[buffer_size_bits - 1:] == p_rd_addr_gray[buffer_size_bits - 1:])
+    def full_next():
+        p_full_next.next = (p_wr_addr_gray_next[:buffer_size_bits - 1] == (p_rd_addr_gray[:buffer_size_bits - 1] ^ 0b11)) \
+                      and (p_wr_addr_gray_next[buffer_size_bits - 1:] == p_rd_addr_gray[buffer_size_bits - 1:])
+
+    @always_seq(p.clk.posedge, reset=p.rst)
+    def check_full():
+        p.full.next = p_full_next
 
     @always_comb
     def rd_signal():
         do_read.next = c.rd and not c.empty
 
+    @always_comb
+    def rd_pointer_next():
+        if do_read:
+            c_rd_addr_next.next = c_rd_addr + 1
+        else:
+            c_rd_addr_next.next = c_rd_addr
+
+    @always_comb
+    def rd_pointer_gray_next():
+        c_rd_addr_gray_next.next = c_rd_addr_next ^ (c_rd_addr_next >> 1)
+
     @always_seq(c.clk.posedge, reset=c.rst)
     def rd_pointer():
-        if do_read:
-            c_rd_addr.next = c_rd_addr + 1
+        c_rd_addr.next = c_rd_addr_next
+        c_rd_addr_gray.next = c_rd_addr_gray_next
 
     @always_comb
     def rd():
         c.data.next = buffer[c_rd_addr[buffer_size_bits:0]]
 
-    @always_comb
-    def rd_pointer_gray():
-        c_rd_addr_gray.next = c_rd_addr ^ (c_rd_addr >> 1)
-
     cdc_wr_addr = ff_synchronizer(c.clk, c.rst, c_wr_addr_gray, p_wr_addr_gray)
 
     @always_comb
+    def empty_next():
+        c_empty_next.next = c_wr_addr_gray == c_rd_addr_gray_next
+
+    @always_seq(c.clk.posedge, reset=c.rst)
     def check_if_empty():
-        c.empty.next = c_wr_addr_gray == c_rd_addr_gray
+        c.empty.next = c_empty_next
 
     return instances()
