@@ -58,8 +58,9 @@ def run(slv_path: str, runtime_config=None):
             if output is not None:
                 nbr_results = nbr_results + 1
                 print('Fetched output dataset: %s' % output['id'])
-                for i, val in enumerate(output['y']):
-                    print('y[%s] = %s' % (i, val))
+                print('%r' % output)
+                # for i, val in enumerate(output['y']):
+                #     print('y[%s] = %s' % (i, val))
 
             print('InputAckId = %s' % solver.input_ack_id)
 

@@ -72,6 +72,18 @@ class Solver:
         input_data.update()
 
         input_packed = input_data.packed()
+        parsed_input_data = data_desc.get_output_desc(system_size).create_read_instance(input_packed)
+        y = []
+        for el in parsed_input_data.y:
+            y.append(num.to_float(el))
+
+        print("Out: %r" % {
+            'x': num.to_float(parsed_input_data.x),
+            'y': y,
+            'id': parsed_input_data.id
+        })
+        print('Input: %s' % input_packed)
+
         assert (len(input_desc) / 8).is_integer()
         input_bytes = int(input_packed).to_bytes(int(len(input_desc) / 8), byteorder='little')
         for bi, b in enumerate(input_bytes):
