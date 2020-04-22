@@ -10,6 +10,16 @@ t_state = enum('IDLE', 'BUSY', )
 
 
 @block
+def _set_y_start(clk, state, in_val, out_val):
+    # TODO more generic approach to list assignments
+    @always_seq(clk.posedge, reset=None)
+    def assign():
+        if state == t_state.IDLE:
+            out_val.next = in_val
+    return instances()
+
+
+@block
 def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
     """
     Logic to handle data stream read and write from / to cpu. Including dispatching single
@@ -34,6 +44,9 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
     solver = SolverInterface(config.system_size, flow=FlowControl(clk=clk))
     solver_inst = rk_solver(config, solver)
 
+    y_start_assign = [_set_y_start(clk, state, solver_input.y_start[i], solver.y_start[i])
+                      for i in range(config.system_size)]
+
     @always_seq(clk.posedge, reset=None)
     def state_machine():
         if rst:
@@ -50,8 +63,6 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
                 solver.h.next = solver_input.h
                 solver.n.next = solver_input.n
                 solver.x_start.next = solver_input.x_start
-                for i in range(config.system_size):
-                    solver.y_start[i].next = solver_input.y_start[i]
                 current_data_id.next = solver_input.id
 
                 if data_in.rd and not data_in.empty:
