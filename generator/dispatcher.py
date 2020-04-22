@@ -72,6 +72,7 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
                     data_in.rd.next = True
                     data_out.wr.next = False
                     solver.flow.rst.next = True
+                    solver.flow.enb.next = False
                     state.next = t_state.IDLE
                 elif solver.flow.fin:
                     data_out.wr.next = True
