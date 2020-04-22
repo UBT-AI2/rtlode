@@ -38,7 +38,7 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
     def state_machine():
         if rst:
             data_out.wr.next = False
-            data_in.rd.next = False
+            data_in.rd.next = True
             solver.flow.enb.next = False
             solver.flow.rst.next = True
             state.next = t_state.IDLE
@@ -54,7 +54,7 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
                     solver.y_start[i].next = solver_input.y_start[i]
                 current_data_id.next = solver_input.id
 
-                if data_in.rd:
+                if data_in.rd and not data_in.empty:
                     data_in.rd.next = False
                     solver.flow.enb.next = True
                     state.next = t_state.BUSY
@@ -68,12 +68,13 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
                     solver_output.y[i].next = solver.y[i]
                 solver_output.id.next = current_data_id
 
-                if solver.flow.fin and not data_out.full:
-                    data_out.wr.next = True
+                if data_out.wr and not data_out.full:
+                    data_in.rd.next = True
+                    data_out.wr.next = False
                     solver.flow.rst.next = True
-                    if not data_in.empty:
-                        data_in.rd.next = True
                     state.next = t_state.IDLE
+                elif solver.flow.fin:
+                    data_out.wr.next = True
 
     @always_comb
     def assign_solver_output():
