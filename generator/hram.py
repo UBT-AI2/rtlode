@@ -73,13 +73,14 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
 
     @always_seq(clk.posedge, reset=reset)
     def mem_reads_responses():
-        if cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0 \
-                and not data_out.full and parsed_input_data.id == next_input_id:
+        if cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0 and parsed_input_data.id == next_input_id:
             data_out.data.next = concat(cp2af.c0.data)[len(input_desc):]
             data_out.wr.next = True
-            csr.input_ack_id.next = next_input_id
         else:
             data_out.wr.next = False
+
+        if data_out.wr and not data_out.full:
+            csr.input_ack_id.next = next_input_id
 
     next_output_id = clone_signal(csr.output_ack_id)
 
@@ -108,11 +109,11 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
             af2cp.c1.hdr.sop.next = 1
             af2cp.c1.hdr.address.next = csr.output_addr
             af2cp.c1.data.next = data_in.data
-            if data_in.rd:
+            if data_in.rd and not data_in.empty:
                 af2cp.c1.valid.next = 1
             else:
                 af2cp.c1.valid.next = 0
-            if not data_in.empty and not cp2af.c1TxAlmFull and parsed_output_data.id == next_output_id:
+            if not cp2af.c1TxAlmFull and parsed_output_data.id == next_output_id:
                 data_in.rd.next = True
             else:
                 data_in.rd.next = False
