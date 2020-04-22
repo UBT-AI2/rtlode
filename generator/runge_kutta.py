@@ -71,7 +71,7 @@ def rk_solver(config: Config, interface: SolverInterface):
     pipe_insts = pipe.create(pipe_flow)
 
     step_counter = clone_signal(interface.n)
-    @always(interface.flow.clk_edge(), interface.flow.rst.posedge)
+    @always(interface.flow.clk_edge())
     def calc_final():
         if interface.flow.rst == interface.flow.rst.active:
             pipe_reset.next = True

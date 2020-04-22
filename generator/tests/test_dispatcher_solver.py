@@ -1,7 +1,7 @@
 from typing import List
 from unittest import TestCase
 
-from myhdl import Signal, ResetSignal, delay, always, intbv, instances, block, always_seq
+from myhdl import Signal, ResetSignal, delay, always, intbv, instances, block, always_seq, instance
 
 from common.config import Config
 from common.data_desc import get_input_desc, get_output_desc
@@ -42,9 +42,9 @@ class Test(TestCase):
             system_size = 1
 
             clk = Signal(bool(0))
-            reset = ResetSignal(False, True, False)
+            reset = ResetSignal(True, True, False)
             usr_clk = Signal(bool(0))
-            usr_reset = ResetSignal(False, True, False)
+            usr_reset = ResetSignal(True, True, False)
 
             input_desc_vec = BitVector(len(get_input_desc(system_size)))
             output_desc_vec = BitVector(len(get_output_desc(system_size)))
@@ -67,6 +67,12 @@ class Test(TestCase):
             in_fifo_p.data.next = create_input_data(0, [2], 0.1, 20)
             in_fifo_p.data._update()
 
+            @instance
+            def reset_handler():
+                yield delay(200)
+                reset.next = False
+                usr_reset.next = False
+
             @always(delay(10))
             def clk_driver():
                 clk.next = not clk
@@ -75,11 +81,14 @@ class Test(TestCase):
             def usr_clk_driver():
                 usr_clk.next = not usr_clk
 
-            @always(in_fifo_p.clk.posedge)
+            @instance
             def p_write():
-                in_fifo_p.wr.next = True
-                if in_fifo_p.wr and not in_fifo_p.full:
-                    in_fifo_p.data.next = create_input_data(0, [2], 0.1, 20)
+                while True:
+                    yield delay(1000)
+                    yield clk.posedge
+                    in_fifo_p.wr.next = True
+                    if in_fifo_p.wr and not in_fifo_p.full:
+                        in_fifo_p.data.next = create_input_data(0, [2], 0.1, 20)
 
             @always_seq(out_fifo_c.clk.posedge, reset=None)
             def c_read():
