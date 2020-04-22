@@ -109,13 +109,17 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
             af2cp.c1.hdr.sop.next = 1
             af2cp.c1.hdr.address.next = csr.output_addr
             af2cp.c1.data.next = data_in.data
+
+            # TODO performance optimization possible
             if data_in.rd and not data_in.empty:
                 af2cp.c1.valid.next = 1
+                data_in.rd.next = False
             else:
                 af2cp.c1.valid.next = 0
-            if not cp2af.c1TxAlmFull and parsed_output_data.id == next_output_id:
-                data_in.rd.next = True
-            else:
-                data_in.rd.next = False
+
+                if not cp2af.c1TxAlmFull and parsed_output_data.id == next_output_id:
+                    data_in.rd.next = True
+                else:
+                    data_in.rd.next = False
 
     return instances()
