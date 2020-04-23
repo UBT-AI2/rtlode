@@ -72,20 +72,6 @@ class Solver:
         input_data.update()
 
         input_packed = input_data.packed()
-        parsed_input_data = data_desc.get_input_desc(system_size).create_read_instance(input_packed)
-        y_start = []
-        for el in parsed_input_data.y_start:
-            y_start.append(num.to_float(el))
-
-        print("Out: %r" % {
-            'x_start': num.to_float(parsed_input_data.x_start),
-            'y_start': y_start,
-            'id': parsed_input_data.id,
-            'h': parsed_input_data.h,
-            'n': parsed_input_data.n,
-        })
-        print('Input: %s' % input_packed)
-
         assert (len(input_desc) / 8).is_integer()
         input_bytes = int(input_packed).to_bytes(int(len(input_desc) / 8), byteorder='little')
         for bi, b in enumerate(input_bytes):
@@ -101,9 +87,6 @@ class Solver:
         assert (len(output_desc) / 8).is_integer()
         output_raw.next = int.from_bytes(self._output_buffer[0:int(len(output_desc) / 8)], byteorder='little')
         output_raw._update()
-
-        for i, val in enumerate(self._output_buffer[0:int(len(output_desc) / 8)]):
-            print('y_raw[%s] = %s' % (i, val))
 
         output_data = output_desc.create_read_instance(output_raw)
         if output_data.id > self.output_ack_id:

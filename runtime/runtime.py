@@ -45,7 +45,7 @@ def run(slv_path: str, runtime_config=None):
 
         timing_start = time.time()
 
-        nbr_datasets = 10
+        nbr_datasets = 1000
         nbr_results = 0
         nbr_inputs = 0
         while nbr_results != nbr_datasets and (time.time() - timing_start) < 5:
@@ -62,9 +62,7 @@ def run(slv_path: str, runtime_config=None):
                 # for i, val in enumerate(output['y']):
                 #     print('y[%s] = %s' % (i, val))
 
-            print('InputAckId = %s' % solver.input_ack_id)
-
-            sleep(0.1)
+            #sleep(0.1)
 
         timing_end = time.time()
         print('Solver finished in: %s' % (timing_end - timing_start))
