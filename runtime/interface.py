@@ -20,6 +20,7 @@ class Solver:
         self._input_buffer = None
         self._output_buffer = None
         self._current_input_id = 0
+        self._current_output_id = 0
 
     def __enter__(self):
         # TODO enable guid filter if segfault in opae is fixed
@@ -52,7 +53,7 @@ class Solver:
         :param n: solver input
         :return: id referring to given dataset, can be used to match results
         """
-        assert not self.input_full()
+        #assert not self.input_full()
 
         system_size = len(self._config['y'])
 
@@ -89,12 +90,13 @@ class Solver:
         output_raw._update()
 
         output_data = output_desc.create_read_instance(output_raw)
-        if output_data.id > self.output_ack_id:
+        if output_data.id > self._current_output_id:
             # New data available
             y = []
             for el in output_data.y:
                 y.append(num.to_float(el))
-            self.output_ack_id = self.output_ack_id + 1
+            self._current_output_id = self._current_output_id + 1
+            self.output_ack_id = self._current_output_id
             return {
                 'x': num.to_float(output_data.x),
                 'y': y,

@@ -51,18 +51,13 @@ def run(slv_path: str, runtime_config=None):
         while nbr_results != nbr_datasets and (time.time() - timing_start) < 5:
             if not solver.input_full() and nbr_inputs < nbr_datasets:
                 nbr_inputs = nbr_inputs + 1
-                data_id = solver.add_input(0, config['y'], config['h'], config['n'])
+                data_id = solver.add_input(config['x'], config['y'], config['h'], config['n'])
                 print('Added new input dataset: %s' % data_id)
 
             output = solver.fetch_output()
             if output is not None:
                 nbr_results = nbr_results + 1
-                print('Fetched output dataset: %s' % output['id'])
                 print('%r' % output)
-                # for i, val in enumerate(output['y']):
-                #     print('y[%s] = %s' % (i, val))
-
-            #sleep(0.1)
 
         timing_end = time.time()
         print('Solver finished in: %s' % (timing_end - timing_start))
