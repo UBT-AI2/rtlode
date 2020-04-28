@@ -55,7 +55,7 @@ class Solver:
         :return: id referring to given dataset, can be used to match results
         """
         self._current_input_id = self._current_input_id + 1
-        struct.pack_into('NIQQQI', self._input_buffer, 0,
+        struct.pack_into('IQQQQI', self._input_buffer, 0,
                          int(n),
                          num.from_float(h),
                          *map(num.from_float, y_start),
