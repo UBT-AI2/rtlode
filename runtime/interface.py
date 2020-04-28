@@ -54,8 +54,8 @@ class Solver:
         :param n: solver input
         :return: id referring to given dataset, can be used to match results
         """
-        self._current_input_id = self._current_input_id + 1
-        struct.pack_into('IQQQQI', self._input_buffer, 0,
+        self._current_input_id = self.p + 1
+        struct.pack_into('<IQ2QQI', self._input_buffer, 0,
                          int(n),
                          num.from_float(h),
                          *map(num.from_float, y_start),
@@ -65,7 +65,7 @@ class Solver:
         return self._current_input_id
 
     def fetch_output(self) -> Union[None, Dict]:
-        (y, x, id) = struct.unpack_from('QQI', self._output_buffer, 0)
+        (y, x, id) = struct.unpack_from('<2QQI', self._output_buffer, 0)
 
         if id > self._current_output_id:
             # New data available
