@@ -1,7 +1,7 @@
 from typing import List
 from unittest import TestCase
 
-from myhdl import Signal, ResetSignal, delay, always, intbv, instances, block, always_seq, instance
+from myhdl import Signal, ResetSignal, delay, always, intbv, instances, block, always_seq, instance, StopSimulation
 
 from common.config import Config
 from common.data_desc import get_input_desc, get_output_desc
@@ -39,7 +39,7 @@ class Test(TestCase):
 
         @block
         def testbench():
-            system_size = 1
+            system_size = 2
 
             clk = Signal(bool(0))
             reset = ResetSignal(True, True, False)
@@ -58,13 +58,13 @@ class Test(TestCase):
             out_fifo = async_fifo(out_fifo_p, out_fifo_c, buffer_size_bits=4)
 
             disp_inst = dispatcher(Config.from_dict(
-                {'method': {'A': [[]], 'b': [1], 'c': [1]}, 'x': 0, 'y': [2], 'h': 0.1, 'n': 20,
-                 'components': ['2 * y[0]']}
+                {'method': {'A': [[], [1]], 'b': [0.5, 0.5], 'c': [0, 1]}, 'x': 0, 'y': [2, 1], 'h': 0.1, 'n': 100,
+                 'components': ['0.1 * y[0] - 0.2 * y[0] * y[1]', '-0.2 * y[1] + 0.4 * y[0] * y[1]']}
             ), data_in=in_fifo_c, data_out=out_fifo_p)
 
             parsed_output_data = get_output_desc(system_size).create_read_instance(out_fifo_c.data)
 
-            in_fifo_p.data.next = create_input_data(0, [2], 0.1, 20)
+            in_fifo_p.data.next = create_input_data(0, [2, 1], 0.1, 100)
             in_fifo_p.data._update()
 
             @instance
@@ -73,25 +73,29 @@ class Test(TestCase):
                 reset.next = False
                 usr_reset.next = False
 
-            @always(delay(10))
+            @always(delay(43))
             def clk_driver():
                 clk.next = not clk
 
-            @always(delay(43))
+            @always(delay(10))
             def usr_clk_driver():
                 usr_clk.next = not usr_clk
 
             @instance
             def p_write():
+                yield delay(1000)
                 while True:
-                    yield delay(1000)
                     yield clk.posedge
                     in_fifo_p.wr.next = True
                     if in_fifo_p.wr and not in_fifo_p.full:
-                        in_fifo_p.data.next = create_input_data(0, [2], 0.1, 20)
+                        in_fifo_p.data.next = create_input_data(0, [2, 1], 0.1, 100)
+
+            clks = 0
 
             @always_seq(out_fifo_c.clk.posedge, reset=None)
             def c_read():
+                nonlocal clks
+                clks = clks + 1
                 out_fifo_c.rd.next = True
                 if out_fifo_c.rd and not out_fifo_c.empty:
                     y = []
@@ -103,6 +107,9 @@ class Test(TestCase):
                         'y': y,
                         'id': parsed_output_data.id
                     })
+                    if parsed_output_data.id == 1:
+                        print("Finished after %i clock cycles." % clks)
+                        raise StopSimulation()
 
             return instances()
 
