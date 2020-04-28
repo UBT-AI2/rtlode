@@ -15,11 +15,11 @@ def add_input(x_start: float, y_start: List[float], h: float, n: int) -> int:
     input_desc = data_desc.get_input_desc(system_size)
     input_data = input_desc.create_write_instance()
 
-    input_data.x_start.next = num.from_float(x_start)
+    input_data.x_start.next = num.signal_from_float(x_start)
     assert len(y_start) == system_size
     for i in range(system_size):
-        input_data.y_start[i].next = num.from_float(y_start[i])
-    input_data.h.next = num.from_float(h)
+        input_data.y_start[i].next = num.signal_from_float(y_start[i])
+    input_data.h.next = num.signal_from_float(h)
     input_data.n.next = int(n)
 
     _current_input_id = _current_input_id + 1

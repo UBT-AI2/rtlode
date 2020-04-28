@@ -11,8 +11,8 @@ class TestMul(unittest.TestCase):
     def test_mul_comb(self):
         """Check if combinatorical logic is working."""
 
-        in_a = Signal(num.from_float(2.5))
-        in_b = Signal(num.from_float(10))
+        in_a = Signal(num.signal_from_float(2.5))
+        in_b = Signal(num.signal_from_float(10))
         out_sum = Signal(num.default())
 
         def test():
@@ -27,8 +27,8 @@ class TestMul(unittest.TestCase):
         a = 2.5
         b = 10
 
-        in_a = Signal(num.from_float(a))
-        in_b = Signal(num.from_float(b))
+        in_a = Signal(num.signal_from_float(a))
+        in_b = Signal(num.signal_from_float(b))
         out_c = Signal(num.default())
         flow = FlowControl(
             Signal(bool(0)),
@@ -48,15 +48,15 @@ class TestMul(unittest.TestCase):
 
             print("Finished after %i clock cycles." % clks)
 
-            self.assertEqual(num.from_float(a * b), out_c)
+            self.assertEqual(num.signal_from_float(a * b), out_c)
 
         self.runTest(in_a, in_b, out_c, test, flow=flow)
 
     def test_mul_negative_result(self):
         """Check signed multiplication."""
 
-        in_a = Signal(num.from_float(-2.5))
-        in_b = Signal(num.from_float(10))
+        in_a = Signal(num.signal_from_float(-2.5))
+        in_b = Signal(num.signal_from_float(10))
         out_sum = Signal(num.default())
 
         def test():
@@ -68,8 +68,8 @@ class TestMul(unittest.TestCase):
     def test_mul_zero(self):
         """Check multiplication with zero."""
 
-        in_a = Signal(num.from_float(0))
-        in_b = Signal(num.from_float(10))
+        in_a = Signal(num.signal_from_float(0))
+        in_b = Signal(num.signal_from_float(10))
         out_sum = Signal(num.default())
 
         def test():

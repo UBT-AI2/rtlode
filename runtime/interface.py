@@ -65,7 +65,7 @@ class Solver:
         return self._current_input_id
 
     def fetch_output(self) -> Union[None, Dict]:
-        (y, x, id) = struct.unpack_from('<2QQI', self._output_buffer, 0)
+        (*y, x, id) = struct.unpack_from('<2QQI', self._output_buffer, 0)
 
         if id > self._current_output_id:
             # New data available
@@ -73,7 +73,7 @@ class Solver:
             self.output_ack_id = self._current_output_id
             return {
                 'x': num.to_float(x),
-                'y': map(num.to_float, y),
+                'y': list(map(num.to_float, y)),
                 'id': id
             }
         else:

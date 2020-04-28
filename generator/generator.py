@@ -88,10 +88,10 @@ def simulate(*config_files):
     enable = Signal(bool(0))
     finished = Signal(bool(0))
 
-    h = Signal(num.from_float(config['h']))
+    h = Signal(num.signal_from_float(config['h']))
     n = Signal(num.integer(config['n']))
-    x_start = Signal(num.from_float(config['x']))
-    y_start = [Signal(num.from_float(config['y'][i])) for i in range(cfg.system_size)]
+    x_start = Signal(num.signal_from_float(config['x']))
+    y_start = [Signal(num.signal_from_float(config['y'][i])) for i in range(cfg.system_size)]
     x = Signal(num.default())
     y = [Signal(num.default()) for _ in range(cfg.system_size)]
 

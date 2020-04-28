@@ -62,7 +62,7 @@ def rk_solver(config: Config, interface: SolverInterface):
     pipe.then([stage_pipe, bind(generator.calc.add, interface.x, interface.h, x_n)])
 
     pipe.then([pipe_calc_step(
-        [clone_signal(y_n[i], value=num.from_float(el)) for el in config.b],
+        [clone_signal(y_n[i], value=num.signal_from_float(el)) for el in config.b],
         [el[i] for el in v],
         interface.h,
         interface.y[i],

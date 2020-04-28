@@ -12,8 +12,8 @@ class TestLincomb(unittest.TestCase):
     def test_lincomb_unequal_vector_len(self):
         """Check if vector of length 0 is working."""
 
-        in_a = [Signal(num.from_float(0)), Signal(num.from_float(1))]
-        in_b = [Signal(num.from_float(0.5))]
+        in_a = [Signal(num.signal_from_float(0)), Signal(num.signal_from_float(1))]
+        in_b = [Signal(num.signal_from_float(0.5))]
         out_sum = Signal(num.default())
         flow = FlowControl(
             Signal(bool(0)),
@@ -61,8 +61,8 @@ class TestLincomb(unittest.TestCase):
         a = randrange(-10, 10)
         b = randrange(-10, 10)
 
-        in_a = [Signal(num.from_float(a))]
-        in_b = [Signal(num.from_float(b))]
+        in_a = [Signal(num.signal_from_float(a))]
+        in_b = [Signal(num.signal_from_float(b))]
         out_sum = Signal(num.default())
         flow = FlowControl(
             Signal(bool(0)),
@@ -77,7 +77,7 @@ class TestLincomb(unittest.TestCase):
                 flow.clk.next = not flow.clk
                 yield delay(10)
                 flow.clk.next = not flow.clk
-            self.assertEqual(num.from_float(a * b), out_sum)
+            self.assertEqual(num.signal_from_float(a * b), out_sum)
 
         self.runTest(in_a, in_b, out_sum, flow, test)
 
@@ -88,8 +88,8 @@ class TestLincomb(unittest.TestCase):
         a = [randrange(-10, 10) for i in range(n)]
         b = [randrange(-10, 10) for i in range(n)]
 
-        in_a = [Signal(num.from_float(a[i])) for i in range(n)]
-        in_b = [Signal(num.from_float(b[i])) for i in range(n)]
+        in_a = [Signal(num.signal_from_float(a[i])) for i in range(n)]
+        in_b = [Signal(num.signal_from_float(b[i])) for i in range(n)]
         out_sum = Signal(intbv(0))
         flow = FlowControl(
             Signal(bool(0)),
@@ -108,7 +108,7 @@ class TestLincomb(unittest.TestCase):
                 flow.clk.next = not flow.clk
                 yield delay(10)
                 flow.clk.next = not flow.clk
-            self.assertEqual(num.from_float(result, out_sum), out_sum)
+            self.assertEqual(num.signal_from_float(result, out_sum), out_sum)
 
         self.runTest(in_a, in_b, out_sum, flow, test)
 

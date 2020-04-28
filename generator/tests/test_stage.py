@@ -30,11 +30,11 @@ class TestStage(unittest.TestCase):
             print(td)
 
             def test(flow, in_h, in_x, in_y, in_v):
-                in_x.next = num.from_float(td[2])
-                in_h.next = num.from_float(td[3])
+                in_x.next = num.signal_from_float(td[2])
+                in_h.next = num.signal_from_float(td[3])
                 for i in range(len(td[4])):
-                    in_v[i][0].next = num.from_float(td[4][i])
-                in_y[0].next = num.from_float(td[5])
+                    in_v[i][0].next = num.signal_from_float(td[4][i])
+                in_y[0].next = num.signal_from_float(td[5])
                 flow.enb.next = 1
 
                 clks = 0
@@ -51,7 +51,7 @@ class TestStage(unittest.TestCase):
                 for i in range(len(td[0])):
                     res_lincomb += td[0][i] * td[4][i]
 
-                self.assertAlmostEqual(num.from_float(2 * (td[5] + td[3] * res_lincomb)), in_v[len(c_a)][0], delta=20000, msg=td)
+                self.assertAlmostEqual(num.signal_from_float(2 * (td[5] + td[3] * res_lincomb)), in_v[len(c_a)][0], delta=20000, msg=td)
 
             self.runTest(c_a, c_c, test)
 

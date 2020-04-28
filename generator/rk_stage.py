@@ -45,11 +45,11 @@ def stage(
     # rhs_x = c_c * in_h + in_x
     rhs_x_int = clone_signal(x)
     rhs_x_pipe = Pipeline()\
-        .then(bind(generator.calc.mul, clone_signal(rhs_x_int, value=num.from_float(config.c)), h, rhs_x_int))\
+        .then(bind(generator.calc.mul, clone_signal(rhs_x_int, value=num.signal_from_float(config.c)), h, rhs_x_int))\
         .then(bind(generator.calc.add, x, rhs_x_int, rhs_x))
 
     pipe.then([pipe_calc_step(
-        [clone_signal(v[config.stage_index][i], value=num.from_float(el)) for el in config.a],
+        [clone_signal(v[config.stage_index][i], value=num.signal_from_float(el)) for el in config.a],
         [el[i] for el in v[:config.stage_index]],
         h,
         y[i],
