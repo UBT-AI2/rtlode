@@ -4,7 +4,7 @@ from myhdl import SignalType
 
 import generator.calc
 from generator.pipeline import Pipeline
-from generator.utils import clone_signal, bind, assign
+from generator.utils import clone_signal, bind, assign_flow
 from generator.vector_utils.lincomb import lincomb
 
 
@@ -26,7 +26,7 @@ def pipe_calc_step(
     :return:
     """
     if len(f) == 0:
-        return Pipeline().then(bind(assign, y, y_n))
+        return Pipeline().then(bind(assign_flow, y, y_n))
 
     lincomb_res = clone_signal(y_n)
     mul_res = clone_signal(y_n)

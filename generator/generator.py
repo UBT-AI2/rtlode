@@ -5,15 +5,13 @@ import subprocess
 import uuid
 
 import yaml
-from myhdl import Simulation, Signal, ResetSignal, delay
+from myhdl import Signal, ResetSignal
 
 from generator.ccip import CcipRx, CcipTx
 from common.config import Config
 from generator.afu import afu
 from generator.csr import csr_addresses
 from common.packed_struct import BitVector
-from generator.runge_kutta import rk_solver, SolverInterface
-from generator.flow import FlowControl
 from utils import slv, num
 
 
@@ -75,59 +73,7 @@ def _create_build_config(config):
 
 
 def simulate(*config_files):
-    config = _load_config(*config_files)
-    cfg = Config(
-        config['method']['A'],
-        config['method']['b'],
-        config['method']['c'],
-        config['components']
-    )
-
-    clk = Signal(bool(0))
-    rst = ResetSignal(False, True, False)
-    enable = Signal(bool(0))
-    finished = Signal(bool(0))
-
-    h = Signal(num.signal_from_float(config['h']))
-    n = Signal(num.integer(config['n']))
-    x_start = Signal(num.signal_from_float(config['x']))
-    y_start = [Signal(num.signal_from_float(config['y'][i])) for i in range(cfg.system_size)]
-    x = Signal(num.default())
-    y = [Signal(num.default()) for _ in range(cfg.system_size)]
-
-    interface = SolverInterface(FlowControl(clk, rst, enable, finished), h, n, x_start, y_start, x, y)
-
-    def test():
-        rst.next = True
-        yield delay(10)
-        clk.next = not clk
-        yield delay(10)
-        clk.next = not clk
-        rst.next = False
-        yield delay(10)
-        clk.next = not clk
-        yield delay(10)
-        clk.next = not clk
-        yield delay(10)
-        clk.next = not clk
-        yield delay(10)
-        clk.next = not clk
-        enable.next = 1
-
-        clks = 0
-        while finished != 1:
-            yield delay(10)
-            clk.next = not clk
-            clks += 1
-            yield delay(10)
-            clk.next = not clk
-
-        print("Finished after %i clock cycles." % clks)
-
-    dut = rk_solver(cfg, interface)
-    testdriver = test()
-    sim_inst = Simulation(dut, testdriver)
-    sim_inst.run(quiet=1)
+    pass  # TODO reimplement
 
 
 def convert(config):

@@ -1,22 +1,10 @@
-from myhdl import block, always_seq, enum, Signal, instances, always_comb
+from myhdl import block, always_seq, Signal, instances, always_comb, intbv, ConcatSignal
 
+from common import data_desc
+from common.packed_struct import BitVector
 from generator.cdc_utils import FifoConsumer, FifoProducer
-from generator.flow import FlowControl
-from common.data_desc import get_input_desc, get_output_desc
-from generator.runge_kutta import SolverInterface, rk_solver
-from utils import num
-
-t_state = enum('IDLE', 'BUSY', )
-
-
-@block
-def _set_y_start(clk, state, in_val, out_val):
-    # TODO more generic approach to list assignments
-    @always_seq(clk.posedge, reset=None)
-    def assign():
-        if state == t_state.IDLE:
-            out_val.next = in_val
-    return instances()
+from generator.priority_encoder import priority_encoder_one_hot
+from generator.solver import solver
 
 
 @block
@@ -24,72 +12,69 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
     """
     Logic to handle data stream read and write from / to cpu. Including dispatching single
     solver instances to solve a given ivp and collecting results to send back to cpu.
-    :return:
+    :return: myhdl instances
     """
     assert data_in.clk == data_out.clk
     assert data_in.rst == data_out.rst
     clk = data_in.clk
     rst = data_in.rst
 
-    state = Signal(t_state.IDLE)
+    rdy_signals = [Signal(bool(0)) for _ in range(config.nbr_solver)]
+    rdy_signals_vec = ConcatSignal(*reversed(rdy_signals))
+    rdy_priority = Signal(intbv(0)[config.nbr_solver:])
+    fin_signals = [Signal(bool(0)) for _ in range(config.nbr_solver)]
+    fin_signals_vec = ConcatSignal(*reversed(fin_signals))
+    fin_priority = Signal(intbv(0)[config.nbr_solver:])
 
-    solver_input_desc = get_input_desc(config.system_size)
-    solver_input = solver_input_desc.create_read_instance(data_in.data)
+    rdy_priority_encoder = priority_encoder_one_hot(rdy_signals_vec, rdy_priority)
+    fin_priority_encoder = priority_encoder_one_hot(fin_signals_vec, fin_priority)
 
-    solver_output_desc = get_output_desc(config.system_size)
-    solver_output = solver_output_desc.create_write_instance()
-    solver_output_packed = solver_output.packed()
+    solver_outputs = [
+        BitVector(len(data_desc.get_output_desc(config.system_size))).create_instance()
+        for _ in range(config.nbr_solver)
+    ]
 
-    current_data_id = Signal(num.integer())
-    solver = SolverInterface(config.system_size, flow=FlowControl(clk=clk))
-    solver_inst = rk_solver(config, solver)
-
-    y_start_assign = [_set_y_start(clk, state, solver_input.y_start[i], solver.y_start[i])
-                      for i in range(config.system_size)]
+    solver_inst = [
+        solver(config, clk, rst,
+               data_in=data_in,
+               data_out=FifoProducer(clk, rst, solver_outputs[i], data_out.wr, data_out.full),
+               rdy=rdy_signals[i],
+               rdy_ack=rdy_priority(i),
+               fin=fin_signals[i],
+               fin_ack=fin_priority(i))
+        for i in range(config.nbr_solver)
+    ]
 
     @always_seq(clk.posedge, reset=None)
-    def state_machine():
+    def fifo_handler():
         if rst:
             data_out.wr.next = False
-            data_in.rd.next = True
-            solver.flow.enb.next = False
-            solver.flow.rst.next = True
-            state.next = t_state.IDLE
+            data_in.rd.next = False
         else:
-            if state == t_state.IDLE:
-                data_out.wr.next = False
-                solver.flow.rst.next = False
-
-                solver.h.next = solver_input.h
-                solver.n.next = solver_input.n
-                solver.x_start.next = solver_input.x_start
-                current_data_id.next = solver_input.id
-
-                if data_in.rd and not data_in.empty:
-                    data_in.rd.next = False
-                    solver.flow.enb.next = True
-                    state.next = t_state.BUSY
+            data_in.rd.next = False
+            if rdy_signals_vec:
+                if not data_in.rd:
+                    data_in.rd.next = True
                 elif not data_in.empty:
-                    data_in.rd.next = True
-            elif state == t_state.BUSY:
-                data_in.rd.next = False
+                    # One solver dispatched
+                    if rdy_signals_vec != rdy_priority:
+                        # More than one solver was ready
+                        data_in.rd.next = True
 
-                solver_output.x.next = solver.x
-                for i in range(config.system_size):
-                    solver_output.y[i].next = solver.y[i]
-                solver_output.id.next = current_data_id
-
-                if data_out.wr and not data_out.full:
-                    data_in.rd.next = True
-                    data_out.wr.next = False
-                    solver.flow.rst.next = True
-                    solver.flow.enb.next = False
-                    state.next = t_state.IDLE
-                elif solver.flow.fin:
+            data_out.wr.next = False
+            if fin_signals_vec:
+                if not data_out.wr:
                     data_out.wr.next = True
+                elif not data_out.full:
+                    # Wrote one result back
+                    if fin_signals_vec != fin_priority:
+                        # More than one solver was finished
+                        data_out.wr.next = True
 
     @always_comb
-    def assign_solver_output():
-        data_out.data.next = solver_output_packed
+    def assign_data_out():
+        for i in range(config.nbr_solver):
+            if fin_priority[i]:
+                data_out.data.next = solver_outputs[i]
 
     return instances()

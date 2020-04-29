@@ -47,10 +47,31 @@ def bind(func, *args):
 
 
 @block
-def assign(old: SignalType, new: SignalType, flow: FlowControl):
+def assign(clk, condition, in_val, out_val):
+    @always_seq(clk.posedge, reset=None)
+    def _assign():
+        if condition:
+            out_val.next = in_val
+    return _assign
+
+
+@block
+def assign_2(clk, condition_1, in_val_1, condition_2, in_val_2, out_val):
+    @always_seq(clk.posedge, reset=None)
+    def _assign():
+        if condition_1:
+            out_val.next = in_val_1
+        if condition_2:
+            out_val.next = in_val_2
+    return _assign
+
+
+@block
+def assign_flow(in_val: SignalType, out_val: SignalType, flow: FlowControl):
     @always_seq(flow.clk_edge(), reset=flow.rst)
     def _assign():
         if flow.enb:
-            new.next = old
+            out_val.next = in_val
             flow.fin.next = True
+
     return _assign

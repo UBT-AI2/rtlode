@@ -59,7 +59,7 @@ class Test(TestCase):
 
             disp_inst = dispatcher(Config.from_dict(
                 {'method': {'A': [[], [1]], 'b': [0.5, 0.5], 'c': [0, 1]}, 'x': 0, 'y': [2, 1], 'h': 0.1, 'n': 100,
-                 'components': ['0.1 * y[0] - 0.2 * y[0] * y[1]', '-0.2 * y[1] + 0.4 * y[0] * y[1]']}
+                 'components': ['0.1 * y[0] - 0.2 * y[0] * y[1]', '-0.2 * y[1] + 0.4 * y[0] * y[1]'], 'nbr_solver': 4}
             ), data_in=in_fifo_c, data_out=out_fifo_p)
 
             parsed_output_data = get_output_desc(system_size).create_read_instance(out_fifo_c.data)
@@ -73,17 +73,16 @@ class Test(TestCase):
                 reset.next = False
                 usr_reset.next = False
 
-            @always(delay(43))
+            @always(delay(10))
             def clk_driver():
                 clk.next = not clk
 
-            @always(delay(10))
+            @always(delay(43))
             def usr_clk_driver():
                 usr_clk.next = not usr_clk
 
             @instance
             def p_write():
-                yield delay(1000)
                 while True:
                     yield clk.posedge
                     in_fifo_p.wr.next = True
@@ -107,7 +106,7 @@ class Test(TestCase):
                         'y': y,
                         'id': parsed_output_data.id
                     })
-                    if parsed_output_data.id == 1:
+                    if parsed_output_data.id == 5:
                         print("Finished after %i clock cycles." % clks)
                         raise StopSimulation()
 
