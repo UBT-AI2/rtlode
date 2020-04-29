@@ -68,7 +68,7 @@ def expr(expression: str,
                     else:
                         var = scope[parse_tree['var']]
 
-                    @always_seq(expr_flow.clk_edge(), expr_flow.rst)
+                    @always_seq(expr_flow.clk_edge(), reset=None)
                     def assign_comb():
                         out.next = var
                         expr_flow.fin.next = True
@@ -127,7 +127,7 @@ def expr(expression: str,
         elif isinstance(parse_tree, float):
             const = num.from_float(parse_tree)
 
-            @always_seq(expr_flow.clk_edge(), expr_flow.rst)
+            @always_seq(expr_flow.clk_edge(), reset=None)
             def assign():
                 out.next = const
                 expr_flow.fin.next = True
