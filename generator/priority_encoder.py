@@ -32,16 +32,17 @@ def priority_encoder_one_hot(
 
     bit_width = len(in_vec)
     priority_bits = [Signal(bool(0)) for _ in range(bit_width)]
-    priority_vec = ConcatSignal(*reversed(priority_bits))
+    priority_vec = ConcatSignal(*reversed(priority_bits)) if bit_width > 1 else priority_bits[0]
 
-    highest_bit = priority_bits[bit_width - 1]
+    in_vec_highest_bit = in_vec(bit_width - 1) if bit_width > 1 else in_vec
+    priority_highest_bit = priority_bits[bit_width - 1]
 
     @always_comb
     def highest_index():
-        if in_vec[bit_width - 1]:
-            highest_bit.next = True
+        if in_vec_highest_bit:
+            priority_highest_bit.next = True
         else:
-            highest_bit.next = False
+            priority_highest_bit.next = False
 
     other_indeces = [
         highest_bit_checker(in_vec, priority_bits[i], i) for i in range(bit_width - 1)

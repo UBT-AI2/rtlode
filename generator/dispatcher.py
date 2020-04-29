@@ -20,10 +20,10 @@ def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
     rst = data_in.rst
 
     rdy_signals = [Signal(bool(0)) for _ in range(config.nbr_solver)]
-    rdy_signals_vec = ConcatSignal(*reversed(rdy_signals))
+    rdy_signals_vec = ConcatSignal(*reversed(rdy_signals)) if config.nbr_solver > 1 else rdy_signals[0]
     rdy_priority = Signal(intbv(0)[config.nbr_solver:])
     fin_signals = [Signal(bool(0)) for _ in range(config.nbr_solver)]
-    fin_signals_vec = ConcatSignal(*reversed(fin_signals))
+    fin_signals_vec = ConcatSignal(*reversed(fin_signals)) if config.nbr_solver > 1 else fin_signals[0]
     fin_priority = Signal(intbv(0)[config.nbr_solver:])
 
     rdy_priority_encoder = priority_encoder_one_hot(rdy_signals_vec, rdy_priority)
