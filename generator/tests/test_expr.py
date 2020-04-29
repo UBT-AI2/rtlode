@@ -47,7 +47,7 @@ class TestExpr(unittest.TestCase):
 
             def convert_scope(data):
                 if isinstance(data, int) or isinstance(data, float):
-                    return Signal(num.signal_from_float(data))
+                    return num.signal_from_float(data)
                 elif isinstance(data, list):
                     return list(map(convert_scope, data))
                 elif isinstance(data, dict):

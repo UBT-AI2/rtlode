@@ -68,7 +68,7 @@ def expr(expression: str,
                     else:
                         var = scope[parse_tree['var']]
 
-                    @always_comb
+                    @always_seq(expr_flow.clk_edge(), expr_flow.rst)
                     def assign_comb():
                         out.next = var
                         expr_flow.fin.next = True
@@ -90,7 +90,7 @@ def expr(expression: str,
                     return generate_logic(parse_tree[1], out, expr_flow)
                 elif parse_tree['sign'] == '-':
                     val = clone_signal(result)
-                    zero = Signal(num.signal_from_float(0, sig=val))
+                    zero = num.signal_from_float(0, sig=val)
 
                     subflow = expr_flow.create_subflow(enb=expr_flow.enb)
                     rhs = generate_logic(parse_tree[1], val, subflow)
@@ -125,9 +125,9 @@ def expr(expression: str,
                 inst = mod(val_lhs, val_rhs, out, expr_flow.create_subflow(enb=subflows_finished, fin=expr_flow.fin))
                 return [lhs] + [rhs] + [fin_reduce] + [inst]
         elif isinstance(parse_tree, float):
-            const = Signal(num.signal_from_float(parse_tree, result))
+            const = num.from_float(parse_tree)
 
-            @always_comb
+            @always_seq(expr_flow.clk_edge(), expr_flow.rst)
             def assign():
                 out.next = const
                 expr_flow.fin.next = True

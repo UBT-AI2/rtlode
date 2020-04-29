@@ -74,7 +74,7 @@ def solver(
     pipe.then([stage_pipe, bind(generator.calc.add, data.x, data.h, x_n)])
 
     pipe.then([pipe_calc_step(
-        [clone_signal(y_n[i], value=num.signal_from_float(el)) for el in config.b],
+        [num.from_float(el) for el in config.b],
         [el[i] for el in v],
         data.h,
         data.y[i],
