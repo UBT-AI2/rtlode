@@ -3,8 +3,6 @@ from typing import List, Union, Dict
 import struct
 from opae import fpga
 
-from common import data_desc
-from common.packed_struct import BitVector
 from utils import num
 
 
@@ -55,17 +53,17 @@ class Solver:
         :return: id referring to given dataset, can be used to match results
         """
         self._current_input_id = self._current_input_id + 1
-        struct.pack_into('<IQ2QQI', self._input_buffer, 0,
+        struct.pack_into('<Iq2qqI', self._input_buffer, 0,
                          int(n),
                          num.from_float(h),
-                         *map(num.from_float, y_start),
+                         *map(num.from_float, reversed(y_start)),
                          num.from_float(x_start),
                          int(self._current_input_id))
 
         return self._current_input_id
 
     def fetch_output(self) -> Union[None, Dict]:
-        (*y, x, id) = struct.unpack_from('<2QQI', self._output_buffer, 0)
+        (*y, x, id) = struct.unpack_from('<2qqI', self._output_buffer, 0)
 
         if id > self._current_output_id:
             # New data available
@@ -73,7 +71,7 @@ class Solver:
             self.output_ack_id = self._current_output_id
             return {
                 'x': num.to_float(x),
-                'y': list(map(num.to_float, y)),
+                'y': list(map(num.to_float, reversed(y))),
                 'id': id
             }
         else:

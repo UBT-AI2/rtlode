@@ -23,7 +23,7 @@ def default(val=0):
 
 
 def same_as(signal, val=0):
-    return modbv(val, min=signal.min, max=signal.max)
+    return intbv(val, min=signal.min, max=signal.max)
 
 
 def from_float(float_val):
