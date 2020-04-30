@@ -55,9 +55,9 @@ class Solver:
         self._current_input_id = self._current_input_id + 1
         struct.pack_into('<Iq2qqI', self._input_buffer, 0,
                          int(n),
-                         num.from_float(h),
-                         *map(num.from_float, reversed(y_start)),
-                         num.from_float(x_start),
+                         num.int_from_float(h),
+                         *map(num.int_from_float, reversed(y_start)),
+                         num.int_from_float(x_start),
                          int(self._current_input_id))
 
         return self._current_input_id

@@ -1,6 +1,6 @@
 from typing import List
 
-from myhdl import block, SignalType
+from myhdl import block, SignalType, Signal
 
 import generator.calc
 from generator import expr_parser
@@ -45,11 +45,11 @@ def stage(
     # rhs_x = c_c * in_h + in_x
     rhs_x_int = clone_signal(x)
     rhs_x_pipe = Pipeline()\
-        .then(bind(generator.calc.mul, num.from_float(config.c), h, rhs_x_int))\
+        .then(bind(generator.calc.mul, Signal(num.from_float(config.c)), h, rhs_x_int))\
         .then(bind(generator.calc.add, x, rhs_x_int, rhs_x))
 
     pipe.then([pipe_calc_step(
-        [num.from_float(el) for el in config.a],
+        [Signal(num.from_float(el)) for el in config.a],
         [el[i] for el in v[:config.stage_index]],
         h,
         y[i],

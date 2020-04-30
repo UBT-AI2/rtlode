@@ -9,12 +9,12 @@ def add(in_a, in_b, out_c, flow: FlowControl = None):
     if flow is not None:
         def calc():
             if flow.enb:
-                out_c.next = in_a + in_b
+                out_c.next = in_a.signed() + in_b.signed()
                 flow.fin.next = True
         calc = always_seq(flow.clk_edge(), flow.rst)(calc)
     else:
         def calc():
-            out_c.next = in_a + in_b
+            out_c.next = in_a.signed() + in_b.signed()
         calc = always_comb(calc)
     return calc
 
@@ -24,12 +24,12 @@ def sub(in_a, in_b, out_c, flow: FlowControl = None):
     if flow is not None:
         def calc():
             if flow.enb:
-                out_c.next = in_a - in_b
+                out_c.next = in_a.signed() - in_b.signed()
                 flow.fin.next = True
         calc = always_seq(flow.clk_edge(), flow.rst)(calc)
     else:
         def calc():
-            out_c.next = in_a - in_b
+            out_c.next = in_a.signed() - in_b.signed()
         calc = always_comb(calc)
     return calc
 
@@ -47,11 +47,11 @@ def mul(in_a, in_b, out_c, flow: FlowControl = None):
     if flow is not None:
         def calc():
             if flow.enb:
-                reg.next = (in_a * in_b)
+                reg.next = (in_a.signed() * in_b.signed())
                 flow.fin.next = True
         calc = always_seq(flow.clk_edge(), flow.rst)(calc)
     else:
         def calc():
-            reg.next = (in_a * in_b)
+            reg.next = (in_a.signed() * in_b.signed())
         calc = always_comb(calc)
     return [resize, calc]

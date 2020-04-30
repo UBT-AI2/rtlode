@@ -86,10 +86,10 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
         input_desc = data_desc.get_input_desc(system_size)
         input_data = input_desc.create_write_instance()
 
-        input_data.x_start.next = num.signal_from_float(x_start)
+        input_data.x_start.next = num.from_float(x_start)
         for i in range(system_size):
-            input_data.y_start[i].next = num.signal_from_float(y_start[i])
-        input_data.h.next = num.signal_from_float(h)
+            input_data.y_start[i].next = num.from_float(y_start[i])
+        input_data.h.next = num.from_float(h)
         input_data.n.next = int(n)
 
         current_input_id = current_input_id + 1

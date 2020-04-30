@@ -47,7 +47,7 @@ class TestExpr(unittest.TestCase):
 
             def convert_scope(data):
                 if isinstance(data, int) or isinstance(data, float):
-                    return num.signal_from_float(data)
+                    return num.from_float(data)
                 elif isinstance(data, list):
                     return list(map(convert_scope, data))
                 elif isinstance(data, dict):
@@ -58,7 +58,7 @@ class TestExpr(unittest.TestCase):
                 raise Exception('Can\'t convert data chunk to signals.')
 
             scope = convert_scope(scope)
-            res = num.signal_from_float(res)
+            res = num.from_float(res)
 
             def test():
                 clks = 0

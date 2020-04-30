@@ -26,14 +26,14 @@ def same_as(signal, val=0):
     return intbv(val, min=signal.min, max=signal.max)
 
 
-def from_float(float_val):
+def int_from_float(float_val):
     return int(round(float_val * 2 ** FRACTION_SIZE))
 
 
-def signal_from_float(float_val, sig=None):
-    raw = from_float(float_val)
-    if sig is not None:
-        return same_as(sig, val=raw)
+def from_float(float_val, size=None):
+    raw = int_from_float(float_val)
+    if size is not None:
+        return same_as(size, val=raw)
     return default(raw)
 
 
