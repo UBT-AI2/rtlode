@@ -1,6 +1,6 @@
 import typing
 
-from myhdl import block, always_seq, Signal, always_comb, SignalType
+from myhdl import block, always_seq, SignalType
 from pyparsing import *
 
 import generator.calc
@@ -69,7 +69,7 @@ def expr(expression: str,
                         var = scope[parse_tree['var']]
 
                     @always_seq(expr_flow.clk_edge(), reset=None)
-                    def assign_comb():
+                    def assign_static():
                         out.next = var
                         expr_flow.fin.next = True
 
@@ -82,7 +82,7 @@ def expr(expression: str,
                     if isinstance(var, SignalType):
                         return [assign_seq]
                     else:
-                        return [assign_comb]
+                        return [assign_static]
                 else:
                     raise ExprParserException('Unknown var identifier found: %s' % parse_tree['var'])
             elif 'sign' in parse_tree and len(parse_tree) == 2:
@@ -90,7 +90,7 @@ def expr(expression: str,
                     return generate_logic(parse_tree[1], out, expr_flow)
                 elif parse_tree['sign'] == '-':
                     val = clone_signal(result)
-                    zero = Signal(num.from_float(0, size=val))
+                    zero = num.int_from_float(0)
 
                     subflow = expr_flow.create_subflow(enb=expr_flow.enb)
                     rhs = generate_logic(parse_tree[1], val, subflow)
@@ -125,9 +125,9 @@ def expr(expression: str,
                 inst = mod(val_lhs, val_rhs, out, expr_flow.create_subflow(enb=subflows_finished, fin=expr_flow.fin))
                 return [lhs] + [rhs] + [fin_reduce] + [inst]
         elif isinstance(parse_tree, float):
-            const = Signal(num.from_float(parse_tree))
+            const = num.int_from_float(parse_tree)
 
-            @always_comb
+            @always_seq(expr_flow.clk_edge(), reset=None)
             def assign():
                 out.next = const
                 expr_flow.fin.next = True
