@@ -1,4 +1,6 @@
-from myhdl import block, always_seq, always_comb, Signal, intbv
+from typing import Union
+
+from myhdl import block, always_seq, always_comb, Signal, intbv, SignalType
 
 from generator.flow import FlowControl
 from utils.num import DOUBLE_MIN_VALUE, DOUBLE_MAX_VALUE, NONFRACTION_SIZE, FRACTION_SIZE
@@ -35,7 +37,7 @@ def sub(in_a, in_b, out_c, flow: FlowControl = None):
 
 
 @block
-def mul(in_a, in_b, out_c, flow: FlowControl = None):
+def mul(in_a: Union[int, SignalType], in_b: SignalType, out_c, flow: FlowControl = None):
     enable = flow.enb if flow is not None else True
 
     reg = Signal(intbv(0, min=DOUBLE_MIN_VALUE, max=DOUBLE_MAX_VALUE))
@@ -45,13 +47,25 @@ def mul(in_a, in_b, out_c, flow: FlowControl = None):
         out_c.next = reg[NONFRACTION_SIZE + FRACTION_SIZE + 1 + FRACTION_SIZE:FRACTION_SIZE].signed()
 
     if flow is not None:
-        def calc():
-            if flow.enb:
-                reg.next = (in_a * in_b)
-                flow.fin.next = True
-        calc = always_seq(flow.clk_edge(), flow.rst)(calc)
+        if isinstance(in_a, int):
+            @always_seq(flow.clk_edge(), flow.rst)
+            def calc():
+                if flow.enb:
+                    reg.next = (intbv(in_a).signed() * in_b)
+                    flow.fin.next = True
+        else:
+            @always_seq(flow.clk_edge(), flow.rst)
+            def calc():
+                if flow.enb:
+                    reg.next = (in_a * in_b)
+                    flow.fin.next = True
     else:
-        def calc():
-            reg.next = (in_a * in_b)
-        calc = always_comb(calc)
+        if isinstance(in_a, int):
+            @always_comb
+            def calc():
+                reg.next = (intbv(in_a).signed() * in_b)
+        else:
+            @always_comb
+            def calc():
+                reg.next = (in_a * in_b)
     return [resize, calc]
