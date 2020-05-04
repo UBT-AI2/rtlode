@@ -1,4 +1,4 @@
-from myhdl import intbv, modbv
+from myhdl import intbv, modbv, SignalType
 
 INTEGER_SIZE = 32
 NONFRACTION_SIZE = 16
@@ -22,8 +22,13 @@ def default(val=0):
     return intbv(val, min=MIN_VALUE, max=MAX_VALUE)
 
 
-def same_as(signal, val=0):
-    return intbv(val, min=signal.min, max=signal.max)
+def same_as(signal: SignalType, val=0):
+    if isinstance(signal.val, modbv):
+        return modbv(val, min=signal.min, max=signal.max)
+    elif isinstance(signal.val, intbv):
+        return intbv(val, min=signal.min, max=signal.max)
+    else:
+        raise NotImplemented()
 
 
 def int_from_float(float_val):

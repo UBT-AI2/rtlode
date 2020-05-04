@@ -1,6 +1,7 @@
 from myhdl import block, always_seq, Signal, instances, always_comb, intbv, ConcatSignal
 
 from common import data_desc
+from common.config import Config
 from common.packed_struct import BitVector
 from generator.cdc_utils import FifoConsumer, FifoProducer
 from generator.priority_encoder import priority_encoder_one_hot
@@ -8,7 +9,7 @@ from generator.solver import solver
 
 
 @block
-def dispatcher(config, data_in: FifoConsumer, data_out: FifoProducer):
+def dispatcher(config: Config, data_in: FifoConsumer, data_out: FifoProducer):
     """
     Logic to handle data stream read and write from / to cpu. Including dispatching single
     solver instances to solve a given ivp and collecting results to send back to cpu.

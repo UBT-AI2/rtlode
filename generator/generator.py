@@ -16,6 +16,7 @@ from generator.cdc_utils import FifoProducer, FifoConsumer, async_fifo
 from generator.csr import csr_addresses
 from common.packed_struct import BitVector
 from generator.dispatcher import dispatcher
+from generator.sim.cosim import dispatcher_cosim
 from utils import slv, num
 
 
@@ -76,7 +77,7 @@ def _create_build_config(config):
         json.dump(_get_build_config(config), f, ensure_ascii=False, indent=2)
 
 
-def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None, nbr_datasets=10):
+def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None, nbr_datasets=10, cosimulate=False):
     current_input_id = 0
 
     def create_input_data(x_start: float, y_start: List[float], h: int, n: int):
@@ -122,7 +123,10 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
         out_fifo_c = FifoConsumer(clk, reset, output_desc_vec.create_instance())
         out_fifo = async_fifo(out_fifo_p, out_fifo_c, buffer_size_bits=buffer_size_bits)
 
-        disp_inst = dispatcher(config, data_in=in_fifo_c, data_out=out_fifo_p)
+        if cosimulate:
+            disp_inst = dispatcher_cosim(config, data_in=in_fifo_c, data_out=out_fifo_p)
+        else:
+            disp_inst = dispatcher(config, data_in=in_fifo_c, data_out=out_fifo_p)
 
         parsed_output_data = data_desc.get_output_desc(config.system_size).create_read_instance(out_fifo_c.data)
 

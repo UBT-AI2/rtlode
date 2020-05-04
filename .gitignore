@@ -1,6 +1,7 @@
 .idea
 venv
 generator/out
+generator/sim/out
 __pycache__
 *.pyc
 *.slv
