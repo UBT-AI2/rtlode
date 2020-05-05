@@ -1,4 +1,4 @@
-from myhdl import block, always_seq, Signal, concat, instances, always_comb
+from myhdl import block, always_seq, Signal, concat, instances, always_comb, ConcatSignal
 
 from common.data_desc import get_input_desc, get_output_desc
 from common.packed_struct import BitVector
@@ -52,7 +52,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
         if reset:
             af2cp.c0.hdr.vc_sel.next = 0
             af2cp.c0.hdr.rsvd1.next = 0
-            af2cp.c0.hdr.cl_len.next = 0
+            af2cp.c0.hdr.cl_len.next = 3  # 4 CL's
             af2cp.c0.hdr.req_type.next = 0
             af2cp.c0.hdr.rsvd0.next = 0
             af2cp.c0.hdr.address.next = 0
@@ -71,11 +71,36 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
     def calc_next_input_id():
         next_input_id.next = csr.input_ack_id + 1
 
+    # Coding as list would prevent usage in always without forcing array in hdl code
+    cl0_data = BitVector(len(CcipClData)).create_instance()
+    cl1_data = BitVector(len(CcipClData)).create_instance()
+    cl2_data = BitVector(len(CcipClData)).create_instance()
+    cl3_data = BitVector(len(CcipClData)).create_instance()
+    data_chunk = ConcatSignal(cl0_data, cl1_data, cl2_data, cl3_data)
+
+    cl0_rcv = Signal(bool(0))
+    cl1_rcv = Signal(bool(0))
+    cl2_rcv = Signal(bool(0))
+    cl3_rcv = Signal(bool(0))
+    cl_rcv_vec = ConcatSignal(cl3_rcv, cl2_rcv, cl1_rcv, cl0_rcv)
+
     @always_seq(clk.posedge, reset=reset)
     def mem_reads_responses():
         if cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0 and parsed_input_data.id == next_input_id:
             data_out.data.next = concat(cp2af.c0.data)[len(input_desc):]
             data_out.wr.next = True
+            if cp2af.c0.hdr.cl_num == 0:
+                cl0_data.next = cp2af.c0.data
+                cl0_rcv.next = True
+            elif cp2af.c0.hdr.cl_num == 1:
+                cl1_data.next = cp2af.c0.data
+                cl1_rcv.next = True
+            elif cp2af.c0.hdr.cl_num == 2:
+                cl2_data.next = cp2af.c0.data
+                cl2_rcv.next = True
+            elif cp2af.c0.hdr.cl_num == 3:
+                cl3_data.next = cp2af.c0.data
+                cl3_rcv.next = True
         else:
             data_out.wr.next = False
 
@@ -87,6 +112,12 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
     @always_comb
     def calc_next_output_id():
         next_output_id.next = csr.output_ack_id + 1
+
+    @always_seq(clk.posedge, reset=reset)
+    def data_chunk_parser():
+        if cl_rcv_vec == 0b1111:
+            # All cl's received
+            pass
 
     # Host Memory Writes
     @always_seq(clk.posedge, reset=None)
