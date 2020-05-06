@@ -1,5 +1,6 @@
-from myhdl import block, always_seq, Signal, concat, instances, always_comb, ConcatSignal
+from myhdl import block, always_seq, Signal, concat, instances, always_comb, ConcatSignal, intbv, modbv, SignalType
 
+from common.config import Config
 from common.data_desc import get_input_desc, get_output_desc
 from common.packed_struct import BitVector
 from generator.ccip import CcipClData
@@ -7,6 +8,99 @@ from generator.cdc_utils import FifoProducer, FifoConsumer
 from generator.csr import CsrSignals
 from generator.utils import clone_signal
 from utils import num
+
+
+@block
+def data_chunk_parser(
+        config: Config,
+        data_out: FifoProducer,
+        chunk_in: FifoProducer,
+        input_ack_id: SignalType,
+        drop_rest: SignalType):
+    """
+    Used to parse solver input data from a noncontinious data chunk (4CLs) input.
+    :param config: config
+    :param data_out: parsed solver input data out
+    :param chunk_in: data chunk (4CLs) input
+    :param input_ack_id: current ack input id
+    :return: myhdl instances
+    """
+    assert data_out.clk == chunk_in.clk
+    assert data_out.rst == chunk_in.rst
+    clk = data_out.clk
+    reset = data_out.rst
+
+    data_desc = get_input_desc(config.system_size)
+    data_len = len(data_desc)
+    assert len(data_out.data) == data_len
+    assert data_len % 8 == 0
+    chunk_len = len(CcipClData) * 4
+    assert len(chunk_in.data) == chunk_len
+    assert chunk_len % 8 == 0
+    chun_len_bytes = chunk_len // 8
+
+    chunk_len_drop = chunk_len // data_len * data_len
+    assert chunk_len_drop % 8 == 0
+    chunk_len_drop_bytes = chunk_len_drop // 8
+
+    buffer_size = int((chunk_len + data_len) / 8)
+    buffer = [Signal(intbv(0, min=0, max=256)) for _ in range(buffer_size)]
+
+    data_out_bytes = [Signal(intbv(0, min=0, max=256)) for _ in range(data_len / 8)]
+    data_out_vec = ConcatSignal(*data_out_bytes)
+    data_out_parsed = data_desc.create_read_instance(data_out_vec)
+
+    wr_addr = Signal(modbv(0, min=0, max=buffer_size))
+    rd_addr = Signal(modbv(255, min=0, max=buffer_size))
+
+    @always_comb
+    def check_full():
+        chunk_in.full.next = (rd_addr - wr_addr - 1) <= (chunk_len / 8)
+
+    @always_seq(clk, reset=reset)
+    def handle_wr():
+        if chunk_in.wr and not chunk_in.full:
+            if drop_rest:
+                for i in range(chunk_len_drop_bytes):
+                    buffer[(wr_addr + i) % buffer_size].next = \
+                        chunk_in.data[chunk_len_drop - i * 8:chunk_len_drop - (i + 1) * 8]
+                wr_addr.next = wr_addr + chunk_len_drop_bytes
+            else:
+                for i in range(chun_len_bytes):
+                    buffer[(wr_addr + i) % buffer_size].next = \
+                        chunk_in.data[chunk_len - i * 8:chunk_len - (i + 1) * 8]
+                wr_addr.next = wr_addr + chun_len_bytes
+
+    enough_data = Signal(bool(0))
+
+    @always_seq(clk, reset=reset)
+    def check_enough_data():
+        enough_data.next = (wr_addr - rd_addr - 1) >= (data_len / 8)
+
+    @always_seq(clk, reset=reset)
+    def handle_parsing():
+        # Update data_out_bytes
+        for i in range(data_len / 8):
+            data_out_bytes[i].next = buffer[(rd_addr + i) % buffer_size]
+
+        if data_out.wr:
+            if not data_out.full:
+                rd_addr.next = rd_addr + data_len / 8
+                input_ack_id.next = input_ack_id + 1
+                data_out.wr.next = False
+        else:
+            if enough_data:
+                if data_out_parsed.id == input_ack_id + 1:
+                    data_out.wr.next = True
+                else:
+                    # Skip data
+                    rd_addr.next = rd_addr + data_len / 8
+
+    @always_comb
+    def assign_data_out():
+        data_out.data.next = data_out_vec
+
+    return instances()
 
 
 @block
@@ -22,13 +116,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
 
     input_desc = get_input_desc(config.system_size)
     assert len(input_desc) <= len(CcipClData)
-
-    parsed_input_raw = BitVector(len(input_desc)).create_instance()
-    parsed_input_data = input_desc.create_read_instance(parsed_input_raw)
-
-    @always_comb
-    def assign_input():
-        parsed_input_raw.next = concat(cp2af.c0.data)[len(input_desc):]
+    assert len(input_desc) % 8 == 0
 
     output_desc = get_output_desc(config.system_size)
     assert len(output_desc) <= len(data_in.data)
@@ -38,8 +126,15 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
     polling_clk = Signal(bool(0))
     polling_clk_counter = Signal(num.integer())
 
+    # Drop reaminding byte of data chunk
+    data_chunk_drop = Signal(bool(0))
+
+    # Incremental counter used for iterating trough host array
+    input_addr_offset = Signal(num.integer(0))
+
     @always_seq(clk.posedge, reset=reset)
     def polling_clk_driver():
+        # Possible race condition (second chunk requested before first one was processed) if clk divide to low
         if polling_clk_counter == 1023:  # Polling clk divider
             polling_clk_counter.next = 0
             polling_clk.next = True
@@ -58,18 +153,23 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
             af2cp.c0.hdr.address.next = 0
             af2cp.c0.hdr.mdata.next = 0  # User defined value, returned in response.
             af2cp.c0.valid.next = 0
+
+            input_addr_offset.next = 0
         else:
-            af2cp.c0.hdr.address.next = csr.input_addr
-            if csr.enb and not cp2af.c0TxAlmFull and polling_clk:
+            af2cp.c0.hdr.address.next = csr.input_addr + input_addr_offset * 0b100
+            if csr.enb and not cp2af.c0TxAlmFull and polling_clk and cl_rcv_vec == 0b0000:
+                # Wait for one request to be received completly and processed (cl_rcv_vec == 0b0000)
                 af2cp.c0.valid.next = 1
+                if input_addr_offset == csr.input_size - 1:
+                    input_addr_offset.next = 0
+                    # Only working if no race condition (see polling_clk_driver())
+                    # Multiple simultanious request not possible currently
+                    data_chunk_drop.next = True
+                else:
+                    input_addr_offset.next = input_addr_offset + 1
+                    data_chunk_drop.next = False
             else:
                 af2cp.c0.valid.next = 0
-
-    next_input_id = clone_signal(csr.input_ack_id)
-
-    @always_comb
-    def calc_next_input_id():
-        next_input_id.next = csr.input_ack_id + 1
 
     # Coding as list would prevent usage in always without forcing array in hdl code
     cl0_data = BitVector(len(CcipClData)).create_instance()
@@ -86,9 +186,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
 
     @always_seq(clk.posedge, reset=reset)
     def mem_reads_responses():
-        if cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0 and parsed_input_data.id == next_input_id:
-            data_out.data.next = concat(cp2af.c0.data)[len(input_desc):]
-            data_out.wr.next = True
+        if cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0:
             if cp2af.c0.hdr.cl_num == 0:
                 cl0_data.next = cp2af.c0.data
                 cl0_rcv.next = True
@@ -101,23 +199,23 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
             elif cp2af.c0.hdr.cl_num == 3:
                 cl3_data.next = cp2af.c0.data
                 cl3_rcv.next = True
-        else:
-            data_out.wr.next = False
 
-        if data_out.wr and not data_out.full:
-            csr.input_ack_id.next = next_input_id
+        if cl_rcv_vec == 0b1111 and not chunk_out.full:
+            cl0_rcv.next = False
+            cl1_rcv.next = False
+            cl2_rcv.next = False
+            cl3_rcv.next = False
+            chunk_out.wr.next = True
+            chunk_out.data.next = data_chunk
+
+    chunk_out = FifoProducer(clk, reset, BitVector(len(cl_rcv_vec)).create_instance())
+    chunk_parser_inst = data_chunk_parser(config, data_out, chunk_out, csr.input_ack_id, data_chunk_drop)
 
     next_output_id = clone_signal(csr.output_ack_id)
 
     @always_comb
     def calc_next_output_id():
         next_output_id.next = csr.output_ack_id + 1
-
-    @always_seq(clk.posedge, reset=reset)
-    def data_chunk_parser():
-        if cl_rcv_vec == 0b1111:
-            # All cl's received
-            pass
 
     # Host Memory Writes
     @always_seq(clk.posedge, reset=None)

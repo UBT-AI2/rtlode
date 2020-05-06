@@ -8,8 +8,10 @@ from utils import num
 
 csr_addresses = {
     'input_addr': 0x0020,
+    'input_size': 0x0060,
     'input_ack_id': 0x0030,
     'output_addr': 0x0040,
+    'output_size': 0x0070,
     'output_ack_id': 0x0050,
     'enb': 0x00A0,
 }
@@ -35,8 +37,10 @@ class CsrHeader:
 @dataclass
 class CsrSignals:
     input_addr: SignalType = field(default_factory=CcipClAddr.create_instance)
+    input_size: SignalType = field(default_factory=lambda: Signal(num.integer(0)))
     input_ack_id: SignalType = field(default_factory=lambda: Signal(num.integer(0)))
     output_addr: SignalType = field(default_factory=CcipClAddr.create_instance)
+    output_size: SignalType = field(default_factory=lambda: Signal(num.integer(0)))
     output_ack_id: SignalType = field(default_factory=lambda: Signal(num.integer(0)))
     enb: SignalType = field(default_factory=lambda: Signal(bool(0)))
 
@@ -55,8 +59,10 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
     """
     # Remapping of addresses required because of myhdl constraints
     csr_address_input_addr = csr_addresses['input_addr']
+    csr_address_input_size = csr_addresses['input_size']
     csr_address_input_ack_id = csr_addresses['input_ack_id']
     csr_address_output_addr = csr_addresses['output_addr']
+    csr_address_output_size = csr_addresses['output_size']
     csr_address_output_ack_id = csr_addresses['output_ack_id']
     csr_address_enb = csr_addresses['enb']
 
@@ -68,8 +74,12 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
         if cp2af.c0.mmioWrValid:
             if mmio_hdr.address == csr_address_input_addr:
                 data.input_addr.next = concat(cp2af.c0.data)[len(CcipClAddr):]
+            elif mmio_hdr.address == csr_address_input_size:
+                data.input_size.next = concat(cp2af.c0.data)[64:]
             elif mmio_hdr.address == csr_address_output_addr:
                 data.output_addr.next = concat(cp2af.c0.data)[len(CcipClAddr):]
+            elif mmio_hdr.address == csr_address_output_size:
+                data.output_size.next = concat(cp2af.c0.data)[64:]
             elif mmio_hdr.address == csr_address_output_ack_id:
                 data.output_ack_id.next = concat(cp2af.c0.data)[64:]
             elif mmio_hdr.address == csr_address_enb:
@@ -100,10 +110,14 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
                 # Custom AFU CSR
                 elif mmio_hdr.address == csr_address_input_addr:
                     af2cp.c2.data.next = data.input_addr
+                elif mmio_hdr.address == csr_address_input_size:
+                    af2cp.c2.data.next = data.input_size
                 elif mmio_hdr.address == csr_address_input_ack_id:
                     af2cp.c2.data.next = data.input_ack_id
                 elif mmio_hdr.address == csr_address_output_addr:
                     af2cp.c2.data.next = data.output_addr
+                elif mmio_hdr.address == csr_address_output_size:
+                    af2cp.c2.data.next = data.output_size
                 elif mmio_hdr.address == csr_address_output_ack_id:
                     af2cp.c2.data.next = data.output_ack_id
                 elif mmio_hdr.address == csr_address_enb:
