@@ -2,7 +2,7 @@ import binascii
 from unittest import TestCase
 
 import struct
-from myhdl import block, Signal, ResetSignal, always, delay, instances
+from myhdl import block, Signal, ResetSignal, always, delay, instances, instance
 
 from common import data_desc
 from common.config import Config
@@ -44,6 +44,7 @@ class Test(TestCase):
                              num.int_from_float(x_start),
                              int(input_id))
             offset += data_size
+        drop_bytes_constant = len(host_byte_array) - offset
 
         @block
         def testbench():
@@ -55,8 +56,9 @@ class Test(TestCase):
             chunk_in = FifoProducer(clk, rst, BitVector(len(CcipClData) * 4).create_instance())
             input_ack_id = Signal(num.integer())
             drop_rest = Signal(bool(0))
+            drop_bytes = Signal(num.integer(drop_bytes_constant))
 
-            parser = data_chunk_parser(config, data_out, chunk_in, input_ack_id, drop_rest)
+            parser = data_chunk_parser(config, data_out, chunk_in, input_ack_id, drop_rest, drop_bytes)
 
             @always(delay(5))
             def clk_driver():
@@ -64,17 +66,24 @@ class Test(TestCase):
 
             chunk_offset = Signal(0)
 
-            @always(clk.posedge)
+            @instance
             def write_chunk():
-                if not chunk_in.full:
-                    chunk_in.data.next = int.from_bytes(host_byte_array[chunk_offset:chunk_offset + 256], "big")
-                    if chunk_offset + 256 < len(host_byte_array):
-                        chunk_offset.next += 256
+                yield delay(100)
+                while True:
+                    yield clk.posedge
+                    if chunk_in.wr:
+                        if not chunk_in.full:
+                            chunk_in.wr.next = False
                     else:
-                        chunk_offset.next = 0
-                    chunk_in.wr.next = True
-                else:
-                    chunk_in.wr.next = False
+                        chunk_in.data.next = int.from_bytes(host_byte_array[chunk_offset:chunk_offset + 256], "big")
+                        if chunk_offset + 256 < len(host_byte_array):
+                            chunk_offset.next += 256
+                            drop_rest.next = False
+                        else:
+                            drop_rest.next = True
+                            chunk_offset.next = 0
+                        yield delay(200)
+                        chunk_in.wr.next = True
 
             @always(clk.posedge)
             def read_data():

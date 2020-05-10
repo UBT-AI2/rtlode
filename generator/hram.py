@@ -1,4 +1,5 @@
-from myhdl import block, always_seq, Signal, concat, instances, always_comb, ConcatSignal, intbv, modbv, SignalType
+from myhdl import block, always_seq, Signal, concat, instances, always_comb, ConcatSignal, intbv, modbv, SignalType, \
+    enum
 
 from common.config import Config
 from common.data_desc import get_input_desc, get_output_desc
@@ -16,7 +17,8 @@ def data_chunk_parser(
         data_out: FifoProducer,
         chunk_in: FifoProducer,
         input_ack_id: SignalType,
-        drop_rest: SignalType):
+        drop_rest: SignalType,
+        drop_bytes: SignalType):
     """
     Used to parse solver input data from a noncontinious data chunk (4CLs) input.
     :param config: config
@@ -42,10 +44,6 @@ def data_chunk_parser(
     assert chunk_len % 8 == 0
     chunk_len_bytes = chunk_len // 8
 
-    chunk_len_drop = chunk_len // data_len * data_len
-    assert chunk_len_drop % 8 == 0
-    chunk_len_drop_bytes = chunk_len_drop // 8
-
     buffer_size = int((chunk_len + data_len) / 8)
     buffer = [Signal(intbv(0, min=0, max=256)) for _ in range(buffer_size)]
 
@@ -66,15 +64,18 @@ def data_chunk_parser(
 
     @always_comb
     def check_full():
-        chunk_in.full.next = buffer_size - fill_level < chunk_len_bytes
+        chunk_in.full.next = buffer_size - 1 - fill_level < chunk_len_bytes
 
     @always_seq(clk.posedge, reset=reset)
     def handle_wr():
         if chunk_in.wr and not chunk_in.full:
+            print('Chunk in, drop_rest: %r' % drop_rest)
             if drop_rest:
+                chunk_len_drop_bytes = chunk_len_bytes - drop_bytes
                 for i in range(chunk_len_drop_bytes):
                     buffer[(wr_addr + i) % buffer_size].next = \
-                        chunk_in.data[chunk_len_drop - i * 8:chunk_len_drop - (i + 1) * 8]
+                        chunk_in.data[chunk_len - i * 8:chunk_len - (i + 1) * 8]
+                    print('Data: %r' % (chunk_in.data[chunk_len - i * 8:chunk_len - (i + 1) * 8]))
                 wr_addr.next = wr_addr + chunk_len_drop_bytes
             else:
                 for i in range(chunk_len_bytes):
@@ -83,30 +84,38 @@ def data_chunk_parser(
                 wr_addr.next = wr_addr + chunk_len_bytes
 
     enough_data = Signal(bool(0))
+    t_state = enum('IDLE', 'PROCESSING', 'WRITING')
+    parser_state = Signal(t_state.IDLE)
 
-    @always_seq(clk.posedge, reset=reset)
+    @always_comb
     def check_enough_data():
         enough_data.next = fill_level >= data_len_bytes
 
     @always_seq(clk.posedge, reset=reset)
     def handle_parsing():
-        # Update data_out_bytes
-        for i in range(data_len_bytes):
-            data_out_bytes[i].next = buffer[(rd_addr + i) % buffer_size]
-
-        if data_out.wr:
+        if parser_state == t_state.IDLE:
+            # Update data_out_bytes
+            for i in range(data_len_bytes):
+                data_out_bytes[i].next = buffer[(rd_addr + i) % buffer_size]
+            if enough_data:
+                parser_state.next = t_state.PROCESSING
+        elif parser_state == t_state.PROCESSING:
+            print("%r; %r" % (data_out_parsed.id, input_ack_id + 1))
+            print("%r" % data_out_bytes)
+            if data_out_parsed.id == input_ack_id + 1:
+                parser_state.next = t_state.WRITING
+                data_out.wr.next = True
+            else:
+                # Skip data
+                parser_state.next = t_state.IDLE
+                rd_addr.next = rd_addr + data_len_bytes
+        elif parser_state == t_state.WRITING:
             if not data_out.full:
+                # Output data written
+                parser_state.next = t_state.IDLE
                 rd_addr.next = rd_addr + data_len_bytes
                 input_ack_id.next = input_ack_id + 1
                 data_out.wr.next = False
-        else:
-            if enough_data:
-                print("%r; %r" % (data_out_parsed.id, input_ack_id + 1))
-                if data_out_parsed.id == input_ack_id + 1:
-                    data_out.wr.next = True
-                else:
-                    # Skip data
-                    rd_addr.next = rd_addr + data_len_bytes
 
     @always_comb
     def assign_data_out():
