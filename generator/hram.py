@@ -23,6 +23,7 @@ def data_chunk_parser(
     :param data_out: parsed solver input data out
     :param chunk_in: data chunk (4CLs) input
     :param input_ack_id: current ack input id
+    :param drop_rest: boolean signal indication if rest of given data chunk should be dropped
     :return: myhdl instances
     """
     assert data_out.clk == chunk_in.clk
@@ -34,10 +35,12 @@ def data_chunk_parser(
     data_len = len(data_desc)
     assert len(data_out.data) == data_len
     assert data_len % 8 == 0
+    data_len_bytes = data_len // 8
+
     chunk_len = len(CcipClData) * 4
     assert len(chunk_in.data) == chunk_len
     assert chunk_len % 8 == 0
-    chun_len_bytes = chunk_len // 8
+    chunk_len_bytes = chunk_len // 8
 
     chunk_len_drop = chunk_len // data_len * data_len
     assert chunk_len_drop % 8 == 0
@@ -46,18 +49,26 @@ def data_chunk_parser(
     buffer_size = int((chunk_len + data_len) / 8)
     buffer = [Signal(intbv(0, min=0, max=256)) for _ in range(buffer_size)]
 
-    data_out_bytes = [Signal(intbv(0, min=0, max=256)) for _ in range(data_len / 8)]
-    data_out_vec = ConcatSignal(*data_out_bytes)
+    data_out_bytes = [Signal(intbv(0, min=0, max=256)) for _ in range(data_len_bytes)]
+    data_out_vec = ConcatSignal(*reversed(data_out_bytes))
     data_out_parsed = data_desc.create_read_instance(data_out_vec)
 
     wr_addr = Signal(modbv(0, min=0, max=buffer_size))
-    rd_addr = Signal(modbv(255, min=0, max=buffer_size))
+    rd_addr = Signal(modbv(0, min=0, max=buffer_size))
+    fill_level = Signal(intbv(0, min=0, max=buffer_size - 1))
+
+    @always_comb
+    def calculate_fill_level():
+        if wr_addr >= rd_addr:
+            fill_level.next = wr_addr - rd_addr
+        else:
+            fill_level.next = buffer_size - rd_addr + wr_addr
 
     @always_comb
     def check_full():
-        chunk_in.full.next = (rd_addr - wr_addr - 1) <= (chunk_len / 8)
+        chunk_in.full.next = buffer_size - fill_level < chunk_len_bytes
 
-    @always_seq(clk, reset=reset)
+    @always_seq(clk.posedge, reset=reset)
     def handle_wr():
         if chunk_in.wr and not chunk_in.full:
             if drop_rest:
@@ -66,35 +77,36 @@ def data_chunk_parser(
                         chunk_in.data[chunk_len_drop - i * 8:chunk_len_drop - (i + 1) * 8]
                 wr_addr.next = wr_addr + chunk_len_drop_bytes
             else:
-                for i in range(chun_len_bytes):
+                for i in range(chunk_len_bytes):
                     buffer[(wr_addr + i) % buffer_size].next = \
                         chunk_in.data[chunk_len - i * 8:chunk_len - (i + 1) * 8]
-                wr_addr.next = wr_addr + chun_len_bytes
+                wr_addr.next = wr_addr + chunk_len_bytes
 
     enough_data = Signal(bool(0))
 
-    @always_seq(clk, reset=reset)
+    @always_seq(clk.posedge, reset=reset)
     def check_enough_data():
-        enough_data.next = (wr_addr - rd_addr - 1) >= (data_len / 8)
+        enough_data.next = fill_level >= data_len_bytes
 
-    @always_seq(clk, reset=reset)
+    @always_seq(clk.posedge, reset=reset)
     def handle_parsing():
         # Update data_out_bytes
-        for i in range(data_len / 8):
+        for i in range(data_len_bytes):
             data_out_bytes[i].next = buffer[(rd_addr + i) % buffer_size]
 
         if data_out.wr:
             if not data_out.full:
-                rd_addr.next = rd_addr + data_len / 8
+                rd_addr.next = rd_addr + data_len_bytes
                 input_ack_id.next = input_ack_id + 1
                 data_out.wr.next = False
         else:
             if enough_data:
+                print("%r; %r" % (data_out_parsed.id, input_ack_id + 1))
                 if data_out_parsed.id == input_ack_id + 1:
                     data_out.wr.next = True
                 else:
                     # Skip data
-                    rd_addr.next = rd_addr + data_len / 8
+                    rd_addr.next = rd_addr + data_len_bytes
 
     @always_comb
     def assign_data_out():
