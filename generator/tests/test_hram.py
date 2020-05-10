@@ -1,4 +1,3 @@
-import binascii
 from unittest import TestCase
 
 import struct
@@ -9,7 +8,6 @@ from common.config import Config
 from common.packed_struct import BitVector
 from generator.ccip import CcipClData
 from generator.cdc_utils import FifoProducer
-from generator.generator import _load_config
 from generator.hram import data_chunk_parser
 from utils import num
 

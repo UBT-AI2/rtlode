@@ -1,4 +1,4 @@
-from myhdl import block, always_seq, Signal, concat, instances, always_comb, ConcatSignal, intbv, modbv, SignalType, \
+from myhdl import block, always_seq, Signal, instances, always_comb, ConcatSignal, intbv, modbv, SignalType, \
     enum
 
 from common.config import Config
@@ -17,7 +17,7 @@ def data_chunk_parser(
         data_out: FifoProducer,
         chunk_in: FifoProducer,
         input_ack_id: SignalType,
-        drop_rest: SignalType,
+        drop: SignalType,
         drop_bytes: SignalType):
     """
     Used to parse solver input data from a noncontinious data chunk (4CLs) input.
@@ -25,7 +25,8 @@ def data_chunk_parser(
     :param data_out: parsed solver input data out
     :param chunk_in: data chunk (4CLs) input
     :param input_ack_id: current ack input id
-    :param drop_rest: boolean signal indication if rest of given data chunk should be dropped
+    :param drop: boolean signal indication if rest of given data chunk should be dropped
+    :param drop_bytes: number of bytes to drop if drop_rest is true
     :return: myhdl instances
     """
     assert data_out.clk == chunk_in.clk
@@ -69,13 +70,11 @@ def data_chunk_parser(
     @always_seq(clk.posedge, reset=reset)
     def handle_wr():
         if chunk_in.wr and not chunk_in.full:
-            print('Chunk in, drop_rest: %r' % drop_rest)
-            if drop_rest:
+            if drop:
                 chunk_len_drop_bytes = chunk_len_bytes - drop_bytes
                 for i in range(chunk_len_drop_bytes):
                     buffer[(wr_addr + i) % buffer_size].next = \
                         chunk_in.data[chunk_len - i * 8:chunk_len - (i + 1) * 8]
-                    print('Data: %r' % (chunk_in.data[chunk_len - i * 8:chunk_len - (i + 1) * 8]))
                 wr_addr.next = wr_addr + chunk_len_drop_bytes
             else:
                 for i in range(chunk_len_bytes):
@@ -100,8 +99,6 @@ def data_chunk_parser(
             if enough_data:
                 parser_state.next = t_state.PROCESSING
         elif parser_state == t_state.PROCESSING:
-            print("%r; %r" % (data_out_parsed.id, input_ack_id + 1))
-            print("%r" % data_out_bytes)
             if data_out_parsed.id == input_ack_id + 1:
                 parser_state.next = t_state.WRITING
                 data_out.wr.next = True
@@ -230,7 +227,8 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
             chunk_out.data.next = data_chunk
 
     chunk_out = FifoProducer(clk, reset, BitVector(len(cl_rcv_vec)).create_instance())
-    chunk_parser_inst = data_chunk_parser(config, data_out, chunk_out, csr.input_ack_id, data_chunk_drop)
+    chunk_parser_inst = data_chunk_parser(config, data_out, chunk_out, csr.input_ack_id, data_chunk_drop,
+                                          csr.input_rest_bytes)
 
     next_output_id = clone_signal(csr.output_ack_id)
 

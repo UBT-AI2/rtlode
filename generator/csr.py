@@ -9,6 +9,7 @@ from utils import num
 csr_addresses = {
     'input_addr': 0x0020,
     'input_size': 0x0060,
+    'input_rest_bytes': 0x0080,
     'input_ack_id': 0x0030,
     'output_addr': 0x0040,
     'output_size': 0x0070,
@@ -38,6 +39,7 @@ class CsrHeader:
 class CsrSignals:
     input_addr: SignalType = field(default_factory=CcipClAddr.create_instance)
     input_size: SignalType = field(default_factory=lambda: Signal(num.integer(0)))
+    input_rest_bytes: SignalType = field(default_factory=lambda: Signal(num.integer(0)))
     input_ack_id: SignalType = field(default_factory=lambda: Signal(num.integer(0)))
     output_addr: SignalType = field(default_factory=CcipClAddr.create_instance)
     output_size: SignalType = field(default_factory=lambda: Signal(num.integer(0)))
@@ -60,6 +62,7 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
     # Remapping of addresses required because of myhdl constraints
     csr_address_input_addr = csr_addresses['input_addr']
     csr_address_input_size = csr_addresses['input_size']
+    csr_address_input_rest_bytes = csr_addresses['input_rest_bytes']
     csr_address_input_ack_id = csr_addresses['input_ack_id']
     csr_address_output_addr = csr_addresses['output_addr']
     csr_address_output_size = csr_addresses['output_size']
@@ -76,6 +79,8 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
                 data.input_addr.next = concat(cp2af.c0.data)[len(CcipClAddr):]
             elif mmio_hdr.address == csr_address_input_size:
                 data.input_size.next = concat(cp2af.c0.data)[64:]
+            elif mmio_hdr.address == csr_address_input_rest_bytes:
+                data.input_rest_bytes.next = concat(cp2af.c0.data)[64:]
             elif mmio_hdr.address == csr_address_output_addr:
                 data.output_addr.next = concat(cp2af.c0.data)[len(CcipClAddr):]
             elif mmio_hdr.address == csr_address_output_size:
@@ -112,6 +117,8 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
                     af2cp.c2.data.next = data.input_addr
                 elif mmio_hdr.address == csr_address_input_size:
                     af2cp.c2.data.next = data.input_size
+                elif mmio_hdr.address == csr_address_input_rest_bytes:
+                    af2cp.c2.data.next = data.input_rest_bytes
                 elif mmio_hdr.address == csr_address_input_ack_id:
                     af2cp.c2.data.next = data.input_ack_id
                 elif mmio_hdr.address == csr_address_output_addr:
