@@ -52,8 +52,8 @@ def data_chunk_parser(
     data_out_vec = ConcatSignal(*reversed(data_out_bytes))
     data_out_parsed = data_desc.create_read_instance(data_out_vec)
 
-    wr_addr = Signal(modbv(0, min=0, max=buffer_size))
-    rd_addr = Signal(modbv(0, min=0, max=buffer_size))
+    wr_addr = Signal(intbv(0, min=0, max=buffer_size))
+    rd_addr = Signal(intbv(0, min=0, max=buffer_size))
     fill_level = Signal(intbv(0, min=0, max=buffer_size - 1))
 
     @always_comb
@@ -67,20 +67,31 @@ def data_chunk_parser(
     def check_full():
         chunk_in.full.next = buffer_size - 1 - fill_level < chunk_len_bytes
 
+    wr_bytes = clone_signal(wr_addr, 0)
+
+    @always_comb
+    def calc_wr_bytes():
+        if drop:
+            wr_bytes.next = chunk_len_bytes - drop_bytes
+        else:
+            wr_bytes.next = chunk_len_bytes
+
+    # noinspection DuplicatedCode
     @always_seq(clk.posedge, reset=reset)
     def handle_wr():
         if chunk_in.wr and not chunk_in.full:
-            if drop:
-                chunk_len_drop_bytes = chunk_len_bytes - drop_bytes
-                for i in range(chunk_len_drop_bytes):
-                    buffer[(wr_addr + i) % buffer_size].next = \
-                        chunk_in.data[chunk_len - i * 8:chunk_len - (i + 1) * 8]
-                wr_addr.next = wr_addr + chunk_len_drop_bytes
+            for i in range(chunk_len_bytes):
+                if not drop or i < wr_bytes:
+                    byte_addr = chunk_len - (i + 1) * 8
+                    if wr_addr + i < buffer_size:
+                        buffer[wr_addr + i].next = chunk_in.data[byte_addr + 8:byte_addr]
+                    else:
+                        buffer[i - (buffer_size - wr_addr)].next = chunk_in.data[byte_addr + 8:byte_addr]
+
+            if (buffer_size - 1) - wr_addr < wr_bytes:
+                wr_addr.next = wr_bytes - (buffer_size - wr_addr)
             else:
-                for i in range(chunk_len_bytes):
-                    buffer[(wr_addr + i) % buffer_size].next = \
-                        chunk_in.data[chunk_len - i * 8:chunk_len - (i + 1) * 8]
-                wr_addr.next = wr_addr + chunk_len_bytes
+                wr_addr.next = wr_addr + wr_bytes
 
     enough_data = Signal(bool(0))
     t_state = enum('IDLE', 'PROCESSING', 'WRITING')
@@ -95,7 +106,10 @@ def data_chunk_parser(
         if parser_state == t_state.IDLE:
             # Update data_out_bytes
             for i in range(data_len_bytes):
-                data_out_bytes[i].next = buffer[(rd_addr + i) % buffer_size]
+                if rd_addr + i < buffer_size:
+                    data_out_bytes[i].next = buffer[rd_addr + i]
+                else:
+                    data_out_bytes[i].next = buffer[i - (buffer_size - rd_addr)]
             if enough_data:
                 parser_state.next = t_state.PROCESSING
         elif parser_state == t_state.PROCESSING:
@@ -105,12 +119,18 @@ def data_chunk_parser(
             else:
                 # Skip data
                 parser_state.next = t_state.IDLE
-                rd_addr.next = rd_addr + data_len_bytes
+                if (buffer_size - 1) - rd_addr < data_len_bytes:
+                    rd_addr.next = data_len_bytes - (buffer_size - rd_addr)
+                else:
+                    rd_addr.next = rd_addr + data_len_bytes
         elif parser_state == t_state.WRITING:
             if not data_out.full:
                 # Output data written
                 parser_state.next = t_state.IDLE
-                rd_addr.next = rd_addr + data_len_bytes
+                if (buffer_size - 1) - rd_addr < data_len_bytes:
+                    rd_addr.next = data_len_bytes - (buffer_size - rd_addr)
+                else:
+                    rd_addr.next = rd_addr + data_len_bytes
                 input_ack_id.next = input_ack_id + 1
                 data_out.wr.next = False
 
@@ -226,7 +246,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
             chunk_out.wr.next = True
             chunk_out.data.next = data_chunk
 
-    chunk_out = FifoProducer(clk, reset, BitVector(len(cl_rcv_vec)).create_instance())
+    chunk_out = FifoProducer(clk, reset, BitVector(len(data_chunk)).create_instance())
     chunk_parser_inst = data_chunk_parser(config, data_out, chunk_out, csr.input_ack_id, data_chunk_drop,
                                           csr.input_rest_bytes)
 
