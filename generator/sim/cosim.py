@@ -38,9 +38,24 @@ def get_wrapped_dispatcher(w_config: Config, w_data_in: FifoConsumer, w_data_out
 
 
 def dispatcher_cosim(config: Config, data_in: FifoConsumer, data_out: FifoProducer):
-    name = 'dispatcher'
-    # Step 0: Defines paths
     disp_inst = get_wrapped_dispatcher(config, data_in, data_out)
+
+    return cosim(
+        disp_inst,
+        'dispatcher',
+        clk=data_in.clk,
+        rst=data_in.rst,
+        data_in_data=data_in.data,
+        data_in_rd=data_in.rd,
+        data_in_empty=data_in.empty,
+        data_out_data=data_out.data,
+        data_out_wr=data_out.wr,
+        data_out_full=data_out.full
+    )
+
+
+def cosim(dut, name, **signals):
+    # Step 0: Defines paths
     dir_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'out')
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
@@ -52,8 +67,8 @@ def dispatcher_cosim(config: Config, data_in: FifoConsumer, data_out: FifoProduc
 
     convert_testbench = not os.path.isfile(tb_path)
 
-    # Step 1: Convert dispatcher to verilog
-    disp_inst.convert(hdl='Verilog', testbench=convert_testbench, name='dispatcher', path=dir_path)
+    # Step 1: Convert dut to verilog
+    dut.convert(hdl='Verilog', testbench=convert_testbench, name=name, path=dir_path)
 
     # Step 2: Compile verilog
     os.system(compile_cmd.format(
@@ -68,12 +83,5 @@ def dispatcher_cosim(config: Config, data_in: FifoConsumer, data_out: FifoProduc
             vpi_path=vpi_path,
             input_path=bin_path
         ),
-        clk=data_in.clk,
-        rst=data_in.rst,
-        data_in_data=data_in.data,
-        data_in_rd=data_in.rd,
-        data_in_empty=data_in.empty,
-        data_out_data=data_out.data,
-        data_out_wr=data_out.wr,
-        data_out_full=data_out.full
+        **signals
     )
