@@ -9,6 +9,7 @@ from common.packed_struct import BitVector
 from generator.ccip import CcipClData
 from generator.cdc_utils import FifoProducer
 from generator.hram import data_chunk_parser
+from generator.sim.cosim import data_chunk_parser_cosim
 from utils import num
 
 
@@ -47,7 +48,7 @@ class Test(TestCase):
         @block
         def testbench():
             clk = Signal(bool(0))
-            rst = ResetSignal(False, True, False)
+            rst = ResetSignal(True, True, False)
 
             data_out = FifoProducer(clk, rst,
                                     BitVector(len(data_desc.get_input_desc(config.system_size))).create_instance())
@@ -56,11 +57,17 @@ class Test(TestCase):
             drop_rest = Signal(bool(0))
             drop_bytes = Signal(num.integer(drop_bytes_constant))
 
-            parser = data_chunk_parser(config, data_out, chunk_in, input_ack_id, drop_rest, drop_bytes)
+            parser = data_chunk_parser_cosim(config, data_out, chunk_in, input_ack_id, drop_rest, drop_bytes)
 
             @always(delay(5))
             def clk_driver():
                 clk.next = not clk
+
+            @instance
+            def rst_driver():
+                rst.next = True
+                yield delay(20)
+                rst.next = False
 
             chunk_offset = Signal(0)
 
@@ -92,5 +99,5 @@ class Test(TestCase):
             return instances()
 
         tb = testbench()
-        tb.config_sim(trace=True)
-        tb.run_sim(100000)
+        # tb.config_sim(trace=True)
+        tb.run_sim(1000000)
