@@ -224,7 +224,17 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
 
     @always_seq(clk.posedge, reset=reset)
     def mem_reads_responses():
-        if cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0:
+        if chunk_out.wr:
+            if not chunk_out.full:
+                chunk_out.wr.next = False
+                cl0_rcv.next = False
+                cl1_rcv.next = False
+                cl2_rcv.next = False
+                cl3_rcv.next = False
+        elif cl_rcv_vec == 0b1111:
+            chunk_out.wr.next = True
+            chunk_out.data.next = data_chunk
+        elif cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0:
             if cp2af.c0.hdr.cl_num == 0:
                 cl0_data.next = cp2af.c0.data
                 cl0_rcv.next = True
@@ -237,14 +247,6 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
             elif cp2af.c0.hdr.cl_num == 3:
                 cl3_data.next = cp2af.c0.data
                 cl3_rcv.next = True
-
-        if cl_rcv_vec == 0b1111 and not chunk_out.full:
-            cl0_rcv.next = False
-            cl1_rcv.next = False
-            cl2_rcv.next = False
-            cl3_rcv.next = False
-            chunk_out.wr.next = True
-            chunk_out.data.next = data_chunk
 
     chunk_out = FifoProducer(clk, reset, BitVector(len(data_chunk)).create_instance())
     chunk_parser_inst = data_chunk_parser(config, data_out, chunk_out, csr.input_ack_id, data_chunk_drop,
