@@ -78,15 +78,15 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
             if mmio_hdr.address == csr_address_input_addr:
                 data.input_addr.next = concat(cp2af.c0.data)[len(CcipClAddr):]
             elif mmio_hdr.address == csr_address_input_size:
-                data.input_size.next = concat(cp2af.c0.data)[64:]
+                data.input_size.next = concat(cp2af.c0.data)[32:]
             elif mmio_hdr.address == csr_address_input_rest_bytes:
-                data.input_rest_bytes.next = concat(cp2af.c0.data)[64:]
+                data.input_rest_bytes.next = concat(cp2af.c0.data)[32:]
             elif mmio_hdr.address == csr_address_output_addr:
                 data.output_addr.next = concat(cp2af.c0.data)[len(CcipClAddr):]
             elif mmio_hdr.address == csr_address_output_size:
-                data.output_size.next = concat(cp2af.c0.data)[64:]
+                data.output_size.next = concat(cp2af.c0.data)[32:]
             elif mmio_hdr.address == csr_address_output_ack_id:
-                data.output_ack_id.next = concat(cp2af.c0.data)[64:]
+                data.output_ack_id.next = concat(cp2af.c0.data)[32:]
             elif mmio_hdr.address == csr_address_enb:
                 data.enb.next = concat(cp2af.c0.data)[1:]
 
