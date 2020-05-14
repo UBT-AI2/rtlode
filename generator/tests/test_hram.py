@@ -7,7 +7,7 @@ from common import data_desc
 from common.config import Config
 from common.packed_struct import BitVector
 from generator.ccip import CcipClData
-from generator.cdc_utils import FifoProducer
+from generator.cdc_utils import AsyncFifoProducer
 from generator.hram import data_chunk_parser
 from generator.sim.cosim import data_chunk_parser_cosim
 from utils import num
@@ -50,9 +50,9 @@ class Test(TestCase):
             clk = Signal(bool(0))
             rst = ResetSignal(True, True, False)
 
-            data_out = FifoProducer(clk, rst,
-                                    BitVector(len(data_desc.get_input_desc(config.system_size))).create_instance())
-            chunk_in = FifoProducer(clk, rst, BitVector(len(CcipClData) * 4).create_instance())
+            data_out = AsyncFifoProducer(clk, rst,
+                                         BitVector(len(data_desc.get_input_desc(config.system_size))).create_instance())
+            chunk_in = AsyncFifoProducer(clk, rst, BitVector(len(CcipClData) * 4).create_instance())
             input_ack_id = Signal(num.integer())
             drop_rest = Signal(bool(0))
             drop_bytes = Signal(num.integer(drop_bytes_constant))

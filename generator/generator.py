@@ -12,7 +12,7 @@ from common import data_desc
 from generator.ccip import CcipRx, CcipTx
 from common.config import Config
 from generator.afu import afu
-from generator.cdc_utils import FifoProducer, FifoConsumer, async_fifo
+from generator.cdc_utils import AsyncFifoProducer, AsyncFifoConsumer, async_fifo
 from generator.csr import csr_addresses
 from common.packed_struct import BitVector
 from generator.dispatcher import dispatcher
@@ -115,12 +115,12 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
         input_desc_vec = BitVector(len(data_desc.get_input_desc(config.system_size)))
         output_desc_vec = BitVector(len(data_desc.get_output_desc(config.system_size)))
 
-        in_fifo_p = FifoProducer(clk, reset, input_desc_vec.create_instance())
-        in_fifo_c = FifoConsumer(usr_clk, usr_reset, input_desc_vec.create_instance())
+        in_fifo_p = AsyncFifoProducer(clk, reset, input_desc_vec.create_instance())
+        in_fifo_c = AsyncFifoConsumer(usr_clk, usr_reset, input_desc_vec.create_instance())
         in_fifo = async_fifo(in_fifo_p, in_fifo_c, buffer_size_bits=buffer_size_bits)
 
-        out_fifo_p = FifoProducer(usr_clk, usr_reset, output_desc_vec.create_instance())
-        out_fifo_c = FifoConsumer(clk, reset, output_desc_vec.create_instance())
+        out_fifo_p = AsyncFifoProducer(usr_clk, usr_reset, output_desc_vec.create_instance())
+        out_fifo_c = AsyncFifoConsumer(clk, reset, output_desc_vec.create_instance())
         out_fifo = async_fifo(out_fifo_p, out_fifo_c, buffer_size_bits=buffer_size_bits)
 
         if cosimulate:

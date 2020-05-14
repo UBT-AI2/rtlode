@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from myhdl import block, always_seq, always, Signal, ResetSignal, always_comb, SignalType, instances, modbv, bin
 
+from generator.fifo import FifoProducer, FifoConsumer
 from generator.utils import clone_signal
 
 # TODO Add missing unit tests
@@ -71,25 +72,27 @@ def areset_synchronizer(clk, async_rst, sync_rst, min_reset_cycles=2):
 
 
 @dataclass
-class FifoProducer:
-    clk: SignalType
-    rst: SignalType
-    data: SignalType
-    wr: SignalType = field(default_factory=lambda: Signal(bool(0)))
-    full: SignalType = field(default_factory=lambda: Signal(bool(1)))
+class AsyncFifoProducer(FifoProducer):
+    clk: SignalType = field(default=None)
+    rst: SignalType = field(default=None)
+
+    def __post_init__(self):
+        assert self.clk is not None
+        assert self.rst is not None
 
 
 @dataclass
-class FifoConsumer:
-    clk: SignalType
-    rst: SignalType
-    data: SignalType
-    rd: SignalType = field(default_factory=lambda: Signal(bool(0)))
-    empty: SignalType = field(default_factory=lambda: Signal(bool(1)))
+class AsyncFifoConsumer(FifoConsumer):
+    clk: SignalType = field(default=None)
+    rst: SignalType = field(default=None)
+
+    def __post_init__(self):
+        assert self.clk is not None
+        assert self.rst is not None
 
 
 @block
-def async_fifo(p: FifoProducer, c: FifoConsumer, buffer_size_bits=8):
+def async_fifo(p: AsyncFifoProducer, c: AsyncFifoConsumer, buffer_size_bits=8):
     """
     Async fifo usable for cdc synchronisation.
     The producer and consumer domains are seperated. The buffer size can be given

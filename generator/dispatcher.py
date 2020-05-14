@@ -3,13 +3,13 @@ from myhdl import block, always_seq, Signal, instances, always_comb, intbv, Conc
 from common import data_desc
 from common.config import Config
 from common.packed_struct import BitVector
-from generator.cdc_utils import FifoConsumer, FifoProducer
+from generator.cdc_utils import AsyncFifoConsumer, AsyncFifoProducer
 from generator.priority_encoder import priority_encoder_one_hot
 from generator.solver import solver
 
 
 @block
-def dispatcher(config: Config, data_in: FifoConsumer, data_out: FifoProducer):
+def dispatcher(config: Config, data_in: AsyncFifoConsumer, data_out: AsyncFifoProducer):
     """
     Logic to handle data stream read and write from / to cpu. Including dispatching single
     solver instances to solve a given ivp and collecting results to send back to cpu.
@@ -38,7 +38,7 @@ def dispatcher(config: Config, data_in: FifoConsumer, data_out: FifoProducer):
     solver_inst = [
         solver(config, clk, rst,
                data_in=data_in,
-               data_out=FifoProducer(clk, rst, solver_outputs[i], data_out.wr, data_out.full),
+               data_out=AsyncFifoProducer(clk, rst, solver_outputs[i], data_out.wr, data_out.full),
                rdy=rdy_signals[i],
                rdy_ack=rdy_priority(i),
                fin=fin_signals[i],

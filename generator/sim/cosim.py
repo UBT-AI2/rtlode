@@ -4,13 +4,13 @@ import subprocess
 from myhdl import Cosimulation, block, SignalType
 
 from common.config import Config
-from generator.cdc_utils import FifoConsumer, FifoProducer
+from generator.cdc_utils import AsyncFifoConsumer, AsyncFifoProducer
 
 compile_cmd = 'iverilog -o {output_path} {dut_path} {tb_path}'
 cosim_cmd = 'vvp -m {vpi_path} {input_path}'
 
 
-def dispatcher_cosim(config: Config, data_in: FifoConsumer, data_out: FifoProducer):
+def dispatcher_cosim(config: Config, data_in: AsyncFifoConsumer, data_out: AsyncFifoProducer):
     # noinspection PyShadowingNames
     @block
     def dispatcher_wrapper(config: Config,
@@ -22,8 +22,8 @@ def dispatcher_cosim(config: Config, data_in: FifoConsumer, data_out: FifoProduc
                            data_out_data,
                            data_out_wr,
                            data_out_full):
-        data_in = FifoConsumer(clk, rst, data_in_data, data_in_rd, data_in_empty)
-        data_out = FifoProducer(clk, rst, data_out_data, data_out_wr, data_out_full)
+        data_in = AsyncFifoConsumer(clk, rst, data_in_data, data_in_rd, data_in_empty)
+        data_out = AsyncFifoProducer(clk, rst, data_out_data, data_out_wr, data_out_full)
         from generator.dispatcher import dispatcher
         return dispatcher(config, data_in, data_out)
 
@@ -55,8 +55,8 @@ def dispatcher_cosim(config: Config, data_in: FifoConsumer, data_out: FifoProduc
 
 def data_chunk_parser_cosim(
         config: Config,
-        data_out: FifoProducer,
-        chunk_in: FifoProducer,
+        data_out: AsyncFifoProducer,
+        chunk_in: AsyncFifoProducer,
         input_ack_id: SignalType,
         drop: SignalType,
         drop_bytes: SignalType):
@@ -64,8 +64,8 @@ def data_chunk_parser_cosim(
     @block
     def data_chunk_parser_wrapper(config: Config, clk, rst, data_out_data, data_out_wr, data_out_full,
                                   chunk_in_data, chunk_in_wr, chunk_in_full, input_ack_id, drop, drop_bytes):
-        data_out = FifoProducer(clk, rst, data_out_data, data_out_wr, data_out_full)
-        chunk_in = FifoProducer(clk, rst, chunk_in_data, chunk_in_wr, chunk_in_full)
+        data_out = AsyncFifoProducer(clk, rst, data_out_data, data_out_wr, data_out_full)
+        chunk_in = AsyncFifoProducer(clk, rst, chunk_in_data, chunk_in_wr, chunk_in_full)
         from generator.hram import data_chunk_parser
         return data_chunk_parser(config, data_out, chunk_in, input_ack_id, drop, drop_bytes)
 

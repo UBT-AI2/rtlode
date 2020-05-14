@@ -5,7 +5,7 @@ from common.config import Config
 from common.data_desc import get_input_desc, get_output_desc
 from common.packed_struct import BitVector
 from generator.ccip import CcipClData
-from generator.cdc_utils import FifoProducer, FifoConsumer
+from generator.cdc_utils import AsyncFifoProducer, AsyncFifoConsumer
 from generator.csr import CsrSignals
 from generator.utils import clone_signal
 from utils import num
@@ -14,8 +14,8 @@ from utils import num
 @block
 def data_chunk_parser(
         config: Config,
-        data_out: FifoProducer,
-        chunk_in: FifoProducer,
+        data_out: AsyncFifoProducer,
+        chunk_in: AsyncFifoProducer,
         input_ack_id: SignalType,
         drop: SignalType,
         drop_bytes: SignalType):
@@ -142,7 +142,7 @@ def data_chunk_parser(
 
 
 @block
-def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, data_in: FifoConsumer):
+def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProducer, data_in: AsyncFifoConsumer):
     """
     Logic to handle data stream read and write from / to cpu (host ram).
     :return:
@@ -248,7 +248,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: FifoProducer, 
                 cl3_data.next = cp2af.c0.data
                 cl3_rcv.next = True
 
-    chunk_out = FifoProducer(clk, reset, BitVector(len(data_chunk)).create_instance())
+    chunk_out = AsyncFifoProducer(clk, reset, BitVector(len(data_chunk)).create_instance())
     chunk_parser_inst = data_chunk_parser(config, data_out, chunk_out, csr.input_ack_id, data_chunk_drop,
                                           csr.input_rest_bytes)
 

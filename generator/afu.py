@@ -1,6 +1,6 @@
 from myhdl import block, SignalType, instances, always_comb, ResetSignal
 
-from generator.cdc_utils import async_fifo, FifoProducer, FifoConsumer, areset_synchronizer
+from generator.cdc_utils import async_fifo, AsyncFifoProducer, AsyncFifoConsumer, areset_synchronizer
 from generator.csr import csr_handler, CsrHeader, CsrSignals
 from generator.ccip import CcipRx, CcipTx
 from common.config import Config
@@ -42,12 +42,12 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     input_desc_vec = BitVector(len(get_input_desc(config.system_size)))
     output_desc_vec = BitVector(len(get_output_desc(config.system_size)))
 
-    in_fifo_p = FifoProducer(clk, reset, input_desc_vec.create_instance())
-    in_fifo_c = FifoConsumer(usr_clk, usr_reset, input_desc_vec.create_instance())
+    in_fifo_p = AsyncFifoProducer(clk, reset, input_desc_vec.create_instance())
+    in_fifo_c = AsyncFifoConsumer(usr_clk, usr_reset, input_desc_vec.create_instance())
     in_fifo = async_fifo(in_fifo_p, in_fifo_c, buffer_size_bits=4)
 
-    out_fifo_p = FifoProducer(usr_clk, usr_reset, output_desc_vec.create_instance())
-    out_fifo_c = FifoConsumer(clk, reset, output_desc_vec.create_instance())
+    out_fifo_p = AsyncFifoProducer(usr_clk, usr_reset, output_desc_vec.create_instance())
+    out_fifo_c = AsyncFifoConsumer(clk, reset, output_desc_vec.create_instance())
     out_fifo = async_fifo(out_fifo_p, out_fifo_c, buffer_size_bits=4)
 
     # hram_handler, running at clk

@@ -5,7 +5,7 @@ from myhdl import block, instances, ResetSignal, SignalType, always, Signal, enu
 
 import generator.calc
 from common import data_desc
-from generator.cdc_utils import FifoConsumer, FifoProducer
+from generator.cdc_utils import AsyncFifoConsumer, AsyncFifoProducer
 from utils import num
 from common.config import Config
 from generator.rk_calc import pipe_calc_step
@@ -39,8 +39,8 @@ def solver(
         config: Config,
         clk: SignalType,
         rst: SignalType,
-        data_in: FifoConsumer,
-        data_out: FifoProducer,
+        data_in: AsyncFifoConsumer,
+        data_out: AsyncFifoProducer,
         rdy: SignalType,
         rdy_ack: SignalType,
         fin: SignalType,
