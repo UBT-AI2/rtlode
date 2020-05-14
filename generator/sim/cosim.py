@@ -53,54 +53,6 @@ def dispatcher_cosim(config: Config, data_in: AsyncFifoConsumer, data_out: Async
     )
 
 
-def data_chunk_parser_cosim(
-        config: Config,
-        data_out: AsyncFifoProducer,
-        chunk_in: AsyncFifoProducer,
-        input_ack_id: SignalType,
-        drop: SignalType,
-        drop_bytes: SignalType):
-    # noinspection PyShadowingNames
-    @block
-    def data_chunk_parser_wrapper(config: Config, clk, rst, data_out_data, data_out_wr, data_out_full,
-                                  chunk_in_data, chunk_in_wr, chunk_in_full, input_ack_id, drop, drop_bytes):
-        data_out = AsyncFifoProducer(clk, rst, data_out_data, data_out_wr, data_out_full)
-        chunk_in = AsyncFifoProducer(clk, rst, chunk_in_data, chunk_in_wr, chunk_in_full)
-        from generator.hram import data_chunk_parser
-        return data_chunk_parser(config, data_out, chunk_in, input_ack_id, drop, drop_bytes)
-
-    dut = data_chunk_parser_wrapper(
-            config,
-            data_out.clk,
-            data_out.rst,
-            data_out.data,
-            data_out.wr,
-            data_out.full,
-            chunk_in.data,
-            chunk_in.wr,
-            chunk_in.full,
-            input_ack_id,
-            drop,
-            drop_bytes
-        )
-
-    return cosim(
-        dut,
-        'data_chunk_parser',
-        clk=data_out.clk,
-        rst=data_out.rst,
-        data_out_data=data_out.data,
-        data_out_wr=data_out.wr,
-        data_out_full=data_out.full,
-        chunk_in_data=chunk_in.data,
-        chunk_in_wr=chunk_in.wr,
-        chunk_in_full=chunk_in.full,
-        input_ack_id=input_ack_id,
-        drop=drop,
-        drop_bytes=drop_bytes
-    )
-
-
 def cosim(dut, name, **signals):
     """
     Initialize cosimulation (icarus verilog) for an given dut.
