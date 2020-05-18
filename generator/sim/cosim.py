@@ -5,6 +5,7 @@ from myhdl import Cosimulation, block, SignalType
 
 from common.config import Config
 from generator.cdc_utils import AsyncFifoConsumer, AsyncFifoProducer
+from generator.fifo import ByteFifoProducer, ByteFifoConsumer
 
 compile_cmd = 'iverilog -o {output_path} {dut_path} {tb_path}'
 cosim_cmd = 'vvp -m {vpi_path} {input_path}'
@@ -50,6 +51,55 @@ def dispatcher_cosim(config: Config, data_in: AsyncFifoConsumer, data_out: Async
         data_out_data=data_out.data,
         data_out_wr=data_out.wr,
         data_out_full=data_out.full
+    )
+
+
+def byte_fifo_cosim(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifoConsumer, buffer_size=None):
+    # noinspection PyShadowingNames
+    @block
+    def byte_fifo_wrapper(clk,
+                          rst,
+                          p_data,
+                          p_wr,
+                          p_full,
+                          p_data_size,
+                          c_data,
+                          c_rd,
+                          c_empty,
+                          c_data_size,
+                          buffer_size=None):
+        p = ByteFifoProducer(p_data, p_wr, p_full, p_data_size)
+        c = ByteFifoConsumer(c_data, c_rd, c_empty, c_data_size)
+        from generator.fifo import byte_fifo
+        return byte_fifo(clk, rst, p, c, buffer_size)
+
+    dut = byte_fifo_wrapper(
+            clk,
+            rst,
+            p.data,
+            p.wr,
+            p.full,
+            p.data_size,
+            c.data,
+            c.rd,
+            c.empty,
+            c.data_size,
+            buffer_size
+        )
+
+    return cosim(
+        dut,
+        'byte_fifo_wrapper',
+        clk=clk,
+        rst=rst,
+        p_data=p.data,
+        p_wr=p.wr,
+        p_full=p.full,
+        p_data_size=p.data_size,
+        c_data=c.data,
+        c_rd=c.rd,
+        c_empty=c.empty,
+        c_data_size=c.data_size
     )
 
 
