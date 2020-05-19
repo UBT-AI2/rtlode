@@ -1,3 +1,4 @@
+import math
 from typing import List, Union, Dict
 
 import struct
@@ -33,6 +34,9 @@ class Solver:
         self._handle.write_csr64(self._csr_addresses['input_addr'], self._input_buffer.io_address() >> 6)
         self._output_buffer = fpga.allocate_shared_buffer(self._handle, self._buffer_size)
         self._handle.write_csr64(self._csr_addresses['output_addr'], self._output_buffer.io_address() >> 6)
+
+        self._input_data_offset = 0
+
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -40,8 +44,7 @@ class Solver:
         self._handle = None
 
     def input_full(self):
-        # TODO this method is only working for the CL1 implementation
-        return self.input_ack_id < self._current_input_id
+        return self._input_data_offset + 40 <= self.buffer_size
 
     def add_input(self, x_start: float, y_start: List[float], h: int, n: int) -> int:
         """
@@ -53,41 +56,53 @@ class Solver:
         :return: id referring to given dataset, can be used to match results
         """
         self._current_input_id = self._current_input_id + 1
-        struct.pack_into('<Iq2qqI', self._input_buffer, 0,
+        struct.pack_into('<Iq2qqI', self._input_buffer, self._input_data_offset,
                          int(n),
                          num.int_from_float(h),
                          *map(num.int_from_float, reversed(y_start)),
                          num.int_from_float(x_start),
                          int(self._current_input_id))
+        self._input_data_offset += 40
 
         return self._current_input_id
 
-    def fetch_output(self) -> Union[None, Dict]:
-        (*y, x, id) = struct.unpack_from('<2qqI', self._output_buffer, 0)
+    def start(self):
+        buffer_size = int(math.ceil(self._input_data_offset / 256))
+        self.buffer_size = buffer_size
+        self.buffer_unused_bytes = buffer_size * 256 - self._input_data_offset
 
-        if id > self._current_output_id:
-            # New data available
-            self._current_output_id = self._current_output_id + 1
-            self.output_ack_id = self._current_output_id
-            return {
-                'x': num.to_float(x),
-                'y': list(map(num.to_float, reversed(y))),
-                'id': id
-            }
-        else:
-            return None
+        self.enb = True
+
+    # def fetch_output(self) -> Union[None, Dict]:
+    #     (*y, x, id) = struct.unpack_from('<2qqI', self._output_buffer, 0)
+    #
+    #     if id > self._current_output_id:
+    #         # New data available
+    #         self._current_output_id = self._current_output_id + 1
+    #         self.output_ack_id = self._current_output_id
+    #         return {
+    #             'x': num.to_float(x),
+    #             'y': list(map(num.to_float, reversed(y))),
+    #             'id': id
+    #         }
+    #     else:
+    #         return None
 
     @property
-    def output_ack_id(self):
-        return self._handle.read_csr64(self._csr_addresses['output_ack_id'])
+    def buffer_size(self):
+        return self._handle.read_csr64(self._csr_addresses['buffer_size'])
 
-    @output_ack_id.setter
-    def output_ack_id(self, value):
-        self._handle.write_csr64(self._csr_addresses['output_ack_id'], value)
+    @buffer_size.setter
+    def buffer_size(self, value):
+        self._handle.write_csr64(self._csr_addresses['buffer_size'], value)
 
     @property
-    def input_ack_id(self):
-        return self._handle.read_csr64(self._csr_addresses['input_ack_id'])
+    def buffer_unused_bytes(self):
+        return self._handle.read_csr64(self._csr_addresses['buffer_unused_bytes'])
+
+    @buffer_unused_bytes.setter
+    def buffer_unused_bytes(self, value):
+        self._handle.write_csr64(self._csr_addresses['buffer_unused_bytes'], value)
 
     @property
     def enb(self):
@@ -96,3 +111,7 @@ class Solver:
     @enb.setter
     def enb(self, value):
         self._handle.write_csr64(self._csr_addresses['enb'], value)
+
+    @property
+    def fin(self):
+        return self._handle.read_csr64(self._csr_addresses['fin'])

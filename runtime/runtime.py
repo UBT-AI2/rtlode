@@ -40,24 +40,18 @@ def run(slv_path: str, runtime_config=None):
     # Access AFU (get Interface Object)
     print('Aquiring ownership of afu...')
     with Solver(config, 4096) as solver:
+        print('Preparing input...')
+        while not solver.input_full():
+            input_id = solver.add_input(config['x'], config['y'], config['h'], config['n'])
+            print('  Added input: %r' % input_id)
+
         print('Starting solver...')
-        solver.enb = True
+        solver.start()
 
         timing_start = time.time()
 
-        nbr_datasets = 1000
-        nbr_results = 0
-        nbr_inputs = 0
-        while nbr_results != nbr_datasets:
-            if not solver.input_full() and nbr_inputs < nbr_datasets:
-                nbr_inputs = nbr_inputs + 1
-                data_id = solver.add_input(config['x'], config['y'], config['h'], config['n'])
-                print('Added new input dataset: %s' % data_id)
-
-            output = solver.fetch_output()
-            if output is not None:
-                nbr_results = nbr_results + 1
-                print('%r' % output)
+        while not solver.fin:
+            pass
 
         timing_end = time.time()
         print('Solver finished in: %s' % (timing_end - timing_start))
