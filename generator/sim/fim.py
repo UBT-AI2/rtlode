@@ -1,3 +1,7 @@
+import random
+import struct
+from typing import List
+
 from myhdl import block, Signal, ResetSignal, always, delay, instance, SignalType, always_seq, always_comb, instances
 
 from common.config import Config
@@ -6,11 +10,31 @@ from generator import csr
 from generator.afu import afu
 from generator.ccip import CcipTx, CcipRx, CcipC0ReqMmioHdr, CcipC0RspMemHdr
 from generator.generator import _load_config
+from utils import num
 
 
 class Fim:
     def __init__(self):
+        self._current_input_id = 0
         self._csr_write_buffer = []
+
+        self._mem_read_request_buffer = []
+
+        self._mem_input = bytearray(2048)
+        self._mem_input_data_offset = 0
+        self._mem_output = bytearray(2048)
+
+    def add_input(self, x_start: float, y_start: List[float], h: int, n: int) -> int:
+        self._current_input_id = self._current_input_id + 1
+        struct.pack_into('<Iq2qqI', self._mem_input, self._mem_input_data_offset,
+                         int(n),
+                         num.int_from_float(h),
+                         *map(num.int_from_float, reversed(y_start)),
+                         num.int_from_float(x_start),
+                         int(self._current_input_id))
+        self._mem_input_data_offset += 40
+
+        return self._current_input_id
 
     def queue_csr_read(self, addr):
         raise NotImplementedError()
@@ -62,11 +86,11 @@ class Fim:
                 cp2af.c0.mmioWrValid.next = False
 
         @always_seq(clk.posedge, reset=None)
-        def csr_read_respone_handler():
+        def csr_read_response_handler():
             if af2cp.c2.mmioRdValid:
                 response = {
-                    'tid': af2cp.c2.hdr.tid,
-                    'data': af2cp.c2.data
+                    'tid': af2cp.c2.hdr.tid[:],
+                    'data': af2cp.c2.data[:]
                 }
                 print('CSR_READ_RESPONSE: %r' % response)
 
@@ -74,19 +98,54 @@ class Fim:
         def mem_read_request_handler():
             if af2cp.c0.valid:
                 request = {
-                    'addr': af2cp.c0.hdr.address,
-                    'cl': af2cp.c0.hdr.cl_len,
+                    'addr': af2cp.c0.hdr.address[:],
+                    'cl': af2cp.c0.hdr.cl_len[:],
                 }
+                self._mem_read_request_buffer.append(request)
                 print('MEM_READ_REQUEST: %r' % request)
+
+        @instance
+        def mem_read_response_driver():
+            while True:
+                yield clk.posedge
+                if len(self._mem_read_request_buffer) > 0:
+                    request = self._mem_read_request_buffer.pop(0)
+
+                    if request['cl'] != 3:
+                        raise NotImplementedError()
+
+                    # Prepare responses
+                    responses = []
+                    for cl in range(4):
+                        base_addr = (request['addr'] + cl) * 64
+                        responses.append({
+                            'cl_num': cl,
+                            'data': int.from_bytes(
+                                self._mem_input[base_addr:base_addr + 64],
+                                'little', signed=False)
+                        })
+                    random.shuffle(responses)
+
+                    # Send responses
+                    for resp in responses:
+                        yield clk.posedge
+                        cp2af.c0.data.next = resp['data']
+                        cp2af.c0.hdr.mdata.next = 0
+                        cp2af.c0.hdr.cl_num.next = resp['cl_num']
+                        cp2af.c0.rspValid.next = True
+                        print('MEM_READ_RESPONSE: %r' % resp)
+                    # Deactivate valid
+                    yield clk.posedge
+                    cp2af.c0.rspValid.next = False
 
         @always_seq(clk.posedge, reset=None)
         def mem_write_handler():
             if af2cp.c1.valid:
                 write = {
-                    'addr': af2cp.c1.hdr.address,
-                    'cl': af2cp.c0.hdr.cl_len,
-                    'sop': af2cp.c1.hdr.sop,
-                    'data': af2cp.c1.data
+                    'addr': af2cp.c1.hdr.address[:],
+                    'cl': af2cp.c0.hdr.cl_len[:],
+                    'sop': af2cp.c1.hdr.sop[:],
+                    'data': af2cp.c1.data[:]
                 }
                 print('MEM_WRITE: %r' % write)
 
@@ -139,8 +198,12 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
         @instance
         def runtime():
             yield delay(200)
-            fim.queue_csr_write(csr.csr_addresses['input_size'], 32)
+            fim.queue_csr_write(csr.csr_addresses['buffer_size'], 1)
+            fim.queue_csr_write(csr.csr_addresses['buffer_unused_bytes'], 176)
             yield delay(20)
+            fim.add_input(0, [2, 1], 0.1, 100)
+            fim.add_input(0, [2, 1], 0.1, 100)
+            yield delay(40)
             fim.queue_csr_write(csr.csr_addresses['enb'], 1)
 
         return instances()
