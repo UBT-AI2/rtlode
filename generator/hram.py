@@ -65,7 +65,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
             input_addr_offset.next = 0
         else:
-            af2cp.c0.hdr.address.next = csr.input_addr + input_addr_offset * 0b100
+            af2cp.c0.hdr.address.next = csr.input_addr + (input_addr_offset << 2)  # * 4 (0b100)
             if csr.enb and not cp2af.c0TxAlmFull and polling_clk and cl_rcv_vec == 0b0000:
                 # Wait for one request to be received completly and processed (cl_rcv_vec == 0b0000)
                 af2cp.c0.valid.next = 1
@@ -85,7 +85,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     cl1_data = BitVector(len(CcipClData)).create_instance()
     cl2_data = BitVector(len(CcipClData)).create_instance()
     cl3_data = BitVector(len(CcipClData)).create_instance()
-    data_chunk = ConcatSignal(cl0_data, cl1_data, cl2_data, cl3_data)
+    input_data_chunk = ConcatSignal(cl0_data, cl1_data, cl2_data, cl3_data)
 
     cl0_rcv = Signal(bool(0))
     cl1_rcv = Signal(bool(0))
@@ -104,7 +104,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
                 cl3_rcv.next = False
         elif cl_rcv_vec == 0b1111:
             chunk_out.wr.next = True
-            chunk_out.data.next = data_chunk
+            chunk_out.data.next = input_data_chunk
             if data_chunk_drop:
                 chunk_out.data_size = 256 - csr.input_rest_bytes
             else:
@@ -123,7 +123,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
                 cl3_data.next = cp2af.c0.data
                 cl3_rcv.next = True
 
-    chunk_out = ByteFifoProducer(BitVector(len(data_chunk)).create_instance())
+    chunk_out = ByteFifoProducer(BitVector(len(input_data_chunk)).create_instance())
     input_data = ByteFifoConsumer(BitVector(len(input_desc)).create_instance())
     input_data_parsed = input_desc.create_read_instance(input_data.data)
 
@@ -138,7 +138,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
         else:
             if data_out.wr and not data_out.full:
                 # Output data written
-                csr.input_ack_id.next += 1
+                csr.input_ack_id.next = csr.input_ack_id + 1
                 data_out.wr.next = False
                 input_data.rd.next = True
 
@@ -155,6 +155,34 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     def calc_next_output_id():
         next_output_id.next = csr.output_ack_id + 1
 
+    output_data = ByteFifoProducer(BitVector(len(output_desc)).create_instance())
+    chunk_in = ByteFifoConsumer(BitVector(len(input_data_chunk)).create_instance())
+
+    output_fifo = byte_fifo(clk, reset, output_data, chunk_in)
+
+    @always_seq(clk.posedge, reset=None)
+    def copy_output_data():
+        if reset:
+            data_in.rd.next = True
+            output_data.wr.next = False
+        else:
+            if output_data.wr and not output_data.full:
+                # Output data written
+                output_data.wr.next = False
+                data_in.rd.next = True
+            if data_in.rd and not data_in.empty:
+                # Input data read
+                output_data.data = data_in.rd
+                output_data.wr.next = True
+                data_in.rd.next = False
+
+    # Incremental counter used for iterating trough host array
+    output_addr_offset = Signal(num.integer(0))
+    output_data_chunk = BitVector(len(CcipClData) * 4).create_instance()
+
+    t_write_state = enum('RDY', 'CL0', 'CL1', 'CL2', 'CL3')
+    write_state = Signal(t_write_state.RDY)
+
     # Host Memory Writes
     @always_seq(clk.posedge, reset=None)
     def mem_writes():
@@ -163,7 +191,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
             af2cp.c1.hdr.vc_sel.next = 0
             af2cp.c1.hdr.sop.next = 0
             af2cp.c1.hdr.rsvd1.next = 0
-            af2cp.c1.hdr.cl_len.next = 0
+            af2cp.c1.hdr.cl_len.next = 3  # Always 4 CL's
             af2cp.c1.hdr.req_type.next = 0
             af2cp.c1.hdr.rsvd0.next = 0
             af2cp.c1.hdr.address.next = 0
@@ -171,22 +199,38 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
             af2cp.c1.data.next = 0
             af2cp.c1.valid.next = 0
 
-            data_in.rd.next = False
+            output_addr_offset.next = 0
+
+            write_state.next = t_write_state.RDY
+
+            chunk_in.rd.next = False
         else:
-            af2cp.c1.hdr.sop.next = 1
-            af2cp.c1.hdr.address.next = csr.output_addr
-            af2cp.c1.data.next = data_in.data
-
-            # TODO performance optimization possible
-            if data_in.rd and not data_in.empty:
-                af2cp.c1.valid.next = 1
-                data_in.rd.next = False
-            else:
+            if write_state == t_write_state.RDY:
                 af2cp.c1.valid.next = 0
-
-                if not cp2af.c1TxAlmFull and parsed_output_data.id == next_output_id:
-                    data_in.rd.next = True
-                else:
-                    data_in.rd.next = False
+                # TODO set chunk_in.rd
+                # TODO increment output_addr_offset
+                # TODO check output id
+                # if parsed_output_data.id == next_output_id:
+                if not chunk_in.empty and not cp2af.c1TxAlmFull:
+                    output_data_chunk.next = chunk_in.data
+                    chunk_in.rd.next = False
+                    write_state.next = t_write_state.CL0
+            elif write_state == t_write_state.CL0:
+                af2cp.c1.hdr.sop.next = 1
+                af2cp.c1.hdr.address.next = csr.output_addr + (output_addr_offset << 2)  # * 4 (0b100)
+                af2cp.c1.data.next = chunk_in.data  # TODO
+                af2cp.c1.valid.next = 1
+            elif write_state == t_write_state.CL1:
+                af2cp.c1.hdr.sop.next = 0
+                af2cp.c1.hdr.address.next = 0b01
+                af2cp.c1.valid.next = 1
+            elif write_state == t_write_state.CL2:
+                af2cp.c1.hdr.sop.next = 0
+                af2cp.c1.hdr.address.next = 0b10
+                af2cp.c1.valid.next = 1
+            elif write_state == t_write_state.CL3:
+                af2cp.c1.hdr.sop.next = 0
+                af2cp.c1.hdr.address.next = 0b11
+                af2cp.c1.valid.next = 1
 
     return instances()
