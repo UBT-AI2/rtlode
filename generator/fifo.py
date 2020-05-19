@@ -33,6 +33,7 @@ class FifoConsumer:
 @dataclass
 class ByteFifoProducer(FifoProducer):
     data_size: SignalType = field(default=None)
+    fill_level: SignalType = field(default=None)
 
     def __post_init__(self):
         super().__post_init__()
@@ -43,6 +44,7 @@ class ByteFifoProducer(FifoProducer):
 @dataclass
 class ByteFifoConsumer(FifoConsumer):
     data_size: SignalType = field(default=None)
+    fill_level: SignalType = field(default=None)
 
     def __post_init__(self):
         super().__post_init__()
@@ -145,5 +147,15 @@ def byte_fifo(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifo
     @always_comb
     def assign_c_data():
         c.data.next = c_data
+
+    if p.fill_level is not None:
+        @always_comb
+        def assign_p_fill_level():
+            p.fill_level.next = fill_level
+
+    if c.fill_level is not None:
+        @always_comb
+        def assign_c_fill_level():
+            c.fill_level.next = fill_level
 
     return instances()
