@@ -73,7 +73,6 @@ def byte_fifo(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifo
     min_buffer_size = p_max_data_size + c_max_data_size
     if buffer_size is None:
         buffer_size = min_buffer_size
-    assert buffer_size % 8 == 0
     assert buffer_size >= min_buffer_size
 
     buffer = [Signal(intbv(0, min=0, max=256)) for _ in range(buffer_size)]
@@ -107,8 +106,7 @@ def byte_fifo(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifo
                     else:
                         buffer[i - (buffer_size - p_addr)].next = p.data[byte_addr + 8:byte_addr]
 
-            if (buffer_size - 1) - p_addr < p.data_size:  # TODO potential bug
-            #if buffer_size - p_addr < p.data_size:
+            if (buffer_size - 1) - p_addr < p.data_size:
                 p_addr.next = p.data_size - (buffer_size - p_addr)
             else:
                 p_addr.next = p_addr + p.data_size
@@ -137,7 +135,7 @@ def byte_fifo(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifo
                 rd_state.next = t_state.RDY
         if rd_state == t_state.RDY:
             if c.rd and not c.empty:
-                # Increase c_addr TODO potential same bug as in 98
+                # Increase c_addr
                 if (buffer_size - 1) - c_addr < c.data_size:
                     c_addr.next = c.data_size - (buffer_size - c_addr)
                 else:

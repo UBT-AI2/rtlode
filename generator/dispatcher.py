@@ -38,7 +38,7 @@ def dispatcher(config: Config, data_in: AsyncFifoConsumer, data_out: AsyncFifoPr
     solver_inst = [
         solver(config, clk, rst,
                data_in=data_in,
-               data_out=AsyncFifoProducer(clk, rst, solver_outputs[i], data_out.wr, data_out.full),
+               data_out=AsyncFifoProducer(clk=clk, rst=rst, data=solver_outputs[i], wr=data_out.wr, full=data_out.full),
                rdy=rdy_signals[i],
                rdy_ack=rdy_priority(i),
                fin=fin_signals[i],

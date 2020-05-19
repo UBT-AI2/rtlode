@@ -79,6 +79,7 @@ class AsyncFifoProducer(FifoProducer):
     def __post_init__(self):
         assert self.clk is not None
         assert self.rst is not None
+        super().__post_init__()
 
 
 @dataclass
@@ -89,6 +90,7 @@ class AsyncFifoConsumer(FifoConsumer):
     def __post_init__(self):
         assert self.clk is not None
         assert self.rst is not None
+        super().__post_init__()
 
 
 @block
