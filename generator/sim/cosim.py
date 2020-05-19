@@ -103,6 +103,23 @@ def byte_fifo_cosim(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: By
     )
 
 
+def afu_cosim(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType, cp2af_port: SignalType,
+              af2cp_port: SignalType):
+    # noinspection PyShadowingNames
+    from generator.afu import afu
+    dut = afu(config, clk, usr_clk, reset, cp2af_port, af2cp_port)
+
+    return cosim(
+        dut,
+        'afu',
+        clk=clk,
+        usr_clk=usr_clk,
+        reset=reset,
+        cp2af_port=cp2af_port,
+        af2cp_port=af2cp_port
+    )
+
+
 def cosim(dut, name, **signals):
     """
     Initialize cosimulation (icarus verilog) for an given dut.
