@@ -85,7 +85,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     cl1_data = BitVector(len(CcipClData)).create_instance()
     cl2_data = BitVector(len(CcipClData)).create_instance()
     cl3_data = BitVector(len(CcipClData)).create_instance()
-    input_data_chunk = ConcatSignal(cl0_data, cl1_data, cl2_data, cl3_data)
+    input_data_chunk = ConcatSignal(cl3_data, cl2_data, cl1_data, cl0_data)
 
     cl0_rcv = Signal(bool(0))
     cl1_rcv = Signal(bool(0))
@@ -144,6 +144,8 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
             if input_data.rd and not input_data.empty:
                 # Data available
+                if __debug__:
+                    print('INPUT: %r' % input_data_parsed.id)
                 if input_data_parsed.id == csr.input_ack_id + 1:
                     data_out.data.next = input_data.data
                     data_out.wr.next = True
@@ -172,7 +174,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
                 data_in.rd.next = True
             if data_in.rd and not data_in.empty:
                 # Input data read
-                output_data.data = data_in.rd
+                output_data.data = data_in.data
                 output_data.wr.next = True
                 data_in.rd.next = False
 
