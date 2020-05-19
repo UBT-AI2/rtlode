@@ -82,7 +82,7 @@ def byte_fifo(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifo
 
     # Prepare max consumer length buffer
     c_data_bytes = [Signal(intbv(0, min=0, max=256)) for _ in range(c_max_data_size)]
-    c_data = ConcatSignal(*c_data_bytes)
+    c_data = ConcatSignal(*reversed(c_data_bytes))
 
     @always_comb
     def calculate_fill_level():
@@ -100,7 +100,7 @@ def byte_fifo(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifo
         if p.wr and not p.full:
             for i in range(p_max_data_size):
                 if i < p.data_size:
-                    byte_addr = (p_max_data_size - i - 1) << 3  # * 8
+                    byte_addr = i << 3  # * 8
                     if p_addr + i < buffer_size:
                         buffer[p_addr + i].next = p.data[byte_addr + 8:byte_addr]
                     else:
