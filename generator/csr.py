@@ -85,6 +85,7 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
         if reset:
             af2cp.c2.hdr.tid.next = 0
             af2cp.c2.mmioRdValid.next = 0
+            af2cp.c2.data.next = 0
         else:
             if cp2af.c0.mmioRdValid:
                 # Copy tid for request response mapping
