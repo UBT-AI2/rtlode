@@ -97,21 +97,24 @@ def byte_fifo(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifo
     def check_full():
         p.full.next = buffer_size - 1 - fill_level < p.data_size
 
-    @always_seq(clk.posedge, reset=rst)
+    @always_seq(clk.posedge, reset=None)
     def handle_wr():
-        if p.wr and not p.full:
-            for i in range(p_max_data_size):
-                if i < p.data_size:
-                    byte_addr = i << 3  # * 8
-                    if p_addr + i < buffer_size:
-                        buffer[p_addr + i].next = p.data[byte_addr + 8:byte_addr]
-                    else:
-                        buffer[i - (buffer_size - p_addr)].next = p.data[byte_addr + 8:byte_addr]
+        if rst:
+            p_addr.next = 0
+        else:
+            if p.wr and not p.full:
+                for i in range(p_max_data_size):
+                    if i < p.data_size:
+                        byte_addr = i << 3  # * 8
+                        if p_addr + i < buffer_size:
+                            buffer[p_addr + i].next = p.data[byte_addr + 8:byte_addr]
+                        else:
+                            buffer[i - (buffer_size - p_addr)].next = p.data[byte_addr + 8:byte_addr]
 
-            if (buffer_size - 1) - p_addr < p.data_size:
-                p_addr.next = p.data_size - (buffer_size - p_addr)
-            else:
-                p_addr.next = p_addr + p.data_size
+                if (buffer_size - 1) - p_addr < p.data_size:
+                    p_addr.next = p.data_size - (buffer_size - p_addr)
+                else:
+                    p_addr.next = p_addr + p.data_size
 
     t_state = enum('CPY', 'RDY')
     rd_state = Signal(t_state.CPY)
@@ -123,26 +126,30 @@ def byte_fifo(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifo
         else:
             c.empty.next = fill_level < c.data_size
 
-    @always_seq(clk.posedge, reset=rst)
+    @always_seq(clk.posedge, reset=None)
     def handle_rd():
-        if rd_state == t_state.CPY:
-            # Provide output data
-            for i in range(c_max_data_size):
-                if i < c.data_size:
-                    if c_addr + i < buffer_size:
-                        c_data_bytes[i].next = buffer[c_addr + i]
+        if rst:
+            rd_state.next = t_state.CPY
+            c_addr.next = 0
+        else:
+            if rd_state == t_state.CPY:
+                # Provide output data
+                for i in range(c_max_data_size):
+                    if i < c.data_size:
+                        if c_addr + i < buffer_size:
+                            c_data_bytes[i].next = buffer[c_addr + i]
+                        else:
+                            c_data_bytes[i].next = buffer[i - (buffer_size - c_addr)]
+                if fill_level >= c.data_size:
+                    rd_state.next = t_state.RDY
+            if rd_state == t_state.RDY:
+                if c.rd and not c.empty:
+                    # Increase c_addr
+                    if (buffer_size - 1) - c_addr < c.data_size:
+                        c_addr.next = c.data_size - (buffer_size - c_addr)
                     else:
-                        c_data_bytes[i].next = buffer[i - (buffer_size - c_addr)]
-            if fill_level >= c.data_size:
-                rd_state.next = t_state.RDY
-        if rd_state == t_state.RDY:
-            if c.rd and not c.empty:
-                # Increase c_addr
-                if (buffer_size - 1) - c_addr < c.data_size:
-                    c_addr.next = c.data_size - (buffer_size - c_addr)
-                else:
-                    c_addr.next = c_addr + c.data_size
-                rd_state.next = t_state.CPY
+                        c_addr.next = c_addr + c.data_size
+                    rd_state.next = t_state.CPY
 
     @always_comb
     def assign_c_data():
