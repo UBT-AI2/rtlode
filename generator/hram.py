@@ -5,7 +5,6 @@ from common.packed_struct import BitVector
 from generator.ccip import CcipClData
 from generator.cdc_utils import AsyncFifoProducer, AsyncFifoConsumer
 from generator.csr import CsrSignals
-from generator.fifo import ByteFifoProducer, ByteFifoConsumer, byte_fifo
 from utils import num
 
 
@@ -40,14 +39,16 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     input_addr_offset = Signal(num.integer(0))
 
     # Currently not completly process read request?
-    outstanding_read_request = Signal(bool(0))
+    read_response_outstanding = Signal(bool(0))
+    read_response_processing_ongoing = Signal(bool(0))
 
     input_finished = Signal(bool(0))
     output_finished = Signal(bool(0))
 
     @always_comb
     def input_finished_driver():
-        input_finished.next = input_addr_offset == csr.buffer_size and not outstanding_read_request
+        input_finished.next = input_addr_offset == csr.buffer_size and not read_response_outstanding \
+                              and not read_response_processing_ongoing
 
     @always_comb
     def output_finished_driver():
@@ -66,21 +67,18 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
             af2cp.c0.valid.next = 0
 
             input_addr_offset.next = 0
-            outstanding_read_request.next = False
+            read_response_outstanding.next = False
         else:
-            if chunk_out.wr and not chunk_out.full:
-                outstanding_read_request.next = False
+            if cl_rcv_vec == 0b1111:
+                read_response_outstanding.next = False
 
             af2cp.c0.hdr.address.next = csr.input_addr + (input_addr_offset << 2)  # * 4 (0b100)
-            if not cp2af.c0TxAlmFull and not outstanding_read_request and not input_finished:
+            if not cp2af.c0TxAlmFull and not read_response_outstanding\
+                    and not read_response_processing_ongoing and not input_finished:
                 af2cp.c0.valid.next = 1
                 # Wait for one request to be received completly and processed
-                outstanding_read_request.next = True
+                read_response_outstanding.next = True
                 input_addr_offset.next = input_addr_offset + 1
-                if input_addr_offset == csr.buffer_size - 1:
-                    chunk_out.data_size.next = 256 - csr.buffer_unused_bytes
-                else:
-                    chunk_out.data_size.next = 256
             else:
                 af2cp.c0.valid.next = 0
 
@@ -97,18 +95,31 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     cl3_rcv = Signal(bool(0))
     cl_rcv_vec = ConcatSignal(cl3_rcv, cl2_rcv, cl1_rcv, cl0_rcv)
 
+    chunk_size = 4 * len(CcipClData)
+    input_data_size = len(input_desc)
+    input_data_iter = Signal(num.integer(0))
+
     @always_seq(clk.posedge, reset=reset)
     def mem_reads_responses():
-        if chunk_out.wr:
-            if not chunk_out.full:
-                chunk_out.wr.next = False
-                cl0_rcv.next = False
-                cl1_rcv.next = False
-                cl2_rcv.next = False
-                cl3_rcv.next = False
+        if data_out.wr:
+            if not data_out.full:
+                nbr_inputs.next = nbr_inputs + 1
+                if input_data_iter + 256 < chunk_size:
+                    data_out.data.next = input_data_chunk[input_data_iter + input_data_size:input_data_iter]
+                    input_data_iter.next = input_data_iter + input_data_size
+                else:
+                    data_out.wr.next = False
+                    input_data_iter.next = 0
+                    cl0_rcv.next = False
+                    cl1_rcv.next = False
+                    cl2_rcv.next = False
+                    cl3_rcv.next = False
+                    read_response_processing_ongoing.next = False
         elif cl_rcv_vec == 0b1111:
-            chunk_out.wr.next = True
-            chunk_out.data.next = input_data_chunk
+            data_out.wr.next = True
+            data_out.data.next = input_data_chunk[input_data_iter + input_data_size:input_data_iter]
+            input_data_iter.next = input_data_iter + input_data_size
+            read_response_processing_ongoing.next = True
         elif cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0:
             if cp2af.c0.hdr.cl_num == 0:
                 cl0_data.next = cp2af.c0.data
@@ -123,66 +134,15 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
                 cl3_data.next = cp2af.c0.data
                 cl3_rcv.next = True
 
-    chunk_out = ByteFifoProducer(BitVector(len(input_data_chunk)).create_instance())
-    input_data = ByteFifoConsumer(BitVector(len(input_desc)).create_instance())
-
-    input_fifo = byte_fifo(clk, reset, chunk_out, input_data)
-
-    @always_seq(clk.posedge, reset=None)
-    def check_input_data():
-        if reset:
-            data_out.wr.next = False
-            input_data.rd.next = True
-            nbr_inputs.next = 0
-        else:
-            if data_out.wr and not data_out.full:
-                # Output data written
-                data_out.wr.next = False
-                input_data.rd.next = True
-
-            if input_data.rd and not input_data.empty:
-                # Data available
-                data_out.data.next = input_data.data
-                data_out.wr.next = True
-                input_data.rd.next = False
-                nbr_inputs.next = nbr_inputs + 1
-
-    output_data = ByteFifoProducer(BitVector(len(output_desc)).create_instance())
-    chunk_in = ByteFifoConsumer(BitVector(len(input_data_chunk)).create_instance(), fill_level=Signal(num.integer()))
-
-    output_fifo = byte_fifo(clk, reset, output_data, chunk_in)
-
-    @always_seq(clk.posedge, reset=None)
-    def copy_output_data():
-        if reset:
-            data_in.rd.next = True
-            output_data.wr.next = False
-            nbr_outputs.next = 0
-        else:
-            if output_data.wr and not output_data.full:
-                # Output data written
-                output_data.wr.next = False
-                data_in.rd.next = True
-                nbr_outputs.next = nbr_outputs + 1
-            if data_in.rd and not data_in.empty:
-                # Input data read
-                output_data.data.next = data_in.data
-                output_data.wr.next = True
-                data_in.rd.next = False
-
     # Incremental counter used for iterating trough host array
     output_addr_offset = Signal(num.integer(0))
-    output_data_chunk = BitVector(len(CcipClData) * 4).create_instance()
+    output_data_per_chunk = (len(CcipClData) * 4) // len(output_desc)
+    output_data_iter = Signal(num.integer(0))
+    output_data = [BitVector(len(output_desc)).create_instance() for _ in range(output_data_per_chunk)]
+    output_data_chunk = ConcatSignal(*reversed(output_data))
 
     t_write_state = enum('RDY', 'CL0', 'CL1', 'CL2', 'CL3', 'FIN')
     write_state = Signal(t_write_state.RDY)
-
-    @always_seq(clk.posedge, reset=reset)
-    def chunk_in_data_size_driver():
-        if output_finished and chunk_in.fill_level > 0:
-            chunk_in.data_size.next = chunk_in.fill_level
-        else:
-            chunk_in.data_size.next = 256
 
     # Host Memory Writes
     @always_seq(clk.posedge, reset=None)
@@ -202,14 +162,21 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
             write_state.next = t_write_state.RDY
             output_addr_offset.next = 0
-            chunk_in.rd.next = True
+            data_in.rd.next = True
             csr.fin.next = False
+            output_data_iter.next = 0
         else:
             if write_state == t_write_state.RDY:
                 af2cp.c1.valid.next = 0
-                if not chunk_in.empty and not cp2af.c1TxAlmFull:
-                    output_data_chunk.next = chunk_in.data
-                    chunk_in.rd.next = False
+                if not data_in.empty and not cp2af.c1TxAlmFull:
+                    nbr_outputs.next = nbr_outputs.next + 1
+                    output_data[output_data_iter].next = data_in.data
+                    output_data_iter.next = output_data_iter + 1
+                    if output_data_iter + 1 == output_data_per_chunk:
+                        data_in.rd.next = False
+                        write_state.next = t_write_state.CL0
+                if output_finished:
+                    data_in.rd.next = False
                     write_state.next = t_write_state.CL0
             elif write_state == t_write_state.CL0:
                 af2cp.c1.hdr.sop.next = 1
@@ -235,12 +202,13 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
                 af2cp.c1.data.next = output_data_chunk[2048:1536]
                 af2cp.c1.valid.next = 1
                 output_addr_offset.next = output_addr_offset + 1
-                if not output_finished or chunk_in.fill_level > 0:
+                if not output_finished:
                     write_state.next = t_write_state.RDY
-                    chunk_in.rd.next = True
+                    output_data_iter.next = 0
+                    data_in.rd.next = True
                 else:
                     write_state.next = t_write_state.FIN
-                    chunk_in.rd.next = False
+                    data_in.rd.next = False
                     csr.fin.next = True
             elif write_state == t_write_state.FIN:
                 af2cp.c1.valid.next = 0
