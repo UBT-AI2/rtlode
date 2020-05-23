@@ -139,9 +139,10 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     output_data_per_chunk = (len(CcipClData) * 4) // len(output_desc)
     output_data_iter = Signal(num.integer(0))
     output_data = [BitVector(len(output_desc)).create_instance() for _ in range(output_data_per_chunk)]
-    output_data_chunk = ConcatSignal(*reversed(output_data), BitVector(
+    output_data_chunk_padding = BitVector(
         (len(CcipClData) * 4) - (output_data_per_chunk * len(output_desc))
-    ).create_instance())
+    ).create_instance()
+    output_data_chunk = ConcatSignal(*reversed(output_data), output_data_chunk_padding)
 
     t_write_state = enum('RDY', 'CL0', 'CL1', 'CL2', 'CL3', 'FIN')
     write_state = Signal(t_write_state.RDY)
@@ -167,6 +168,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
             data_in.rd.next = True
             csr.fin.next = False
             output_data_iter.next = 0
+            output_data_chunk_padding.next = 0
         else:
             if write_state == t_write_state.RDY:
                 af2cp.c1.valid.next = 0
