@@ -48,7 +48,7 @@ class Fim:
                                          self._mem_output_chunk_offset + self._mem_output_data_offset)
 
         self._mem_output_data_offset += 28
-        if 256 - self._mem_output_data_offset < 40:
+        if 256 - self._mem_output_data_offset < 28:
             self._mem_output_chunk_offset += 256
             self._mem_output_data_offset = 0
 
@@ -248,4 +248,4 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
 
     tb = sim()
     tb.config_sim(trace=trace)
-    tb.run_sim()
+    tb.run_sim(1001000)

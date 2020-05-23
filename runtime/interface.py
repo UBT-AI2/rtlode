@@ -91,7 +91,7 @@ class Solver:
                                          self._output_data_offset + self._output_chunk_offset)
 
         self._output_data_offset += 28
-        if 256 - self._output_data_offset < 40:
+        if 256 - self._output_data_offset < 28:
             self._output_chunk_offset += 256
             self._output_data_offset = 0
 
