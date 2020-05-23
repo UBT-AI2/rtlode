@@ -171,6 +171,8 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
             output_data_chunk_padding.next = 0
 
             nbr_outputs.next = 0
+            for i in range(output_data_per_chunk):
+                output_data[i].next = 0
         else:
             if write_state == t_write_state.RDY:
                 af2cp.c1.valid.next = 0
