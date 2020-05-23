@@ -8,6 +8,7 @@ from common.config import Config
 from common.packed_struct import BitVector
 from generator.ccip import CcipClData
 from generator.fifo import byte_fifo, ByteFifoProducer, ByteFifoConsumer
+from generator.sim.cosim import byte_fifo_cosim
 from utils import num
 
 
@@ -78,7 +79,7 @@ class Test(TestCase):
                             p.wr.next = False
                     else:
                         if not p.full:
-                            p.data.next = int.from_bytes(host_byte_array[chunk_offset:chunk_offset + 256], "big")
+                            p.data.next = int.from_bytes(host_byte_array[chunk_offset:chunk_offset + 256], "little")
                             if chunk_offset + 512 <= len(host_byte_array):
                                 chunk_offset.next += 256
                             else:
@@ -95,7 +96,7 @@ class Test(TestCase):
                 c.rd.next = True
                 if c.rd and not c.empty:
                     print("Out: %r" % hex(c.data.val))
-                    (n, h, *y, x, id) = struct.unpack_from('<Iq2qqI', int.to_bytes(int(c.data.val), data_size, "big", signed=False), 0)
+                    (n, h, *y, x, id) = struct.unpack_from('<Iq2qqI', int.to_bytes(int(c.data.val), data_size, "little", signed=False), 0)
 
                     print({
                         'x': num.to_float(x),
