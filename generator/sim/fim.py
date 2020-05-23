@@ -21,20 +21,42 @@ class Fim:
         self._mem_read_request_buffer = []
 
         self._mem_input = bytearray(2048)
+        self._mem_input_chunk_offset = 0
         self._mem_input_data_offset = 0
         self._mem_output = bytearray(2048)
+        self._mem_output_chunk_offset = 0
+        self._mem_output_data_offset = 0
+        self._mem_last_write_addr = 0
 
     def add_input(self, x_start: float, y_start: List[float], h: int, n: int) -> int:
         self._current_input_id = self._current_input_id + 1
-        struct.pack_into('<Iq2qqI', self._mem_input, self._mem_input_data_offset,
+        struct.pack_into('<Iq2qqI', self._mem_input, self._mem_input_chunk_offset + self._mem_input_data_offset,
                          int(n),
                          num.int_from_float(h),
                          *map(num.int_from_float, reversed(y_start)),
                          num.int_from_float(x_start),
                          int(self._current_input_id))
         self._mem_input_data_offset += 40
+        if 256 - self._mem_input_data_offset < 40:
+            self._mem_input_chunk_offset += 256
+            self._mem_input_data_offset = 0
 
         return self._current_input_id
+
+    def get_output(self) -> int:
+        (*y, x, id) = struct.unpack_from('<2qqI', self._mem_output,
+                                         self._mem_output_chunk_offset + self._mem_output_data_offset)
+
+        self._mem_output_data_offset += 28
+        if 256 - self._mem_output_data_offset < 40:
+            self._mem_output_chunk_offset += 256
+            self._mem_output_data_offset = 0
+
+        return {
+            'x': num.to_float(x),
+            'y': list(map(num.to_float, reversed(y))),
+            'id': id
+        }
 
     def queue_csr_read(self, addr):
         raise NotImplementedError()
@@ -148,6 +170,12 @@ class Fim:
                     'data': af2cp.c1.data[:]
                 }
                 print('MEM_WRITE: %r' % write)
+                if write['sop']:
+                    self._mem_last_write_addr = write['addr']
+                    addr = write['addr'] * 64
+                else:
+                    addr = (self._mem_last_write_addr + write['addr']) * 64
+                self._mem_output[addr:addr + 64] = int(write['data']._val).to_bytes(64, 'little', signed=False)
 
         return instances()
 
@@ -199,12 +227,22 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
         def runtime():
             yield delay(200)
             fim.queue_csr_write(csr.csr_addresses['buffer_size'], 1)
-            fim.queue_csr_write(csr.csr_addresses['buffer_unused_bytes'], 176)
             yield delay(20)
+            fim.add_input(0, [2, 1], 0.1, 100)
+            fim.add_input(0, [2, 1], 0.1, 100)
+            fim.add_input(0, [2, 1], 0.1, 100)
+            fim.add_input(0, [2, 1], 0.1, 100)
             fim.add_input(0, [2, 1], 0.1, 100)
             fim.add_input(0, [2, 1], 0.1, 100)
             yield delay(40)
             fim.queue_csr_write(csr.csr_addresses['enb'], 1)
+            yield delay(1000000)
+            print(fim.get_output())
+            print(fim.get_output())
+            print(fim.get_output())
+            print(fim.get_output())
+            print(fim.get_output())
+            print(fim.get_output())
 
         return instances()
 
