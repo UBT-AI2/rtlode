@@ -22,6 +22,12 @@ class Solver:
         self._current_input_id = 0
         self._current_output_id = 0
 
+        self._input_data_offset = 0
+        self._input_chunk_offset = 0
+
+        self._output_data_offset = 0
+        self._output_chunk_offset = 0
+
     def __enter__(self):
         # TODO enable guid filter if segfault in opae is fixed
         tokens = fpga.enumerate(type=fpga.ACCELERATOR)  # , guid=self._config['build_info']['uuid'])
@@ -36,6 +42,10 @@ class Solver:
         self._handle.write_csr64(self._csr_addresses['output_addr'], self._output_buffer.io_address() >> 6)
 
         self._input_data_offset = 0
+        self._input_chunk_offset = 0
+
+        self._output_data_offset = 0
+        self._output_chunk_offset = 0
 
         return self
 
@@ -44,7 +54,7 @@ class Solver:
         self._handle = None
 
     def input_full(self):
-        return self._input_data_offset + 40 <= self.buffer_size
+        return (self._input_chunk_offset + self._input_data_offset) + 40 <= self._buffer_size
 
     def add_input(self, x_start: float, y_start: List[float], h: int, n: int) -> int:
         """
@@ -56,7 +66,7 @@ class Solver:
         :return: id referring to given dataset, can be used to match results
         """
         self._current_input_id = self._current_input_id + 1
-        struct.pack_into('<Iq2qqI', self._input_buffer, self._input_data_offset,
+        struct.pack_into('<Iq2qqI', self._input_buffer, self._input_chunk_offset + self._input_data_offset,
                          int(n),
                          num.int_from_float(h),
                          *map(num.int_from_float, reversed(y_start)),
@@ -64,29 +74,32 @@ class Solver:
                          int(self._current_input_id))
         self._input_data_offset += 40
 
+        if 256 - self._input_data_offset < 40:
+            self._input_chunk_offset += 256
+            self._input_data_offset = 0
+
         return self._current_input_id
 
     def start(self):
-        buffer_size = int(math.ceil(self._input_data_offset / 256))
+        buffer_size = int(math.ceil((self._input_chunk_offset + self._input_data_offset) / 256))
         self.buffer_size = buffer_size
-        self.buffer_unused_bytes = buffer_size * 256 - self._input_data_offset
 
         self.enb = True
 
-    # def fetch_output(self) -> Union[None, Dict]:
-    #     (*y, x, id) = struct.unpack_from('<2qqI', self._output_buffer, 0)
-    #
-    #     if id > self._current_output_id:
-    #         # New data available
-    #         self._current_output_id = self._current_output_id + 1
-    #         self.output_ack_id = self._current_output_id
-    #         return {
-    #             'x': num.to_float(x),
-    #             'y': list(map(num.to_float, reversed(y))),
-    #             'id': id
-    #         }
-    #     else:
-    #         return None
+    def fetch_output(self) -> Union[None, Dict]:
+        (*y, x, id) = struct.unpack_from('<2qqI', self._output_buffer,
+                                         self._output_data_offset + self._output_chunk_offset)
+
+        self._output_data_offset += 28
+        if 256 - self._output_data_offset < 40:
+            self._output_chunk_offset += 256
+            self._output_data_offset = 0
+
+        return {
+            'x': num.to_float(x),
+            'y': list(map(num.to_float, reversed(y))),
+            'id': id
+        }
 
     @property
     def buffer_size(self):
@@ -95,14 +108,6 @@ class Solver:
     @buffer_size.setter
     def buffer_size(self, value):
         self._handle.write_csr64(self._csr_addresses['buffer_size'], value)
-
-    @property
-    def buffer_unused_bytes(self):
-        return self._handle.read_csr64(self._csr_addresses['buffer_unused_bytes'])
-
-    @buffer_unused_bytes.setter
-    def buffer_unused_bytes(self, value):
-        self._handle.write_csr64(self._csr_addresses['buffer_unused_bytes'], value)
 
     @property
     def enb(self):

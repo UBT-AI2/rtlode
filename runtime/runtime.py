@@ -41,9 +41,11 @@ def run(slv_path: str, runtime_config=None):
     print('Aquiring ownership of afu...')
     with Solver(config, 4096) as solver:
         print('Preparing input...')
+        nbr_inputs = 0
         while not solver.input_full():
             input_id = solver.add_input(config['x'], config['y'], config['h'], config['n'])
             print('  Added input: %r' % input_id)
+            nbr_inputs += 1
 
         print('Starting solver...')
         solver.start()
@@ -55,3 +57,6 @@ def run(slv_path: str, runtime_config=None):
 
         timing_end = time.time()
         print('Solver finished in: %s' % (timing_end - timing_start))
+
+        for _ in range(nbr_inputs):
+            print('Res: %r' % solver.fetch_output())
