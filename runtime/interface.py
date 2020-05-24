@@ -90,7 +90,7 @@ class Solver:
         You can't add more inputs. Either increase buffer size or restart the solver with new input.
         :return: true if input is full
         """
-        input_data_size = len(data_desc.get_input_desc(self._system_size))
+        input_data_size = len(data_desc.get_input_desc(self._system_size)) // 8
         return (self._input_data_chunk + self._input_data_offset) + input_data_size > self._buffer_size
 
     def add_input(self, x_start: float, y_start: List[float], h: int, n: int) -> int:
@@ -105,7 +105,7 @@ class Solver:
         assert len(y_start) == self._system_size
         assert not self.input_full()
 
-        input_data_size = len(data_desc.get_input_desc(self._system_size))
+        input_data_size = len(data_desc.get_input_desc(self._system_size)) // 8
 
         self._current_input_id = self._current_input_id + 1
         struct.pack_into('<Iq%dqqI' % self._system_size,
@@ -129,7 +129,7 @@ class Solver:
         Return the solver outputs one after another. The order is the output order of the solver.
         :return: dictionary with id, x, y
         """
-        output_data_size = len(data_desc.get_output_desc(self._system_size))
+        output_data_size = len(data_desc.get_output_desc(self._system_size)) // 8
 
         (*y, x, out_id) = struct.unpack_from('<%dqqI' % self._system_size, self._output_buffer,
                                              self._output_data_offset + self._output_data_chunk)
