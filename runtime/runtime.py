@@ -19,10 +19,9 @@ def _load_bitstream(gbs_path: str):
         device.reconfigure(0, fd)
 
 
-def run(slv_path: str, runtime_config=None):
+def run(slv_path: str, runtime_config=None, amount_data=1000):
     """
     Loads and run a given solver.
-
     :return:
     """
     runtime_path = os.path.dirname(os.path.realpath(__file__))
@@ -39,23 +38,23 @@ def run(slv_path: str, runtime_config=None):
 
     # Access AFU (get Interface Object)
     print('Aquiring ownership of afu...')
-    with Solver(config, 4096) as solver:
+    with Solver(config, 65536) as solver:
         print('Preparing input...')
         nbr_inputs = 0
-        while not solver.input_full():
+        while nbr_inputs < amount_data and not solver.input_full():
             input_id = solver.add_input(config['x'], config['y'], config['h'], config['n'])
             print('  Added input: %r' % input_id)
             nbr_inputs += 1
 
         print('Starting solver...')
-        solver.start()
-
         timing_start = time.time()
+        solver.start()
 
         while not solver.fin:
             pass
 
         timing_end = time.time()
+        solver.stop()
         print('Solver finished in: %s' % (timing_end - timing_start))
 
         for _ in range(nbr_inputs):
