@@ -32,13 +32,6 @@ def pipe_calc_step(
     mul_res = clone_signal(y_n)
 
     return Pipeline() \
-        .then(
-            bind(
-                lincomb,
-                f,
-                y_i,
-                lincomb_res
-            )
-        ) \
+        .then(lincomb(f, y_i, lincomb_res)) \
         .then(bind(generator.calc.mul, h, lincomb_res, mul_res)) \
         .then(bind(generator.calc.add, y, mul_res, y_n))

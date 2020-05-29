@@ -12,16 +12,14 @@ class UnequalVectorLength(Exception):
     pass
 
 
-@block
-def lincomb(in_a, in_b, out_sum, flow: FlowControl):
+def lincomb(in_a, in_b, out_sum):
     """
     Calculates the linear combination of vector a and b.
 
     :param in_a: input vector a
     :param in_b: input vector b
     :param out_sum: sum of a .* b
-    :param flow: FlowControl sigs
-    :return: myhdl instances
+    :return: pipe instance
     :raises UnequalVectorLength: if lengths of vector a and b are not equal
     """
     if len(in_a) != len(in_b):
@@ -35,4 +33,4 @@ def lincomb(in_a, in_b, out_sum, flow: FlowControl):
     pipe.then([bind(generator.calc.mul, in_a[i], in_b[i], partial_results[i]) for i in range(n_elements)])
     pipe.then(bind(reduce_sum, partial_results, out_sum))
 
-    return pipe.create(flow)
+    return pipe

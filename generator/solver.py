@@ -69,7 +69,7 @@ def solver(
     for si in range(config.stages):
         # TODO use parallel stage calc if possible
         stage_pipe.then(
-            bind(stage, config.get_stage_config(si), data.h, data.x, data.y, v)
+            stage(config.get_stage_config(si), data.h, data.x, data.y, v)
         )
     pipe.then([stage_pipe, bind(generator.calc.add, data.x, data.h, x_n)])
 

@@ -16,19 +16,16 @@ class MethodNotExplicit(Exception):
     pass
 
 
-@block
 def stage(
         config: StageConfig,
         h: SignalType,
         x: SignalType,
         y: List[SignalType],
-        v: List[List[SignalType]],
-        flow: FlowControl):
+        v: List[List[SignalType]]):
     """
     Implements logic to solve a rk stage.
 
     :param config: all relevant config parameters for this stage
-    :param flow:
     :param h: step size
     :param x: current x value
     :param y: current y values
@@ -62,4 +59,4 @@ def stage(
         }, v[config.stage_index][i]) for i, rhs_expr in enumerate(config.components)]
     )
 
-    return pipe.create(flow)
+    return pipe
