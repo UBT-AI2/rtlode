@@ -41,7 +41,9 @@ def sub(in_a, in_b, out_c, flow: FlowControl = None):
 def mul(in_a: Union[int, SignalType], in_b: SignalType, out_c, flow: FlowControl):
     reg = Signal(intbv(0, min=DOUBLE_MIN_VALUE, max=DOUBLE_MAX_VALUE))
 
-    if isinstance(in_a, int) and bin(in_a).count('1') == 1:
+    if isinstance(in_a, int) and in_a == 0:
+        return assign_flow(0, out_c, flow)
+    elif isinstance(in_a, int) and bin(in_a).count('1') == 1:
         # This multiplication can be implemented in shifts.
         bin_repr = bin(in_a)
         shift_by = len(bin_repr) - 1 - bin_repr.index('1') - FRACTION_SIZE
