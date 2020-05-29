@@ -166,6 +166,12 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
                     )
 
         clks = 0
+        usr_clks = 0
+
+        @always_seq(out_fifo_p.clk.posedge, reset=None)
+        def usr_clk_counter():
+            nonlocal usr_clks
+            usr_clks = usr_clks + 1
 
         @always_seq(out_fifo_c.clk.posedge, reset=None)
         def c_read():
@@ -183,7 +189,7 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
                     'id': parsed_output_data.id
                 })
                 if parsed_output_data.id == nbr_datasets:
-                    print("Finished after %i clock cycles." % clks)
+                    print("Finished after %i pclk cycles and %i usr_clk cycles." % (clks, usr_clks))
                     raise StopSimulation()
 
         return instances()
