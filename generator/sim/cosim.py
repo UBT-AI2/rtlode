@@ -23,8 +23,8 @@ def dispatcher_cosim(config: Config, data_in: AsyncFifoConsumer, data_out: Async
                            data_out_data,
                            data_out_wr,
                            data_out_full):
-        data_in = AsyncFifoConsumer(clk, rst, data_in_data, data_in_rd, data_in_empty)
-        data_out = AsyncFifoProducer(clk, rst, data_out_data, data_out_wr, data_out_full)
+        data_in = AsyncFifoConsumer(clk=clk, rst=rst, data=data_in_data, rd=data_in_rd, empty=data_in_empty)
+        data_out = AsyncFifoProducer(clk=clk, rst=rst, data=data_out_data, wr=data_out_wr, full=data_out_full)
         from generator.dispatcher import dispatcher
         return dispatcher(config, data_in, data_out)
 
