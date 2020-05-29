@@ -1,4 +1,4 @@
-from myhdl import Signal, SignalType, block, always_seq
+from myhdl import Signal, SignalType, block, always_seq, always_comb
 
 from utils import num
 from generator.flow import FlowControl
@@ -68,10 +68,10 @@ def assign_2(clk, condition_1, in_val_1, condition_2, in_val_2, out_val):
 
 @block
 def assign_flow(in_val: SignalType, out_val: SignalType, flow: FlowControl):
-    @always_seq(flow.clk_edge(), reset=flow.rst)
+    @always_comb
     def _assign():
         if flow.enb:
             out_val.next = in_val
-            flow.fin.next = True
+        flow.fin.next = flow.enb
 
     return _assign
