@@ -4,7 +4,7 @@ from myhdl import block, always_seq, always_comb, Signal, intbv, SignalType
 
 from generator.flow import FlowControl
 from generator.utils import assign_flow
-from utils.num import DOUBLE_MIN_VALUE, DOUBLE_MAX_VALUE, NONFRACTION_SIZE, FRACTION_SIZE
+from utils.num import NONFRACTION_SIZE, FRACTION_SIZE
 
 
 @block
@@ -39,7 +39,8 @@ def sub(in_a, in_b, out_c, flow: FlowControl = None):
 
 @block
 def mul(in_a: Union[int, SignalType], in_b: SignalType, out_c, flow: FlowControl):
-    reg = Signal(intbv(0, min=DOUBLE_MIN_VALUE, max=DOUBLE_MAX_VALUE))
+    reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
+    reg = Signal(intbv(0, min=-reg_max, max=reg_max))
 
     if isinstance(in_a, int) and in_a == 0:
         return assign_flow(0, out_c, flow)
@@ -69,7 +70,7 @@ def mul(in_a: Union[int, SignalType], in_b: SignalType, out_c, flow: FlowControl
 
     @always_comb
     def resize():
-        out_c.next = reg[NONFRACTION_SIZE + FRACTION_SIZE + 1 + FRACTION_SIZE:FRACTION_SIZE].signed()
+        out_c.next = reg[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
 
     if isinstance(in_a, int):
         @always_seq(flow.clk_edge(), flow.rst)

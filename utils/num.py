@@ -1,14 +1,29 @@
 from myhdl import intbv, modbv, SignalType
 
 INTEGER_SIZE = 32
-NONFRACTION_SIZE = 16
-FRACTION_SIZE = 47
-TOTAL_SIZE = 1 + NONFRACTION_SIZE + FRACTION_SIZE
-MAX_VALUE = 2 ** (NONFRACTION_SIZE + FRACTION_SIZE) - 1
-MIN_VALUE = - MAX_VALUE
 
-DOUBLE_MAX_VALUE = 2 ** (2 * NONFRACTION_SIZE + 2 * FRACTION_SIZE) - 1
-DOUBLE_MIN_VALUE = - DOUBLE_MAX_VALUE
+# Define globals at module level
+NONFRACTION_SIZE = None
+FRACTION_SIZE = None
+
+TOTAL_SIZE = None
+MAX_VALUE = None
+MIN_VALUE = None
+
+
+def from_config(numeric_cfg: dict):
+    global FRACTION_SIZE, NONFRACTION_SIZE
+    FRACTION_SIZE = numeric_cfg.get('fixed_point_fraction_size', 37)
+    NONFRACTION_SIZE = numeric_cfg.get('fixed_point_nonfraction_size', 16)
+    # Recalculate dependent values
+    global TOTAL_SIZE, MAX_VALUE, MIN_VALUE
+    TOTAL_SIZE = 1 + NONFRACTION_SIZE + FRACTION_SIZE
+    MAX_VALUE = 2 ** (NONFRACTION_SIZE + FRACTION_SIZE)
+    MIN_VALUE = - MAX_VALUE
+
+
+# Initialize globals
+from_config({})
 
 
 def integer(val=0, max=2 ** INTEGER_SIZE):

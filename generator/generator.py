@@ -131,10 +131,10 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
         parsed_output_data = data_desc.get_output_desc(config.system_size).create_read_instance(out_fifo_c.data)
 
         in_fifo_p.data.next = create_input_data(
-            config_dict['x'],
-            config_dict['y'],
-            config_dict['h'],
-            config_dict['n']
+            config_dict['problem']['x'],
+            config_dict['problem']['y'],
+            config_dict['problem']['h'],
+            config_dict['problem']['n']
         )
         in_fifo_p.data._update()
 
@@ -159,10 +159,10 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
                 in_fifo_p.wr.next = True
                 if in_fifo_p.wr and not in_fifo_p.full:
                     in_fifo_p.data.next = create_input_data(
-                        config_dict['x'],
-                        config_dict['y'],
-                        config_dict['h'],
-                        config_dict['n']
+                        config_dict['problem']['x'],
+                        config_dict['problem']['y'],
+                        config_dict['problem']['h'],
+                        config_dict['problem']['n']
                     )
 
         clks = 0
@@ -200,6 +200,7 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
 
 
 def convert(config):
+    num.from_config(config.get('numeric', {}))
     cfg = Config.from_dict(config)
 
     clk = Signal(num.bool())
