@@ -4,11 +4,10 @@ from unittest import TestCase
 from myhdl import Signal, ResetSignal, block, always, delay, instance, instances
 
 from common import data_desc
-from common.config import Config
+from generator.config import Config
 from common.packed_struct import BitVector
 from generator.ccip import CcipClData
 from generator.fifo import byte_fifo, ByteFifoProducer, ByteFifoConsumer
-from generator.sim.cosim import byte_fifo_cosim
 from utils import num
 
 

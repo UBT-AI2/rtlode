@@ -10,7 +10,7 @@ from myhdl import Signal, ResetSignal, instance, delay, always, always_seq, inst
 
 from common import data_desc
 from generator.ccip import CcipRx, CcipTx
-from common.config import Config
+from generator.config import Config
 from generator.afu import afu
 from generator.cdc_utils import AsyncFifoProducer, AsyncFifoConsumer, async_fifo
 from generator.csr import csr_addresses

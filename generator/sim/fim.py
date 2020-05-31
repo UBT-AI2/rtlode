@@ -4,7 +4,7 @@ from typing import List
 
 from myhdl import block, Signal, ResetSignal, always, delay, instance, SignalType, always_seq, always_comb, instances
 
-from common.config import Config
+from generator.config import Config
 from common.packed_struct import BitVector
 from generator import csr
 from generator.afu import afu

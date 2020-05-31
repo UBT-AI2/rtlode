@@ -28,7 +28,7 @@ class Config:
             config['method']['A'],
             config['method']['b'],
             config['method']['c'],
-            config['components'],
+            config['problem']['components'],
             config['nbr_solver'] if 'nbr_solver' in config else None,
             # Needed if convert is called outside the normal build process.
             uuid=config['build_info']['uuid'] if 'build_info' in config else 'BEEFBEEFBEEFBEEFBEEFBEEFBEEFBEEF'

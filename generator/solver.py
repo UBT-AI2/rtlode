@@ -1,13 +1,13 @@
 from dataclasses import dataclass, field, InitVar
 from typing import List
 
-from myhdl import block, instances, ResetSignal, SignalType, always, Signal, enum, always_comb, always_seq
+from myhdl import block, instances, ResetSignal, SignalType, always, Signal, enum, always_comb
 
 import generator.calc
 from common import data_desc
 from generator.cdc_utils import AsyncFifoConsumer, AsyncFifoProducer
 from utils import num
-from common.config import Config
+from generator.config import Config
 from generator.rk_calc import pipe_calc_step
 from generator.rk_stage import stage
 from generator.utils import clone_signal, clone_signal_structure, bind, assign, assign_2

@@ -1,14 +1,13 @@
 from typing import List
 
-from myhdl import block, SignalType, Signal
+from myhdl import SignalType
 
 import generator.calc
 from generator import expr_parser
 from utils import num
-from common.config import StageConfig
+from generator.config import StageConfig
 from generator.rk_calc import pipe_calc_step
 from generator.utils import clone_signal, clone_signal_structure, bind
-from generator.flow import FlowControl
 from generator.pipeline import Pipeline
 
 

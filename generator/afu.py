@@ -3,7 +3,7 @@ from myhdl import block, SignalType, instances, always_comb, ResetSignal
 from generator.cdc_utils import async_fifo, AsyncFifoProducer, AsyncFifoConsumer, areset_synchronizer
 from generator.csr import csr_handler, CsrHeader, CsrSignals
 from generator.ccip import CcipRx, CcipTx
-from common.config import Config
+from generator.config import Config
 from generator.dispatcher import dispatcher
 from generator.hram import hram_handler
 from common.data_desc import get_input_desc, get_output_desc

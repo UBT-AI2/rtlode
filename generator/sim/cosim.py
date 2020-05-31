@@ -3,7 +3,7 @@ import subprocess
 
 from myhdl import Cosimulation, block, SignalType
 
-from common.config import Config
+from generator.config import Config
 from generator.cdc_utils import AsyncFifoConsumer, AsyncFifoProducer
 from generator.fifo import ByteFifoProducer, ByteFifoConsumer
 

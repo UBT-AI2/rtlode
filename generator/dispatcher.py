@@ -1,7 +1,7 @@
 from myhdl import block, always_seq, Signal, instances, always_comb, intbv, ConcatSignal
 
 from common import data_desc
-from common.config import Config
+from generator.config import Config
 from common.packed_struct import BitVector
 from generator.cdc_utils import AsyncFifoConsumer, AsyncFifoProducer
 from generator.priority_encoder import priority_encoder_one_hot
