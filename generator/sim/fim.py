@@ -2,8 +2,12 @@ import random
 import struct
 from typing import List
 
-from myhdl import block, Signal, ResetSignal, always, delay, instance, SignalType, always_seq, always_comb, instances
+from bitarray import bitarray
+from myhdl import block, Signal, ResetSignal, always, delay, instance, SignalType, always_seq, always_comb, instances, \
+    intbv
 
+from common import data_desc
+from common.data_desc import unpack_output_data
 from generator.config import Config
 from common.packed_struct import BitVector
 from generator import csr
@@ -14,7 +18,8 @@ from utils import num
 
 
 class Fim:
-    def __init__(self):
+    def __init__(self, config: Config):
+        self._config = config
         self._current_input_id = 0
         self._csr_write_buffer = []
 
@@ -30,32 +35,44 @@ class Fim:
 
     def add_input(self, x_start: float, y_start: List[float], h: int, n: int) -> int:
         self._current_input_id = self._current_input_id + 1
-        struct.pack_into('<Iq2qqI', self._mem_input, self._mem_input_chunk_offset + self._mem_input_data_offset,
-                         int(n),
-                         num.int_from_float(h),
-                         *map(num.int_from_float, reversed(y_start)),
-                         num.int_from_float(x_start),
-                         int(self._current_input_id))
-        self._mem_input_data_offset += 40
-        if 256 - self._mem_input_data_offset < 40:
+
+        packed_data = data_desc.pack_input_data(self._config.system_size, {
+            'id': int(self._current_input_id),
+            'x_start': num.int_from_float(x_start),
+            'y_start': list(map(num.int_from_float, reversed(y_start))),
+            'h': num.int_from_float(h),
+            'n': int(n)
+        })
+        print(packed_data)
+        packed_data_len = len(packed_data)
+
+        offset = self._mem_input_chunk_offset + self._mem_input_data_offset
+        self._mem_input[offset:offset + packed_data_len] = packed_data
+
+        self._mem_input_data_offset += packed_data_len
+        if 256 - self._mem_input_data_offset < packed_data_len:
             self._mem_input_chunk_offset += 256
             self._mem_input_data_offset = 0
 
         return self._current_input_id
 
     def get_output(self) -> int:
-        (*y, x, id) = struct.unpack_from('<2qqI', self._mem_output,
-                                         self._mem_output_chunk_offset + self._mem_output_data_offset)
+        packed_data_len = len(data_desc.get_output_desc(self._config.system_size)) // 8
 
-        self._mem_output_data_offset += 28
-        if 256 - self._mem_output_data_offset < 28:
+        offset = self._mem_output_chunk_offset + self._mem_output_data_offset
+        packed_data = self._mem_output[offset:offset + packed_data_len]
+
+        unpacked_data = unpack_output_data(self._config.system_size, bytes(packed_data))
+
+        self._mem_output_data_offset += packed_data_len
+        if 256 - self._mem_output_data_offset < packed_data_len:
             self._mem_output_chunk_offset += 256
             self._mem_output_data_offset = 0
 
         return {
-            'x': num.to_float(x),
-            'y': list(map(num.to_float, reversed(y))),
-            'id': id
+            'x': num.to_float(unpacked_data['x']),
+            'y': list(map(num.to_float, reversed(unpacked_data['y']))),
+            'id': unpacked_data['id']
         }
 
     def queue_csr_read(self, addr):
@@ -197,7 +214,7 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
 
         afu_inst = afu(config, clk, usr_clk, reset, cp2af_port, af2cp_port)
 
-        fim = Fim()
+        fim = Fim(config)
         fim_inst = fim.instance(clk, cp2af_port, af2cp_port)
 
         @always(delay(5))
