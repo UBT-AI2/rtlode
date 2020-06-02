@@ -19,7 +19,7 @@ class Solver:
                             the system must support ram pages of this size (without hugepage typically max 4096 bytes)
         """
         self._config = config
-        self._system_size = len(config['method']['components'])
+        self._system_size = len(config['problem']['components'])
         self._csr_addresses = config['build_info']['csr_addresses']
         # Shift all addresses
         for key, val in self._csr_addresses.items():
