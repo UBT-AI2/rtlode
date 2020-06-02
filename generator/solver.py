@@ -55,6 +55,11 @@ def solver(
     solver_output = solver_output_desc.create_write_instance()
     solver_output_packed = solver_output.packed()
 
+    if '_bit_padding' in solver_output_desc.get_fields():
+        @always_seq(clk.posedge, reset=None)
+        def drive_output_bit_padding():
+            solver_output._bit_padding.next = 0
+
     data = SolverData(config.system_size)
 
     x_n = clone_signal(data.x)
