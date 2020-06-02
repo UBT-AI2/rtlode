@@ -42,7 +42,12 @@ def run(slv_path: str, runtime_config=None, amount_data=1000):
         print('Preparing input...')
         nbr_inputs = 0
         while nbr_inputs < amount_data and not solver.input_full():
-            input_id = solver.add_input(config['x'], config['y'], config['h'], config['n'])
+            input_id = solver.add_input(
+                config['problem']['x'],
+                config['problem']['y'],
+                config['problem']['h'],
+                config['problem']['n']
+            )
             print('  Added input: %r' % input_id)
             nbr_inputs += 1
 
