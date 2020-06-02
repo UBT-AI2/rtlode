@@ -207,17 +207,17 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
         """
         cls._check_wellformness()
         length = 0
-        for _, value in cls._get_props().items():
+        for _, value in cls.get_fields().items():
             length += len(value)
         return length
 
     @classmethod
-    def _get_props(cls):
+    def get_fields(cls):
         return collections.OrderedDict([(k, getattr(cls, k)) for k in cls.__ordered__ if not k.startswith("__")])
 
     @classmethod
     def _check_wellformness(cls):
-        for name, value in cls._get_props().items():
+        for name, value in cls.get_fields().items():
             if isinstance(value, BitVector):
                 continue
             elif isinstance(value, List):
@@ -255,7 +255,7 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
 
         if high_lim - low_lim != len(cls):
             raise Exception('PackedReadStruct data must be the size of StructDescription.')
-        return PackedReadStruct(cls._get_props(), data, high_lim, low_lim)
+        return PackedReadStruct(cls.get_fields(), data, high_lim, low_lim)
 
     @classmethod
     def create_write_instance(cls) -> PackedWriteStruct:
@@ -265,4 +265,4 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
         """
         cls._check_wellformness()
 
-        return PackedWriteStruct(cls._get_props())
+        return PackedWriteStruct(cls.get_fields())

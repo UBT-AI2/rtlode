@@ -32,9 +32,9 @@ class TestStructDescription(TestCase):
         self.assertEqual(13, len(TestB))
 
     def test__get_props(self):
-        self.assertEqual(3, len(TestA._get_props()))
-        self.assertEqual(3, len(TestB._get_props()))
-        self.assertEqual(TestA, TestB._get_props()['c'])
+        self.assertEqual(3, len(TestA.get_fields()))
+        self.assertEqual(3, len(TestB.get_fields()))
+        self.assertEqual(TestA, TestB.get_fields()['c'])
 
     def test__check_wellformness(self):
         self.assertTrue(TestA._check_wellformness())
