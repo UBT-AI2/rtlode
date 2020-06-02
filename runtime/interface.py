@@ -117,7 +117,8 @@ class Solver:
         packed_data_len = len(packed_data)
 
         offset = self._input_data_chunk + self._input_data_offset
-        self._input_buffer[offset:offset + packed_data_len] = packed_data
+        for i in range(packed_data_len):
+            self._input_buffer[offset + i] = packed_data[i]
 
         self._input_data_offset += packed_data_len
         if CHUNK_SIZE - self._input_data_offset < packed_data_len:
@@ -136,7 +137,7 @@ class Solver:
         offset = self._output_data_offset + self._output_data_chunk
         packed_data = self._output_buffer[offset:offset + packed_data_len]
 
-        unpacked_data = data_desc.unpack_output_data(self._config.system_size, bytes(packed_data))
+        unpacked_data = data_desc.unpack_output_data(self._system_size, bytes(packed_data))
 
         self._output_data_offset += packed_data_len
         if CHUNK_SIZE - self._output_data_offset < packed_data_len:

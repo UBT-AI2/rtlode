@@ -38,7 +38,7 @@ def run(slv_path: str, runtime_config=None, amount_data=1000):
 
     # Access AFU (get Interface Object)
     print('Aquiring ownership of afu...')
-    with Solver(config, 65536) as solver:
+    with Solver(config, 2097152) as solver:
         print('Preparing input...')
         nbr_inputs = 0
         while nbr_inputs < amount_data and not solver.input_full():
@@ -62,5 +62,6 @@ def run(slv_path: str, runtime_config=None, amount_data=1000):
         solver.stop()
         print('Solver finished in: %s' % (timing_end - timing_start))
 
-        for _ in range(nbr_inputs):
-            print('Res: %r' % solver.fetch_output())
+        for i in range(nbr_inputs):
+            if nbr_inputs - i < 20:
+                print('Res: %r' % solver.fetch_output())
