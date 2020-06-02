@@ -63,5 +63,6 @@ def run(slv_path: str, runtime_config=None, amount_data=1000):
         print('Solver finished in: %s' % (timing_end - timing_start))
 
         for i in range(nbr_inputs):
+            data = solver.fetch_output()
             if nbr_inputs - i < 20:
-                print('Res: %r' % solver.fetch_output())
+                print('Res: %r' % data)
