@@ -1,10 +1,7 @@
 import random
-import struct
 from typing import List
 
-from bitarray import bitarray
-from myhdl import block, Signal, ResetSignal, always, delay, instance, SignalType, always_seq, always_comb, instances, \
-    intbv
+from myhdl import block, Signal, ResetSignal, always, delay, instance, SignalType, always_seq, always_comb, instances
 
 from common import data_desc
 from common.data_desc import unpack_output_data
