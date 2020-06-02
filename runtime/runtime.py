@@ -1,9 +1,9 @@
 import os
 import time
-from time import sleep
 
 from runtime.interface import Solver
 from utils import slv
+from utils.dict_update import deep_update
 
 
 def _load_bitstream(gbs_path: str):
@@ -30,7 +30,7 @@ def run(slv_path: str, runtime_config=None, amount_data=1000):
 
     # Patch loaded configs with runtime configuration
     if runtime_config is not None:
-        config.update(runtime_config)
+        deep_update(config, runtime_config)
 
     # Load bitstream on FPGA
     print('Loading bitstream on fpga...')

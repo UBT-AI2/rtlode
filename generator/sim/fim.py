@@ -12,6 +12,7 @@ from generator.afu import afu
 from generator.ccip import CcipTx, CcipRx, CcipC0ReqMmioHdr, CcipC0RspMemHdr
 from generator.generator import _load_config
 from utils import num
+from utils.dict_update import deep_update
 
 
 class Fim:
@@ -197,7 +198,7 @@ class Fim:
 def sim_manager(*config_files, trace=False, runtime_config=None):
     config_dict = _load_config(*config_files)
     if runtime_config is not None:
-        config_dict.update(runtime_config)
+        deep_update(config_dict, runtime_config)
     config = Config.from_dict(config_dict)
 
     @block

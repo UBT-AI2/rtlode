@@ -18,6 +18,7 @@ from common.packed_struct import BitVector
 from generator.dispatcher import dispatcher
 from generator.sim.cosim import dispatcher_cosim
 from utils import slv, num
+from utils.dict_update import deep_update
 
 
 def _load_config(*files):
@@ -25,7 +26,7 @@ def _load_config(*files):
     for file in files:
         with open(file, 'r') as stream:
             try:
-                config.update(yaml.safe_load(stream))
+                deep_update(config, yaml.safe_load(stream))
             except yaml.YAMLError as exc:
                 raise exc
     return config
@@ -104,7 +105,7 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
     def testbench():
         config_dict = _load_config(*config_files)
         if runtime_config is not None:
-            config_dict.update(runtime_config)
+            deep_update(config_dict, runtime_config)
         config = Config.from_dict(config_dict)
 
         clk = Signal(bool(0))
@@ -240,11 +241,10 @@ def build(*config_files, name=None, config=None, cleanup=True):
 
     # 1. Load and enrich config
     loaded_config = _load_config(*config_files)
-    loaded_config.update(_build_info())
+    deep_update(loaded_config, _build_info())
     if config is not None:
-        config = loaded_config.update(config)
-    else:
-        config = loaded_config
+        deep_update(loaded_config, config)
+    config = loaded_config
 
     # 2. Invokes :func:`convert` to get generated solver in verilog.
     convert(config)
