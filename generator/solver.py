@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field, InitVar
 from typing import List
 
-from myhdl import block, instances, ResetSignal, SignalType, always, Signal, enum, always_comb
+from myhdl import block, instances, ResetSignal, SignalType, always, Signal, enum, always_comb, always_seq
 
 import generator.calc
 from common import data_desc
