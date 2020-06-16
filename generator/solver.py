@@ -12,7 +12,7 @@ from generator.rk_calc import pipe_calc_step
 from generator.rk_stage import stage
 from generator.utils import clone_signal, clone_signal_structure, bind, assign, assign_2
 from generator.flow import FlowControl
-from generator.pipeline import Pipeline
+from generator.sequence import Sequence
 
 t_state = enum('READY', 'BUSY', 'FINISHED')
 
@@ -68,9 +68,9 @@ def solver(
     v = [clone_signal_structure(y_n) for _ in range(config.stages)]
 
     pipe_flow = FlowControl(clk=clk, rst=ResetSignal(False, True, False), enb=Signal(bool(0)))
-    pipe = Pipeline()
+    pipe = Sequence()
 
-    stage_pipe = Pipeline()
+    stage_pipe = Sequence()
     for si in range(config.stages):
         # TODO use parallel stage calc if possible
         stage_pipe.then(

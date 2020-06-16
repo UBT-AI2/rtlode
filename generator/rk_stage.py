@@ -8,7 +8,7 @@ from utils import num
 from generator.config import StageConfig
 from generator.rk_calc import pipe_calc_step
 from generator.utils import clone_signal, clone_signal_structure, bind
-from generator.pipeline import Pipeline
+from generator.sequence import Sequence
 
 
 class MethodNotExplicit(Exception):
@@ -33,14 +33,14 @@ def stage(
     """
     if not config.is_explicit():
         raise MethodNotExplicit()
-    pipe = Pipeline()
+    pipe = Sequence()
 
     rhs_x = clone_signal(x)
     rhs_y = clone_signal_structure(y)
 
     # rhs_x = c_c * in_h + in_x
     rhs_x_int = clone_signal(x)
-    rhs_x_pipe = Pipeline()\
+    rhs_x_pipe = Sequence()\
         .then(bind(generator.calc.mul, num.int_from_float(config.c), h, rhs_x_int))\
         .then(bind(generator.calc.add, x, rhs_x_int, rhs_x))
 

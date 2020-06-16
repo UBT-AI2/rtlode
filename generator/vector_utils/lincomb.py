@@ -2,7 +2,7 @@ from myhdl import block, Signal, SignalType
 
 import generator.calc
 from generator.flow import FlowControl
-from generator.pipeline import Pipeline
+from generator.sequence import Sequence
 from generator.utils import bind, assign_flow
 from generator.vector_utils.reduce import reduce_sum
 from utils import num
@@ -36,7 +36,7 @@ def lincomb(in_a, in_b, out_sum):
     in_b = [in_b[i] for i in range(n_elements) if valid[i]]
     n_elements = len(in_a)
 
-    pipe = Pipeline()
+    pipe = Sequence()
     if n_elements == 0:
         pipe.then(bind(assign_flow, 0, out_sum))
         return pipe

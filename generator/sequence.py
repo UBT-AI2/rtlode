@@ -6,7 +6,7 @@ from generator.utils import clone_signal
 from generator.vector_utils.reduce import reduce_and
 
 
-class Pipeline:
+class Sequence:
     """
     Allows simple creation of sequential and parallel logic.
     Order of execution is managed by flow interface.
@@ -29,7 +29,7 @@ class Pipeline:
             for component in stage_components:
                 subflow = flow.create_subflow(enb=pre_fin)
                 stage_fin_signals.append(subflow.fin)
-                if isinstance(component, Pipeline):
+                if isinstance(component, Sequence):
                     insts.append(component.create(subflow))
                 elif callable(component):
                     insts.append(block(component)(subflow))
@@ -50,7 +50,7 @@ class Pipeline:
 
     component = Union['Pipeline', Callable]
 
-    def then(self, components: Union[List[component], component]) -> 'Pipeline':
+    def then(self, components: Union[List[component], component]) -> 'Sequence':
         """
         Defines next logic step of pipeline.
         These can either be a list of components which should be processed in parallel
