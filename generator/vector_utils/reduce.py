@@ -57,7 +57,7 @@ def reduce_and(in_vector, res, flow: FlowControl = None):
     Checks if all elements of the vector are true.
 
     :param in_vector: vector of elements
-    :param res: sum off all vector elements
+    :param res: true if all elements are true
     :param flow: FlowControl sigs
     :return: myhdl instances
     """
@@ -69,6 +69,26 @@ def reduce_and(in_vector, res, flow: FlowControl = None):
         return instances()
 
     return reduce(in_vector, logical_and, res, flow=flow, default=1)
+
+
+@block
+def reduce_or(in_vector, res, flow: FlowControl = None):
+    """
+    Checks if one element of the vector is true.
+
+    :param in_vector: vector of elements
+    :param res: true if one element is true
+    :param flow: FlowControl sigs
+    :return: myhdl instances
+    """
+    @block
+    def logical_or(a, b, c):
+        @always_comb
+        def assign():
+            c.next = a or b
+        return instances()
+
+    return reduce(in_vector, logical_or, res, flow=flow)
 
 
 @block
