@@ -355,7 +355,7 @@ class Register(InnerNode):
         self.add_output(res)
 
         @block
-        def logic(clk, stage, node_input, node_output):
+        def register(clk, stage, node_input, node_output):
             reg_data = clone_signal(node_output.default)
 
             @always_seq(clk.posedge, reset=None)
@@ -367,4 +367,4 @@ class Register(InnerNode):
                 if stage.data2reg:
                     reg_data.next = node_input.default
             return instances()
-        self.logic = logic
+        self.logic = register

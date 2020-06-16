@@ -16,7 +16,7 @@ class Mul(InnerNode):
         self.add_output(res)
 
         @block
-        def logic(clk, stage, node_input, node_output):
+        def mul(clk, stage, node_input, node_output):
             reg_data = clone_signal(node_output.default)
 
             @always_seq(clk.posedge, reset=None)
@@ -28,7 +28,7 @@ class Mul(InnerNode):
                 if stage.data2reg:
                     reg_data.next = node_input.a * node_input.b
             return instances()
-        self.logic = logic
+        self.logic = mul
 
 
 class Add(InnerNode):
@@ -40,7 +40,7 @@ class Add(InnerNode):
         self.add_output(res)
 
         @block
-        def logic(clk, stage, node_input, node_output):
+        def add(clk, stage, node_input, node_output):
             reg_data = clone_signal(node_output.default)
 
             @always_seq(clk.posedge, reset=None)
@@ -52,7 +52,7 @@ class Add(InnerNode):
                 if stage.data2reg:
                     reg_data.next = node_input.a + node_input.b
             return instances()
-        self.logic = logic
+        self.logic = add
 
 
 def negate(value: Union[PipeSignal, int]) -> Union[PipeSignal, int]:
