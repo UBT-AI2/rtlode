@@ -112,12 +112,14 @@ class Pipe:
             if stage_id == 0:
                 # First stage before Consumer
                 next_busy = self.pipe_output.busy
+                self.pipe_output.set_pipe_valid(stage.valid)
             else:
                 next_busy = self.stages[stage_id - 1].busy
 
             if stage_id == len(self.stages) - 1:
                 # Last stage before Producer
                 previous_valid = self.pipe_input.valid
+                self.pipe_input.set_pipe_busy(stage.busy)
             else:
                 previous_valid = self.stages[stage_id + 1].valid
 
@@ -248,8 +250,12 @@ class PipeInput(ProducerNode):
         super().__init__()
 
         self.valid = input_valid
+        self.pipe_busy = None
 
         self.add_output(**raw_signals)
+
+    def set_pipe_busy(self, busy_signal):
+        self.pipe_busy = busy_signal
 
 
 class PipeOutput(ConsumerNode):
@@ -260,6 +266,7 @@ class PipeOutput(ConsumerNode):
         super().__init__()
 
         self.busy = busy
+        self.pipe_valid = None
 
         self.add_input(**inputs)
 
@@ -267,6 +274,9 @@ class PipeOutput(ConsumerNode):
         if name in self._inputs:
             return self._inputs[name].get_signal()
         raise AttributeError()
+
+    def set_pipe_valid(self, valid_signal):
+        self.pipe_valid = valid_signal
 
 
 class Stage:
