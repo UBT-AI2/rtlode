@@ -3,7 +3,7 @@ from unittest import TestCase
 from myhdl import Signal, block, ResetSignal, instances, delay, always, StopSimulation
 
 from generator.pipeline import PipeInput, PipeOutput, Pipe
-from generator.pipeline_elements import Add, Mul
+from generator.pipeline_elements import add, mul
 from utils import num
 
 
@@ -20,8 +20,8 @@ class TestPipe(TestCase):
             out_busy = Signal(bool(0))
 
             data_in = PipeInput(in_valid, a=in_signal)
-            add1 = Add(data_in.a, 3)
-            mul1 = Mul(add1, data_in.a)
+            add1 = add(data_in.a, 3)
+            mul1 = mul(add1, data_in.a)
             data_out = PipeOutput(out_busy, res=mul1)
             pipe = Pipe(data_in, data_out).create(clk, rst)
 
