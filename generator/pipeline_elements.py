@@ -1,66 +1,132 @@
-from myhdl import Signal, block, always_seq, instances, SignalType, intbv
+from myhdl import Signal, block, always_seq, instances, SignalType, intbv, always_comb
 
-from generator.pipeline import SeqNode
+from generator.pipeline import SeqNode, CombNode
 from generator.utils import clone_signal
 from utils import num
 from utils.num import FRACTION_SIZE, NONFRACTION_SIZE
 
 
 def mul(a, b):
-    # if isinstance(a, int) and a == 0:
-    #     return 0
-    # elif isinstance(a, int) and bin(a).count('1') == 1:
-    #     # This multiplication can be implemented in shifts.
-    #     bin_repr = bin(a)
-    #     shift_by = len(bin_repr) - 1 - bin_repr.index('1') - FRACTION_SIZE
-    #     print('Implemented multiplication as shift by: ', shift_by)
-    #     if shift_by == 0:
-    #         return b
-    #     elif shift_by > 0:
-    #         @always_comb
-    #         def shift_left():
-    #             if flow.enb:
-    #                 out_c.next = in_b << shift_by
-    #             flow.fin.next = flow.enb
-    #         return shift_left
-    #     elif shift_by < 0:
-    #         shift_by = -shift_by
-    #
-    #         @always_comb
-    #         def shift_right():
-    #             if flow.enb:
-    #                 out_c.next = in_b >> shift_by
-    #             flow.fin.next = flow.enb
-    #         return shift_right
-
-    node = SeqNode()
-
-    node.add_input(a=a, b=b)
-    res = Signal(num.default())
-    node.add_output(res)
-
-    @block
-    def mul(clk, stage, node_input, node_output):
+    """
+    Pipeline node which multiplies the two given parameters.
+    Optimization is performed where possible.
+    The return type is int if both parameters were integer and so the result is static. Depending of the multiplication
+    implementation used the return type is CombNode or SeqNode in other cases.
+    :param a: parameter a
+    :param b: parameter b
+    :return: int or pipeline node
+    """
+    if isinstance(a, int) and isinstance(b, int):
         reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
-        reg_data = clone_signal(node_output.default)
+        return int(intbv(
+                        num.default(a) * num.default(b),
+                        min=-reg_max,
+                        max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed())
+    elif isinstance(a, int) or isinstance(b, int):
+        if isinstance(a, int):
+            static_value = a
+            dynamic_value = b
+        else:
+            static_value = b
+            dynamic_value = a
 
-        @always_seq(clk.posedge, reset=None)
-        def drive_data():
-            if stage.data2out:
-                node_output.default.next = intbv(
-                    node_input.a * node_input.b,
-                    min=-reg_max,
-                    max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
-            if stage.reg2out:
-                node_output.default.next = reg_data
-            if stage.data2reg:
-                reg_data.next = intbv(
-                    node_input.a * node_input.b,
-                    min=-reg_max,
-                    max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
-        return instances()
-    node.logic = mul
-    return node
+        if static_value == 0:
+            return 0
+        elif bin(static_value).count('1') == 1:
+            # This multiplication can be implemented ny shifts.
+            bin_repr = bin(static_value)
+            shift_by = len(bin_repr) - 1 - bin_repr.index('1') - FRACTION_SIZE
+            print('Implemented multiplication as shift by: ', shift_by)
+            if shift_by == 0:
+                # Just return the dynamic_value
+                return dynamic_value
+
+            node = CombNode()
+            node.add_input(value=dynamic_value)
+            res = Signal(num.default())
+            node.add_output(res)
+
+            if shift_by > 0:
+                node.add_input(shift_by=shift_by)
+
+                @block
+                def mul_by_shift_left(node_input, node_output):
+                    @always_comb
+                    def shift_left():
+                        node_output.default.next = node_input.value << node_input.shift_by
+                    return shift_left
+                node.set_logic(mul_by_shift_left)
+            elif shift_by < 0:
+                shift_by = -shift_by
+                node.add_input(shift_by=shift_by)
+
+                @block
+                def mul_by_shift_right(node_input, node_output):
+                    @always_comb
+                    def shift_right():
+                        node_output.default.next = node_input.value >> node_input.shift_by
+                    return shift_right
+                node.set_logic(mul_by_shift_right)
+            return node
+        else:
+            node = SeqNode()
+
+            node.add_input(dynamic_value=dynamic_value, static_value=static_value)
+            res = Signal(num.default())
+            node.add_output(res)
+
+            @block
+            def mul_c(clk, stage, node_input, node_output):
+                reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
+                reg_data = clone_signal(node_output.default)
+
+                @always_seq(clk.posedge, reset=None)
+                def drive_data():
+                    if stage.data2out:
+                        node_output.default.next = intbv(
+                            intbv(node_input.static_value).signed() * node_input.dynamic_value,
+                            min=-reg_max,
+                            max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+                    if stage.reg2out:
+                        node_output.default.next = reg_data
+                    if stage.data2reg:
+                        reg_data.next = intbv(
+                            intbv(node_input.static_value).signed() * node_input.dynamic_value,
+                            min=-reg_max,
+                            max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+                return instances()
+
+            node.set_logic(mul_c)
+            return node
+    else:
+        node = SeqNode()
+
+        node.add_input(a=a, b=b)
+        res = Signal(num.default())
+        node.add_output(res)
+
+        @block
+        def mul(clk, stage, node_input, node_output):
+            reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
+            reg_data = clone_signal(node_output.default)
+
+            @always_seq(clk.posedge, reset=None)
+            def drive_data():
+                if stage.data2out:
+                    node_output.default.next = intbv(
+                        node_input.a * node_input.b,
+                        min=-reg_max,
+                        max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+                if stage.reg2out:
+                    node_output.default.next = reg_data
+                if stage.data2reg:
+                    reg_data.next = intbv(
+                        node_input.a * node_input.b,
+                        min=-reg_max,
+                        max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+            return instances()
+        node.set_logic(mul)
+        return node
 
 
 def add(a, b):
@@ -86,7 +152,7 @@ def add(a, b):
             if stage.data2reg:
                 reg_data.next = node_input.a + node_input.b
         return instances()
-    node.logic = add
+    node.set_logic(add)
     return node
 
 
@@ -110,7 +176,7 @@ def sub(a, b):
             if stage.data2reg:
                 reg_data.next = node_input.a - node_input.b
         return instances()
-    node.logic = sub
+    node.set_logic(sub)
     return node
 
 
