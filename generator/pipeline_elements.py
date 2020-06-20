@@ -1,6 +1,6 @@
 from myhdl import Signal, block, always_seq, instances, SignalType, intbv
 
-from generator.pipeline import InnerNode
+from generator.pipeline import SeqNode
 from generator.utils import clone_signal
 from utils import num
 from utils.num import FRACTION_SIZE, NONFRACTION_SIZE
@@ -33,7 +33,7 @@ def mul(a, b):
     #             flow.fin.next = flow.enb
     #         return shift_right
 
-    node = InnerNode()
+    node = SeqNode()
 
     node.add_input(a=a, b=b)
     res = Signal(num.default())
@@ -67,7 +67,7 @@ def add(a, b):
     if isinstance(a, int) and isinstance(b, int):
         return a + b
 
-    node = InnerNode()
+    node = SeqNode()
 
     node.add_input(a=a, b=b)
     res = Signal(num.default())
@@ -91,7 +91,7 @@ def add(a, b):
 
 
 def sub(a, b):
-    node = InnerNode()
+    node = SeqNode()
 
     node.add_input(a=a, b=b)
     res = Signal(num.default())

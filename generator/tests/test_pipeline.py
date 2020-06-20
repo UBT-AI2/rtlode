@@ -26,7 +26,8 @@ class TestPipe(TestCase):
             add1 = add(data_in.a, num.int_from_float(3))
             mul1 = mul(add1, data_in.a)
             data_out = PipeOutput(out_busy, res=mul1)
-            pipe = Pipe(data_in, data_out).create(clk, rst)
+            pipe = Pipe(data_in, data_out)
+            pipe_inst = pipe.create(clk, rst)
 
             @always(delay(10))
             def clk_driver():
