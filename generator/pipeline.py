@@ -259,12 +259,15 @@ class ConsumerNode:
 
     def add_input(self, **kwargs):
         for name, in_arg in kwargs.items():
-            try:
-                p = in_arg.get_producer()
-                p.register_consumer(self)
-            except AttributeError:
-                pass
-            self._inputs[name] = in_arg
+            if name in self._inputs:
+                self.replace_input(**kwargs)
+            else:
+                try:
+                    p = in_arg.get_producer()
+                    p.register_consumer(self)
+                except AttributeError:
+                    pass
+                self._inputs[name] = in_arg
 
     def get_inputs(self):
         return self._inputs
