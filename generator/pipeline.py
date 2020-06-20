@@ -92,7 +92,8 @@ class Pipe:
         while len(to_visit) > 0:
             p = to_visit.pop()
             if p not in already_visited:
-                stats['nbr_nodes'] += 1
+                if isinstance(p, _Node):
+                    stats['nbr_nodes'] += 1
                 if isinstance(p, SeqNode):
                     stats['nbr_seq_nodes'] += 1
                 elif isinstance(p, CombNode):
@@ -148,7 +149,8 @@ class Pipe:
             if stage is not None:
                 node.stage_index = stage
                 self.add_to_stage(node)
-                to_visit.update(node.get_consumers())
+                if isinstance(node, ProducerNode):
+                    to_visit.update(node.get_consumers())
                 for name in node.get_inputs().keys():
                     try:
                         p = node.get_inputs()[name].get_producer()
@@ -239,7 +241,15 @@ class ProducerNode:
 
     def __getattr__(self, name):
         if name in self._output_signals:
-            return _PipeSignal(signal=self._output_signals[name], producer=self)
+            signal = self._output_signals[name]
+            if isinstance(signal, list):
+                return list(
+                    map(
+                        lambda x: _PipeSignal(signal=x, producer=self),
+                        signal
+                    ))
+            else:
+                return _PipeSignal(signal=signal, producer=self)
         raise AttributeError()
 
     # Be compatible to Pipe Signal
@@ -372,7 +382,15 @@ class PipeOutput(ConsumerNode):
 
     def __getattr__(self, name):
         if name in self._inputs:
-            return self._inputs[name].get_signal()
+            signal = self._inputs[name]
+            if isinstance(signal, list):
+                return list(
+                    map(
+                        lambda x: x.get_signal(),
+                        signal
+                    ))
+            else:
+                return signal.get_signal()
         raise AttributeError()
 
     def set_pipe_valid(self, valid_signal):

@@ -3,7 +3,7 @@ from unittest import TestCase
 from myhdl import Signal, block, ResetSignal, instances, delay, always, StopSimulation
 
 from generator.pipeline import PipeInput, PipeOutput, Pipe
-from generator.pipeline_elements import add, mul
+from generator.pipeline_elements import add, mul, sub, reduce_sum
 from utils import num
 
 
@@ -18,6 +18,26 @@ class TestPipe(TestCase):
             return mul1
 
         self.run_test(inner_pipe, list(range(40)), [(i + 3) * i for i in range(40)])
+
+    def test_add(self):
+        """
+        Testing addition.
+        """
+        def inner_pipe(data):
+            res = add(data, num.int_from_float(5))
+            return res
+
+        self.run_test(inner_pipe, list(range(40)), [i + 5 for i in range(40)])
+
+    def test_sub(self):
+        """
+        Testing substraction.
+        """
+        def inner_pipe(data):
+            res = sub(data, num.int_from_float(5))
+            return res
+
+        self.run_test(inner_pipe, list(range(40)), [i - 5 for i in range(40)])
 
     def test_mul_only_constants(self):
         """
@@ -74,6 +94,27 @@ class TestPipe(TestCase):
 
         self.run_test(inner_pipe, list(range(40)), [(i + 3) * i for i in range(40)])
 
+    def test_reduce_sum(self):
+        """
+        Testing the reduce_sum pipeline element.
+        """
+        def inner_pipe(data):
+            res = reduce_sum([data for _ in range(5)])
+            return res
+
+        self.run_test(inner_pipe, list(range(40)), [i * 5 for i in range(40)])
+
+    def test_reduce_sum_len1(self):
+        """
+        Testing the reduce_sum pipeline element with len 1.
+        """
+        def inner_pipe(data):
+            val = reduce_sum([data])
+            res = add(val, 0)
+            return res
+
+        self.run_test(inner_pipe, list(range(40)), [i for i in range(40)])
+
     def test_comb_node_last(self):
         """
         Testing what happens if comb nodes is last node in pipe.
@@ -96,6 +137,8 @@ class TestPipe(TestCase):
         self.run_test(inner_pipe, list(range(40)), [(i + 3) * 2 for i in range(40)])
 
     def run_test(self, inner_pipe, input_data, output_data):
+        assert len(input_data) == len(output_data)
+
         @block
         def testbench():
             clk = Signal(bool(0))
@@ -154,5 +197,5 @@ class TestPipe(TestCase):
             return instances()
 
         tb = testbench()
-        tb.config_sim(trace=True)
+        # tb.config_sim(trace=True)
         tb.run_sim()
