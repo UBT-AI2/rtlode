@@ -80,18 +80,31 @@ class Pipe:
 
     def get_stats(self):
         self.resolve()
+        stats = {
+            'nbr_nodes': 0,
+            'nbr_seq_nodes': 0,
+            'nbr_comb_nodes': 0,
+            'nbr_regs': 0,
+            'nbr_stages': len(self.stages)
+        }
         already_visited = [self.pipe_output]
         to_visit = self.pipe_output.get_producers()
         while len(to_visit) > 0:
             p = to_visit.pop()
             if p not in already_visited:
+                stats['nbr_nodes'] += 1
+                if isinstance(p, SeqNode):
+                    stats['nbr_seq_nodes'] += 1
+                elif isinstance(p, CombNode):
+                    stats['nbr_comb_nodes'] += 1
+
+                if isinstance(p, Register):
+                    stats['nbr_regs'] += 1
+
                 already_visited.append(p)
                 if isinstance(p, ConsumerNode):
                     to_visit.update(p.get_producers())
-        return {
-            'len': len(already_visited),
-            'nbr_stages': len(self.stages)
-        }
+        return stats
 
     def add_to_stage(self, node: _Node):
         assert node.stage_index is not None
@@ -102,14 +115,19 @@ class Pipe:
 
     def resolve(self):
         # TODO recognize circles and abort
-        # TODO check that only one producers present
         self.stages = []
 
         to_visit = self.pipe_input.get_consumers()
         while len(to_visit) > 0:
             node = to_visit.pop()
-            if not isinstance(node, _Node):
+            if isinstance(node, PipeInput):
+                assert self.pipe_input == node
                 continue
+            elif isinstance(node, PipeOutput):
+                assert self.pipe_output == node
+                continue
+            elif not isinstance(node, _Node):
+                raise NotImplementedError()
 
             stage = None
             for p in node.get_producers():
