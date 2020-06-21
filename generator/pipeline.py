@@ -130,7 +130,7 @@ class Pipe:
             elif not isinstance(node, _Node):
                 raise NotImplementedError()
 
-            stage = None
+            stage = 0
             for p in node.get_producers():
                 lowest_possible_stage = None
                 if isinstance(p, PipeInput):
@@ -142,9 +142,7 @@ class Pipe:
                     lowest_possible_stage = p.stage_index
                 if lowest_possible_stage is None:
                     stage = None
-                elif stage is None:
-                    stage = lowest_possible_stage
-                else:
+                elif stage is not None:
                     stage = max(stage, lowest_possible_stage)
             if stage is not None:
                 node.stage_index = stage

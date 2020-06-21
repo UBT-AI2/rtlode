@@ -126,6 +126,18 @@ class TestPipe(TestCase):
 
         self.run_test(inner_pipe, list(range(40)), [(i + 3) * 2 for i in range(40)])
 
+    def test_comb_node_double(self):
+        """
+        Testing what happens if two comb nodes are after each other.
+        """
+        def inner_pipe(data):
+            mul1 = mul(data, num.int_from_float(4))
+            mul2 = mul(mul1, num.int_from_float(0.5))
+            res = add(mul2, data)
+            return res
+
+        self.run_test(inner_pipe, list(range(40)), [(i * 4 * 0.5) + i for i in range(40)])
+
     def test_comb_node_only(self):
         """
         Testing what happens if comb nodes is the only node in pipe.
