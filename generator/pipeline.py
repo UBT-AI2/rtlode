@@ -67,6 +67,10 @@ class _PipeSignal:
         return self.signal
 
 
+class NoSeqNodeError(Exception):
+    pass
+
+
 class Pipe:
     pipe_input: PipeInput
     pipe_output: PipeOutput
@@ -170,6 +174,17 @@ class Pipe:
                         continue
             else:
                 to_visit.add(node)
+
+        # Check if last stage contains only CombLogic
+        for node in self.stages[-1].nodes:
+            if not isinstance(node, CombNode):
+                break
+        else:
+            # Migrate all nodes to one stage earlier
+            if len(self.stages) < 2:
+                raise NoSeqNodeError('At least one SeqNode is required in a pipeline.')
+            self.stages[-2].nodes.update(self.stages[-1].nodes)
+            del self.stages[-1]
 
         return self.stages
 
