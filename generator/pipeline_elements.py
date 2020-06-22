@@ -250,7 +250,7 @@ class UnequalVectorLength(Exception):
     pass
 
 
-def lincomb(vec_a, vec_b):
+def vec_mul(vec_a, vec_b):
     if len(vec_a) != len(vec_b):
         raise UnequalVectorLength("len(in_a) = %d != len(in_b) = %d" % (len(vec_a), len(vec_b)))
     n_elements = len(vec_a)
