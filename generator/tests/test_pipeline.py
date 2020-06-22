@@ -1,3 +1,4 @@
+from typing import Dict
 from unittest import TestCase
 
 from myhdl import Signal, block, ResetSignal, instances, delay, always, StopSimulation
@@ -159,8 +160,23 @@ class TestPipe(TestCase):
         with self.assertRaises(NoSeqNodeError):
             self.run_test(inner_pipe, list(range(40)), [(i + 3) * 2 for i in range(40)])
 
-    def run_test(self, inner_pipe, input_data, output_data):
+    def test_unconnected_node(self):
+        """
+        Testing what happens if comb nodes is the only node in pipe.
+        """
+        def inner_pipe(data):
+            add1 = add(data, num.int_from_float(4))
+            add2 = add(add1, num.int_from_float(2))
+            mul1 = mul(add1, num.int_from_float(2))
+            return mul1
+
+        stats = self.run_test(inner_pipe, list(range(40)), [(i + 4) * 2 for i in range(40)])
+        self.assertEqual(1, stats['by_type']['add'])
+
+    def run_test(self, inner_pipe, input_data, output_data) -> Dict:
         assert len(input_data) == len(output_data)
+
+        stats = None
 
         @block
         def testbench():
@@ -176,7 +192,10 @@ class TestPipe(TestCase):
             res = inner_pipe(data_in.value)
             data_out = PipeOutput(out_busy, res=res)
             pipe = Pipe(data_in, data_out)
-            print(pipe.get_stats())
+
+            nonlocal stats
+            stats = pipe.get_stats()
+
             pipe_inst = pipe.create(clk, rst)
 
             @always(delay(10))
@@ -222,3 +241,6 @@ class TestPipe(TestCase):
         tb = testbench()
         # tb.config_sim(trace=True)
         tb.run_sim()
+
+        print(stats)
+        return stats

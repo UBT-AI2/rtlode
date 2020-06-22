@@ -139,6 +139,10 @@ class Pipe:
             elif not isinstance(node, _Node):
                 raise NotImplementedError()
 
+            if len(node.get_consumers()) == 0:
+                # Result not needed
+                continue
+
             stage = 0
             for p in node.get_producers():
                 lowest_possible_stage = None
