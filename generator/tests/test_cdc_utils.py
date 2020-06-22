@@ -1,17 +1,16 @@
 from unittest import TestCase
 
-from myhdl import Signal, ResetSignal, Simulation, delay, always, intbv, instances, block
+from myhdl import Signal, ResetSignal, delay, always, intbv, instances, block
 
 from generator.cdc_utils import AsyncFifoProducer, AsyncFifoConsumer, async_fifo
 
 
 class Test(TestCase):
     def test_async_fifo(self):
-
         @block
         def testbench():
-            fifo_p = AsyncFifoProducer(Signal(bool(0)), ResetSignal(False, True, False), Signal(intbv(0)))
-            fifo_c = AsyncFifoConsumer(Signal(bool(0)), ResetSignal(False, True, False), Signal(intbv(0)))
+            fifo_p = AsyncFifoProducer(clk=Signal(bool(0)), rst=ResetSignal(False, True, False), data=Signal(intbv(0)))
+            fifo_c = AsyncFifoConsumer(clk=Signal(bool(0)), rst=ResetSignal(False, True, False), data=Signal(intbv(0)))
 
             fifo = async_fifo(fifo_p, fifo_c, buffer_size_bits=4)
 
@@ -47,5 +46,6 @@ class Test(TestCase):
             return instances()
 
         tb = testbench()
-        tb.config_sim(trace=True)
+        # tb.config_sim(trace=True)
         tb.run_sim(1000)
+        tb.quit_sim()
