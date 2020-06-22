@@ -89,7 +89,8 @@ class Pipe:
             'nbr_seq_nodes': 0,
             'nbr_comb_nodes': 0,
             'nbr_regs': 0,
-            'nbr_stages': len(self.stages)
+            'nbr_stages': len(self.stages),
+            'by_type': {}
         }
         already_visited = [self.pipe_output]
         to_visit = self.pipe_output.get_producers()
@@ -98,6 +99,10 @@ class Pipe:
             if p not in already_visited:
                 if isinstance(p, _Node):
                     stats['nbr_nodes'] += 1
+                    if p.name in stats['by_type']:
+                        stats['by_type'][p.name] += 1
+                    else:
+                        stats['by_type'][p.name] = 1
                 if isinstance(p, SeqNode):
                     stats['nbr_seq_nodes'] += 1
                 elif isinstance(p, CombNode):
@@ -334,12 +339,16 @@ class _Node(ProducerNode, ConsumerNode):
 
         self.logic = None
         self.stage_index = None
+        self.name = 'N/A'
 
     def set_logic(self, logic):
         self.logic = logic
 
     def get_logic(self):
         return self.logic
+
+    def set_name(self, name):
+        self.name = name
 
 
 class SeqNode(_Node):
@@ -420,21 +429,24 @@ class Register(SeqNode):
         self.add_input(default=val)
         res = clone_signal(val.get_signal())
         self.add_output(res)
+        self.set_name('reg')
 
-        @block
-        def register(clk, stage, node_input, node_output):
-            reg_data = clone_signal(node_output.default)
-
-            @always_seq(clk.posedge, reset=None)
-            def drive_data():
-                if stage.data2out:
-                    node_output.default.next = node_input.default
-                if stage.reg2out:
-                    node_output.default.next = reg_data
-                if stage.data2reg:
-                    reg_data.next = node_input.default
-            return instances()
         self.logic = register
+
+
+@block
+def register(clk, stage, node_input, node_output):
+    reg_data = clone_signal(node_output.default)
+
+    @always_seq(clk.posedge, reset=None)
+    def drive_data():
+        if stage.data2out:
+            node_output.default.next = node_input.default
+        if stage.reg2out:
+            node_output.default.next = reg_data
+        if stage.data2reg:
+            reg_data.next = node_input.default
+    return instances()
 
 
 class Stage:

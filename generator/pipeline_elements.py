@@ -6,6 +6,70 @@ from utils import num
 from utils.num import FRACTION_SIZE, NONFRACTION_SIZE
 
 
+@block
+def mul_by_shift_left(node_input, node_output):
+    @always_comb
+    def shift_left():
+        node_output.default.next = node_input.value << node_input.shift_by
+
+    return shift_left
+
+
+@block
+def mul_by_shift_right(node_input, node_output):
+    @always_comb
+    def shift_right():
+        node_output.default.next = node_input.value >> node_input.shift_by
+
+    return shift_right
+
+
+@block
+def mul_dsp_c(clk, stage, node_input, node_output):
+    reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
+    reg_data = clone_signal(node_output.default)
+
+    @always_seq(clk.posedge, reset=None)
+    def drive_data():
+        if stage.data2out:
+            node_output.default.next = intbv(
+                intbv(node_input.static_value).signed() * node_input.dynamic_value,
+                min=-reg_max,
+                max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+        if stage.reg2out:
+            node_output.default.next = reg_data
+        if stage.data2reg:
+            reg_data.next = intbv(
+                intbv(node_input.static_value).signed() * node_input.dynamic_value,
+                min=-reg_max,
+                max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+
+    return instances()
+
+
+@block
+def mul_dsp(clk, stage, node_input, node_output):
+    reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
+    reg_data = clone_signal(node_output.default)
+
+    @always_seq(clk.posedge, reset=None)
+    def drive_data():
+        if stage.data2out:
+            node_output.default.next = intbv(
+                node_input.a * node_input.b,
+                min=-reg_max,
+                max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+        if stage.reg2out:
+            node_output.default.next = reg_data
+        if stage.data2reg:
+            reg_data.next = intbv(
+                node_input.a * node_input.b,
+                min=-reg_max,
+                max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+
+    return instances()
+
+
 def mul(a, b):
     """
     Pipeline node which multiplies the two given parameters.
@@ -45,27 +109,16 @@ def mul(a, b):
             node.add_input(value=dynamic_value)
             res = Signal(num.default())
             node.add_output(res)
+            node.set_name('mul_by_shift')
 
             if shift_by > 0:
                 node.add_input(shift_by=shift_by)
 
-                @block
-                def mul_by_shift_left(node_input, node_output):
-                    @always_comb
-                    def shift_left():
-                        node_output.default.next = node_input.value << node_input.shift_by
-                    return shift_left
                 node.set_logic(mul_by_shift_left)
             elif shift_by < 0:
                 shift_by = -shift_by
                 node.add_input(shift_by=shift_by)
 
-                @block
-                def mul_by_shift_right(node_input, node_output):
-                    @always_comb
-                    def shift_right():
-                        node_output.default.next = node_input.value >> node_input.shift_by
-                    return shift_right
                 node.set_logic(mul_by_shift_right)
             return node
         else:
@@ -74,29 +127,9 @@ def mul(a, b):
             node.add_input(dynamic_value=dynamic_value, static_value=static_value)
             res = Signal(num.default())
             node.add_output(res)
+            node.set_name('mul')
 
-            @block
-            def mul_c(clk, stage, node_input, node_output):
-                reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
-                reg_data = clone_signal(node_output.default)
-
-                @always_seq(clk.posedge, reset=None)
-                def drive_data():
-                    if stage.data2out:
-                        node_output.default.next = intbv(
-                            intbv(node_input.static_value).signed() * node_input.dynamic_value,
-                            min=-reg_max,
-                            max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
-                    if stage.reg2out:
-                        node_output.default.next = reg_data
-                    if stage.data2reg:
-                        reg_data.next = intbv(
-                            intbv(node_input.static_value).signed() * node_input.dynamic_value,
-                            min=-reg_max,
-                            max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
-                return instances()
-
-            node.set_logic(mul_c)
+            node.set_logic(mul_dsp_c)
             return node
     else:
         node = SeqNode()
@@ -104,29 +137,25 @@ def mul(a, b):
         node.add_input(a=a, b=b)
         res = Signal(num.default())
         node.add_output(res)
+        node.set_name('mul')
 
-        @block
-        def mul(clk, stage, node_input, node_output):
-            reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
-            reg_data = clone_signal(node_output.default)
-
-            @always_seq(clk.posedge, reset=None)
-            def drive_data():
-                if stage.data2out:
-                    node_output.default.next = intbv(
-                        node_input.a * node_input.b,
-                        min=-reg_max,
-                        max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
-                if stage.reg2out:
-                    node_output.default.next = reg_data
-                if stage.data2reg:
-                    reg_data.next = intbv(
-                        node_input.a * node_input.b,
-                        min=-reg_max,
-                        max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
-            return instances()
-        node.set_logic(mul)
+        node.set_logic(mul_dsp)
         return node
+
+
+@block
+def add_seq(clk, stage, node_input, node_output):
+    reg_data = clone_signal(node_output.default)
+
+    @always_seq(clk.posedge, reset=None)
+    def drive_data():
+        if stage.data2out:
+            node_output.default.next = node_input.a + node_input.b
+        if stage.reg2out:
+            node_output.default.next = reg_data
+        if stage.data2reg:
+            reg_data.next = node_input.a + node_input.b
+    return instances()
 
 
 def add(a, b):
@@ -138,22 +167,25 @@ def add(a, b):
     node.add_input(a=a, b=b)
     res = Signal(num.default())
     node.add_output(res)
+    node.set_name('add')
+    node.set_logic(add_seq)
 
-    @block
-    def add(clk, stage, node_input, node_output):
-        reg_data = clone_signal(node_output.default)
-
-        @always_seq(clk.posedge, reset=None)
-        def drive_data():
-            if stage.data2out:
-                node_output.default.next = node_input.a + node_input.b
-            if stage.reg2out:
-                node_output.default.next = reg_data
-            if stage.data2reg:
-                reg_data.next = node_input.a + node_input.b
-        return instances()
-    node.set_logic(add)
     return node
+
+
+@block
+def sub_seq(clk, stage, node_input, node_output):
+    reg_data = clone_signal(node_output.default)
+
+    @always_seq(clk.posedge, reset=None)
+    def drive_data():
+        if stage.data2out:
+            node_output.default.next = node_input.a - node_input.b
+        if stage.reg2out:
+            node_output.default.next = reg_data
+        if stage.data2reg:
+            reg_data.next = node_input.a - node_input.b
+    return instances()
 
 
 def sub(a, b):
@@ -162,21 +194,9 @@ def sub(a, b):
     node.add_input(a=a, b=b)
     res = Signal(num.default())
     node.add_output(res)
+    node.set_name('sub')
+    node.set_logic(sub_seq)
 
-    @block
-    def sub(clk, stage, node_input, node_output):
-        reg_data = clone_signal(node_output.default)
-
-        @always_seq(clk.posedge, reset=None)
-        def drive_data():
-            if stage.data2out:
-                node_output.default.next = node_input.a - node_input.b
-            if stage.reg2out:
-                node_output.default.next = reg_data
-            if stage.data2reg:
-                reg_data.next = node_input.a - node_input.b
-        return instances()
-    node.set_logic(sub)
     return node
 
 

@@ -94,7 +94,17 @@ class TestPipe(TestCase):
 
         self.run_test(inner_pipe, list(range(40)), [(i + 3) * i for i in range(40)])
 
-    def test_reduce_sum(self):
+    def test_reduce_sum_even(self):
+        """
+        Testing the reduce_sum pipeline element.
+        """
+        def inner_pipe(data):
+            res = reduce_sum([data for _ in range(4)])
+            return res
+
+        self.run_test(inner_pipe, list(range(40)), [i * 4 for i in range(40)])
+
+    def test_reduce_sum_odd(self):
         """
         Testing the reduce_sum pipeline element.
         """
