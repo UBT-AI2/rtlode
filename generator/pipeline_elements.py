@@ -200,6 +200,33 @@ def sub(a, b):
     return node
 
 
+@block
+def negate_seq(clk, stage, node_input, node_output):
+    reg_data = clone_signal(node_output.default)
+
+    @always_seq(clk.posedge, reset=None)
+    def drive_data():
+        if stage.data2out:
+            node_output.default.next = -node_input.val
+        if stage.reg2out:
+            node_output.default.next = reg_data
+        if stage.data2reg:
+            reg_data.next = -node_input.val
+    return instances()
+
+
+def negate(val):
+    node = SeqNode()
+
+    node.add_input(val=val)
+    res = Signal(num.default())
+    node.add_output(res)
+    node.set_name('negate')
+    node.set_logic(negate_seq)
+
+    return node
+
+
 def reduce_sum(vec):
     if len(vec) == 0:
         return 0

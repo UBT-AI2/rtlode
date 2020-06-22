@@ -4,11 +4,17 @@ from unittest import TestCase
 from myhdl import Signal, block, ResetSignal, instances, delay, always, StopSimulation
 
 from generator.pipeline import PipeInput, PipeOutput, Pipe
-from generator.pipeline_elements import add, mul, sub, reduce_sum
+from generator.pipeline_elements import add, mul, sub, reduce_sum, negate
 from utils import num
 
 
 class TestPipe(TestCase):
+    """
+    Things to test:
+        - PipeOutput with multiple results from different stages
+        - Pipe behaviour without any stage
+    """
+
     def test_simple(self):
         """
         Basic pipeline test, testing creation and function of a simple 2 node pipeline.
@@ -39,6 +45,16 @@ class TestPipe(TestCase):
             return res
 
         self.run_test(inner_pipe, list(range(40)), [i - 5 for i in range(40)])
+
+    def test_negate(self):
+        """
+        Testing substraction.
+        """
+        def inner_pipe(data):
+            res = negate(data)
+            return res
+
+        self.run_test(inner_pipe, list(range(40)), [-i for i in range(40)])
 
     def test_mul_only_constants(self):
         """
