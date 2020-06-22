@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from myhdl import Signal, block, ResetSignal, instances, delay, always, StopSimulation
 
-from generator.pipeline import PipeInput, PipeOutput, Pipe, NoSeqNodeError
+from generator.pipeline import PipeInput, PipeOutput, Pipe
 from generator.pipeline_elements import add, mul, sub, reduce_sum
 from utils import num
 
@@ -157,8 +157,8 @@ class TestPipe(TestCase):
             mul1 = mul(data, num.int_from_float(2))
             return mul1
 
-        with self.assertRaises(NoSeqNodeError):
-            self.run_test(inner_pipe, list(range(40)), [(i + 3) * 2 for i in range(40)])
+        stats = self.run_test(inner_pipe, list(range(40)), [i * 2 for i in range(40)])
+        self.assertEqual(1, stats['nbr_stages'])
 
     def test_unconnected_node(self):
         """

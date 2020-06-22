@@ -67,10 +67,6 @@ class _PipeSignal:
         return self.signal
 
 
-class NoSeqNodeError(Exception):
-    pass
-
-
 class Pipe:
     pipe_input: PipeInput
     pipe_output: PipeOutput
@@ -92,8 +88,8 @@ class Pipe:
             'nbr_stages': len(self.stages),
             'by_type': {}
         }
-        already_visited = [self.pipe_output]
-        to_visit = self.pipe_output.get_producers()
+        already_visited = [self.pipe_input]
+        to_visit = self.pipe_input.get_consumers()
         while len(to_visit) > 0:
             p = to_visit.pop()
             if p not in already_visited:
@@ -112,8 +108,8 @@ class Pipe:
                     stats['nbr_regs'] += 1
 
                 already_visited.append(p)
-                if isinstance(p, ConsumerNode):
-                    to_visit.update(p.get_producers())
+                if isinstance(p, ProducerNode):
+                    to_visit.update(p.get_consumers())
         return stats
 
     def add_to_stage(self, node: _Node):
@@ -130,17 +126,15 @@ class Pipe:
         to_visit = self.pipe_input.get_consumers()
         while len(to_visit) > 0:
             node = to_visit.pop()
-            if isinstance(node, PipeInput):
-                assert self.pipe_input == node
-                continue
-            elif isinstance(node, PipeOutput):
+            if isinstance(node, PipeOutput):
                 assert self.pipe_output == node
-                continue
             elif not isinstance(node, _Node):
                 raise NotImplementedError()
 
-            if len(node.get_consumers()) == 0:
-                # Result not needed
+            if isinstance(node, _Node) and len(node.get_consumers()) == 0:
+                # Result not needed, remove this node
+                for p in node.get_producers():
+                    p.deregister_consumer(node)
                 continue
 
             stage = 0
@@ -158,10 +152,13 @@ class Pipe:
                 elif stage is not None:
                     stage = max(stage, lowest_possible_stage)
             if stage is not None:
-                node.stage_index = stage
-                self.add_to_stage(node)
-                if isinstance(node, ProducerNode):
+                if isinstance(node, _Node):
+                    node.stage_index = stage
+                    self.add_to_stage(node)
                     to_visit.update(node.get_consumers())
+                elif isinstance(node, PipeOutput):
+                    # Pipe output must be placed in own stage after all other
+                    stage = len(self.stages)
                 for name in node.get_inputs().keys():
                     try:
                         p = node.get_inputs()[name].get_producer()
@@ -173,7 +170,7 @@ class Pipe:
                             min_reg_stage = p.stage_index
                         else:
                             raise NotImplementedError()
-                        for reg_stage in range(min_reg_stage, node.stage_index):
+                        for reg_stage in range(min_reg_stage, stage):
                             value = node.get_inputs()[name]
                             reg = Register(value)
                             reg.stage_index = reg_stage
@@ -183,17 +180,6 @@ class Pipe:
                         continue
             else:
                 to_visit.add(node)
-
-        # Check if last stage contains only CombLogic
-        for node in self.stages[-1].nodes:
-            if not isinstance(node, CombNode):
-                break
-        else:
-            # Migrate all nodes to one stage earlier
-            if len(self.stages) < 2:
-                raise NoSeqNodeError('At least one SeqNode is required in a pipeline.')
-            self.stages[-2].nodes.update(self.stages[-1].nodes)
-            del self.stages[-1]
 
         return self.stages
 
