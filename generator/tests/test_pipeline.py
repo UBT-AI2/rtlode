@@ -1,14 +1,9 @@
-from typing import Dict
-from unittest import TestCase
-
-from myhdl import Signal, block, ResetSignal, instances, delay, always, StopSimulation
-
-from generator.pipeline import PipeInput, PipeOutput, Pipe
 from generator.pipeline_elements import add, mul, sub, reduce_sum, negate
+from generator.tests.helper import PipeTestCase
 from utils import num
 
 
-class TestPipe(TestCase):
+class TestPipe(PipeTestCase):
     """
     Things to test:
         - PipeOutput with multiple results from different stages
@@ -24,7 +19,7 @@ class TestPipe(TestCase):
             mul1 = mul(add1, data)
             return mul1
 
-        self.run_test(inner_pipe, list(range(40)), [(i + 3) * i for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [(i + 3) * i for i in range(40)])
 
     def test_add(self):
         """
@@ -34,7 +29,7 @@ class TestPipe(TestCase):
             res = add(data, num.int_from_float(5))
             return res
 
-        self.run_test(inner_pipe, list(range(40)), [i + 5 for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [i + 5 for i in range(40)])
 
     def test_sub(self):
         """
@@ -44,7 +39,7 @@ class TestPipe(TestCase):
             res = sub(data, num.int_from_float(5))
             return res
 
-        self.run_test(inner_pipe, list(range(40)), [i - 5 for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [i - 5 for i in range(40)])
 
     def test_negate(self):
         """
@@ -54,7 +49,7 @@ class TestPipe(TestCase):
             res = negate(data)
             return res
 
-        self.run_test(inner_pipe, list(range(40)), [-i for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [-i for i in range(40)])
 
     def test_mul_only_constants(self):
         """
@@ -65,7 +60,7 @@ class TestPipe(TestCase):
             add1 = add(data, mul1)
             return add1
 
-        self.run_test(inner_pipe, list(range(40)), [i + 6 for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [i + 6 for i in range(40)])
 
     def test_mul_by_constant(self):
         """
@@ -76,7 +71,7 @@ class TestPipe(TestCase):
             add1 = add(mul1, num.int_from_float(3))
             return add1
 
-        self.run_test(inner_pipe, list(range(40)), [(i * 3) + 3 for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [(i * 3) + 3 for i in range(40)])
 
     def test_mul_by_shift_left(self):
         """
@@ -87,7 +82,7 @@ class TestPipe(TestCase):
             add1 = add(mul1, num.int_from_float(3))
             return add1
 
-        self.run_test(inner_pipe, list(range(40)), [(i * 2) + 3 for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [(i * 2) + 3 for i in range(40)])
 
     def test_mul_by_shift_right(self):
         """
@@ -98,7 +93,7 @@ class TestPipe(TestCase):
             add1 = add(mul1, num.int_from_float(3))
             return add1
 
-        self.run_test(inner_pipe, list(range(40)), [(i * 0.5) + 3 for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [(i * 0.5) + 3 for i in range(40)])
 
     def test_mul(self):
         """
@@ -109,7 +104,7 @@ class TestPipe(TestCase):
             mul1 = mul(add1, data)
             return mul1
 
-        self.run_test(inner_pipe, list(range(40)), [(i + 3) * i for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [(i + 3) * i for i in range(40)])
 
     def test_reduce_sum_even(self):
         """
@@ -119,7 +114,7 @@ class TestPipe(TestCase):
             res = reduce_sum([data for _ in range(4)])
             return res
 
-        self.run_test(inner_pipe, list(range(40)), [i * 4 for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [i * 4 for i in range(40)])
 
     def test_reduce_sum_odd(self):
         """
@@ -129,7 +124,7 @@ class TestPipe(TestCase):
             res = reduce_sum([data for _ in range(5)])
             return res
 
-        self.run_test(inner_pipe, list(range(40)), [i * 5 for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [i * 5 for i in range(40)])
 
     def test_reduce_sum_len1(self):
         """
@@ -140,7 +135,7 @@ class TestPipe(TestCase):
             res = add(val, 0)
             return res
 
-        self.run_test(inner_pipe, list(range(40)), [i for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [i for i in range(40)])
 
     def test_comb_node_last(self):
         """
@@ -151,7 +146,7 @@ class TestPipe(TestCase):
             mul1 = mul(add1, num.int_from_float(2))
             return mul1
 
-        self.run_test(inner_pipe, list(range(40)), [(i + 3) * 2 for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [(i + 3) * 2 for i in range(40)])
 
     def test_comb_node_double(self):
         """
@@ -163,7 +158,7 @@ class TestPipe(TestCase):
             res = add(mul2, data)
             return res
 
-        self.run_test(inner_pipe, list(range(40)), [(i * 4 * 0.5) + i for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [(i * 4 * 0.5) + i for i in range(40)])
 
     def test_comb_node_only(self):
         """
@@ -173,7 +168,7 @@ class TestPipe(TestCase):
             mul1 = mul(data, num.int_from_float(2))
             return mul1
 
-        stats = self.run_test(inner_pipe, list(range(40)), [i * 2 for i in range(40)])
+        stats = self.run_pipe(inner_pipe, list(range(40)), [i * 2 for i in range(40)])
         self.assertEqual(1, stats['nbr_stages'])
 
     def test_unconnected_node(self):
@@ -186,77 +181,5 @@ class TestPipe(TestCase):
             mul1 = mul(add1, num.int_from_float(2))
             return mul1
 
-        stats = self.run_test(inner_pipe, list(range(40)), [(i + 4) * 2 for i in range(40)])
+        stats = self.run_pipe(inner_pipe, list(range(40)), [(i + 4) * 2 for i in range(40)])
         self.assertEqual(1, stats['by_type']['add'])
-
-    def run_test(self, inner_pipe, input_data, output_data) -> Dict:
-        assert len(input_data) == len(output_data)
-
-        stats = None
-
-        @block
-        def testbench():
-            clk = Signal(bool(0))
-            rst = ResetSignal(False, True, False)
-
-            in_valid = Signal(bool(0))
-            in_signal = Signal(num.default())
-
-            out_busy = Signal(bool(0))
-
-            data_in = PipeInput(in_valid, value=in_signal)
-            res = inner_pipe(data_in.value)
-            data_out = PipeOutput(out_busy, res=res)
-            pipe = Pipe(data_in, data_out)
-
-            nonlocal stats
-            stats = pipe.get_stats()
-
-            pipe_inst = pipe.create(clk, rst)
-
-            @always(delay(10))
-            def clk_driver():
-                clk.next = not clk
-
-            in_counter = Signal(num.integer(0))
-
-            @always(clk.posedge)
-            def input_driver():
-                in_valid.next = True
-                if not data_in.pipe_busy:
-                    in_counter.next = in_counter + 1
-                    in_signal.next = num.from_float(input_data[min(in_counter, len(input_data) - 1)])
-
-            busy_counter = Signal(num.integer())
-
-            out_counter = Signal(num.integer(0))
-            reg_busy = Signal(bool(0))
-
-            @always(clk.posedge)
-            def output_driver():
-                if not out_busy:
-                    reg_busy.next = False
-
-                if data_out.pipe_valid and not reg_busy:
-                    out_counter.next += 1
-                    self.assertEqual(num.int_from_float(output_data[out_counter]), data_out.res)
-                    print(data_out.res)
-                    if out_busy:
-                        reg_busy.next = True
-                if busy_counter == 10:
-                    out_busy.next = not out_busy
-                    busy_counter.next = 0
-                else:
-                    busy_counter.next = busy_counter + 1
-
-                if out_counter == len(output_data) - 1:
-                    raise StopSimulation()
-
-            return instances()
-
-        tb = testbench()
-        # tb.config_sim(trace=True)
-        tb.run_sim()
-
-        print(stats)
-        return stats
