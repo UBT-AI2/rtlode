@@ -183,3 +183,23 @@ class TestPipe(PipeTestCase):
 
         stats = self.run_pipe(inner_pipe, list(range(40)), [(i + 4) * 2 for i in range(40)])
         self.assertEqual(1, stats['by_type']['add'])
+
+    def test_register_reuse(self):
+        """
+        Testing if registers are reused if two nodes need the same signal in later stage.
+        """
+        def inner_pipe(data):
+            add1 = add(data, num.int_from_float(1))
+            add2 = add(add1, num.int_from_float(1))
+            add3 = add(add2, num.int_from_float(1))
+            add4 = add(add3, num.int_from_float(1))
+            add5 = add(add4, num.int_from_float(1))
+            add6 = add(add5, num.int_from_float(1))
+            add7 = add(add6, num.int_from_float(1))
+            mul1 = mul(data, add7)
+            mul2 = mul(data, add6)
+            res = add(mul1, mul2)
+            return res
+
+        stats = self.run_pipe(inner_pipe, list(range(40)), [(i + 7) * i + (i + 6) * i for i in range(40)])
+        self.assertEqual(8, stats['by_type']['reg'])

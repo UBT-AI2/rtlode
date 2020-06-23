@@ -172,9 +172,15 @@ class Pipe:
                             raise NotImplementedError()
                         for reg_stage in range(min_reg_stage, stage):
                             value = node.get_inputs()[name]
-                            reg = Register(value)
-                            reg.stage_index = reg_stage
-                            self.add_to_stage(reg)
+
+                            # Search if needed register is already present (other node created one already)
+                            for reg in self.stages[reg_stage].nodes:
+                                if isinstance(reg, Register) and reg.get_inputs()['default'] == value:
+                                    break
+                            else:
+                                reg = Register(value)
+                                reg.stage_index = reg_stage
+                                self.add_to_stage(reg)
                             node.replace_input(**{name: reg})
                     except AttributeError:
                         continue
