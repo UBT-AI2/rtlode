@@ -77,6 +77,7 @@ class Pipe:
         self.pipe_input = producer
         self.pipe_output = consumer
         self.comb_logic = []
+        self.stages = []
 
     def get_stats(self):
         self.resolve()
@@ -121,8 +122,6 @@ class Pipe:
 
     def resolve(self):
         # TODO recognize circles and abort
-        self.stages = []
-
         to_visit = self.pipe_input.get_consumers()
         while len(to_visit) > 0:
             node = to_visit.pop()
@@ -148,10 +147,10 @@ class Pipe:
                 elif isinstance(p, CombNode):
                     lowest_possible_stage = p.stage_index
                 if lowest_possible_stage is None:
-                    stage = None
-                elif stage is not None:
-                    stage = max(stage, lowest_possible_stage)
-            if stage is not None:
+                    to_visit.add(node)
+                    break
+                stage = max(stage, lowest_possible_stage)
+            else:
                 if isinstance(node, _Node):
                     node.stage_index = stage
                     self.add_to_stage(node)
@@ -184,8 +183,6 @@ class Pipe:
                             node.replace_input(**{name: reg})
                     except AttributeError:
                         continue
-            else:
-                to_visit.add(node)
 
         return self.stages
 
@@ -303,7 +300,18 @@ class ConsumerNode:
             # Deregister for old producers
             try:
                 p = old_in.get_producer()
-                p.deregister_consumer(self)
+                # Check if other input still needs this producer
+                deregister = True
+                for other_name, other_in in self._inputs.items():
+                    try:
+                        other_p = other_in.get_producer()
+                    except AttributeError:
+                        continue
+                    if other_p == p:
+                        deregister = False
+
+                if deregister:
+                    p.deregister_consumer(self)
             except AttributeError:
                 pass
             # Register for new producers
@@ -409,7 +417,7 @@ class PipeOutput(ConsumerNode):
                     ))
             else:
                 return signal.get_signal()
-        raise AttributeError()
+        raise AttributeError("%r object has no attribute %r" % (self.__class__.__name__, name))
 
     def set_pipe_valid(self, valid_signal):
         self.pipe_valid = valid_signal
