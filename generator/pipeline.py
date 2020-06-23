@@ -29,6 +29,20 @@ to process one more value after stalling the output.
 """
 
 
+def _next_stage(p):
+    min_reg_stage = None
+    if isinstance(p, PipeInput):
+        min_reg_stage = 0
+    elif isinstance(p, SeqNode):
+        if p.stage_index is not None:
+            min_reg_stage = p.stage_index + 1
+    elif isinstance(p, CombNode):
+        min_reg_stage = p.stage_index
+    else:
+        raise NotImplementedError()
+    return min_reg_stage
+
+
 class _DynamicInterface:
     """
     Utility to provide a myhdl block with an interface dynamically defined at runtime.
@@ -138,14 +152,7 @@ class Pipe:
 
             stage = 0
             for p in node.get_producers():
-                lowest_possible_stage = None
-                if isinstance(p, PipeInput):
-                    lowest_possible_stage = 0
-                elif isinstance(p, SeqNode):
-                    if p.stage_index is not None:
-                        lowest_possible_stage = p.stage_index + 1
-                elif isinstance(p, CombNode):
-                    lowest_possible_stage = p.stage_index
+                lowest_possible_stage = _next_stage(p)
                 if lowest_possible_stage is None:
                     to_visit.add(node)
                     break
@@ -159,36 +166,48 @@ class Pipe:
                     # Pipe output must be placed in own stage after all other
                     stage = len(self.stages)
                 for name in node.get_inputs().keys():
-                    try:
-                        p = node.get_inputs()[name].get_producer()
-                        if isinstance(p, PipeInput):
-                            min_reg_stage = 0
-                        elif isinstance(p, SeqNode):
-                            min_reg_stage = p.stage_index + 1
-                        elif isinstance(p, CombNode):
-                            min_reg_stage = p.stage_index
-                        else:
-                            raise NotImplementedError()
-                        for reg_stage in range(min_reg_stage, stage):
-                            value = node.get_inputs()[name]
+                    if isinstance(node.get_inputs()[name], list):
+                        for index in range(len(node.get_inputs()[name])):
+                            try:
+                                p = node.get_inputs()[name][index].get_producer()
+                                for reg_stage in range(_next_stage(p), stage):
+                                    value = node.get_inputs()[name][index]
 
-                            # Search if needed register is already present (other node created one already)
-                            for reg in self.stages[reg_stage].nodes:
-                                if isinstance(reg, Register) and reg.get_inputs()['default'] == value:
-                                    break
-                            else:
-                                reg = Register(value)
-                                reg.stage_index = reg_stage
-                                self.add_to_stage(reg)
-                            node.replace_input(**{name: reg})
-                    except AttributeError:
-                        continue
+                                    # Search if needed register is already present (other node created one already)
+                                    for reg in self.stages[reg_stage].nodes:
+                                        if isinstance(reg, Register) and reg.get_inputs()['default'] == value:
+                                            break
+                                    else:
+                                        reg = Register(value)
+                                        reg.stage_index = reg_stage
+                                        self.add_to_stage(reg)
+                                    node.replace_input_listel(name, index, reg)
+                            except AttributeError:
+                                continue
+                    else:
+                        try:
+                            p = node.get_inputs()[name].get_producer()
+                            for reg_stage in range(_next_stage(p), stage):
+                                value = node.get_inputs()[name]
+
+                                # Search if needed register is already present (other node created one already)
+                                for reg in self.stages[reg_stage].nodes:
+                                    if isinstance(reg, Register) and reg.get_inputs()['default'] == value:
+                                        break
+                                else:
+                                    reg = Register(value)
+                                    reg.stage_index = reg_stage
+                                    self.add_to_stage(reg)
+                                node.replace_input(name, reg)
+                        except AttributeError:
+                            continue
 
         return self.stages
 
     @block
     def create(self, clk, rst):
-        self.resolve()
+        if len(self.stages) == 0:
+            self.resolve()
         stage_instances = []
 
         for stage_id, stage in enumerate(self.stages):
@@ -278,58 +297,91 @@ class ConsumerNode:
         super().__init__()
         self._inputs = {}
 
-    def add_input(self, **kwargs):
-        for name, in_arg in kwargs.items():
-            if name in self._inputs:
-                self.replace_input(**kwargs)
-            else:
+    def _try_register(self, val):
+        if isinstance(val, list):
+            for el in val:
                 try:
-                    p = in_arg.get_producer()
+                    p = el.get_producer()
                     p.register_consumer(self)
                 except AttributeError:
                     pass
+        else:
+            try:
+                p = val.get_producer()
+                p.register_consumer(self)
+            except AttributeError:
+                pass
+
+    def add_inputs(self, **kwargs):
+        for name, in_arg in kwargs.items():
+            if name in self._inputs:
+                self.replace_input(name, in_arg)
+            else:
+                self._try_register(in_arg)
                 self._inputs[name] = in_arg
 
     def get_inputs(self):
         return self._inputs
 
-    def replace_input(self, **kwargs):
-        for name, new_in in kwargs.items():
-            assert name in self._inputs
-            old_in = self._inputs[name]
-            # Deregister for old producers
-            try:
-                p = old_in.get_producer()
-                # Check if other input still needs this producer
-                deregister = True
-                for other_name, other_in in self._inputs.items():
-                    try:
-                        other_p = other_in.get_producer()
-                    except AttributeError:
-                        continue
-                    if other_p == p:
-                        deregister = False
+    def replace_input(self, name, new_in):
+        assert name in self._inputs
+        old_in = self._inputs[name]
+        assert not isinstance(old_in, list)
 
-                if deregister:
-                    p.deregister_consumer(self)
-            except AttributeError:
-                pass
-            # Register for new producers
-            try:
-                p = new_in.get_producer()
-                p.register_consumer(self)
-            except AttributeError:
-                pass
-            self._inputs[name] = new_in
+        # Register for new producers
+        self._try_register(new_in)
+        self._inputs[name] = new_in
+
+        # Deregister for old producers
+        try:
+            p = old_in.get_producer()
+            # Check if other input still needs this producer
+            for other_p in self.get_producers():
+                if other_p == p:
+                    break
+            else:
+                p.deregister_consumer(self)
+        except AttributeError:
+            pass
+
+    def replace_input_listel(self, name, index, new_in):
+        assert name in self._inputs
+        assert isinstance(self._inputs[name], list)
+        assert index < len(self._inputs[name])
+        el_in = self._inputs[name][index]
+
+        # Register for new producers
+        self._try_register(new_in)
+        self._inputs[name][index] = new_in
+
+        # Deregister for old producers
+        try:
+            p = el_in.get_producer()
+            # Check if other input still needs this producer
+            for other_p in self.get_producers():
+                if other_p == p:
+                    break
+            else:
+                p.deregister_consumer(self)
+        except AttributeError:
+            pass
 
     def get_producers(self) -> Set:
         producers = set()
         for in_arg in self._inputs.values():
-            try:
-                p = in_arg.get_producer()
-                producers.add(p)
-            except AttributeError:
-                continue
+            if isinstance(in_arg, list):
+                for el in in_arg:
+                    try:
+                        p = el.get_producer()
+                        producers.add(p)
+                    except AttributeError:
+                        continue
+            else:
+                try:
+                    p = in_arg.get_producer()
+                    producers.add(p)
+                except AttributeError:
+                    continue
         return producers
 
 
@@ -404,7 +456,7 @@ class PipeOutput(ConsumerNode):
         self.busy = busy
         self.pipe_valid = None
 
-        self.add_input(**inputs)
+        self.add_inputs(**inputs)
 
     def __getattr__(self, name):
         if name in self._inputs:
@@ -430,7 +482,7 @@ class Register(SeqNode):
         if isinstance(val, int):
             raise NotImplementedError()
 
-        self.add_input(default=val)
+        self.add_inputs(default=val)
         res = clone_signal(val.get_signal())
         self.add_output(res)
         self.set_name('reg')

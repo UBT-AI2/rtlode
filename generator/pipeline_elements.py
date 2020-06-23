@@ -106,25 +106,25 @@ def mul(a, b):
                 return dynamic_value
 
             node = CombNode()
-            node.add_input(value=dynamic_value)
+            node.add_inputs(value=dynamic_value)
             res = Signal(num.default())
             node.add_output(res)
             node.set_name('mul_by_shift')
 
             if shift_by > 0:
-                node.add_input(shift_by=shift_by)
+                node.add_inputs(shift_by=shift_by)
 
                 node.set_logic(mul_by_shift_left)
             elif shift_by < 0:
                 shift_by = -shift_by
-                node.add_input(shift_by=shift_by)
+                node.add_inputs(shift_by=shift_by)
 
                 node.set_logic(mul_by_shift_right)
             return node
         else:
             node = SeqNode()
 
-            node.add_input(dynamic_value=dynamic_value, static_value=static_value)
+            node.add_inputs(dynamic_value=dynamic_value, static_value=static_value)
             res = Signal(num.default())
             node.add_output(res)
             node.set_name('mul')
@@ -134,7 +134,7 @@ def mul(a, b):
     else:
         node = SeqNode()
 
-        node.add_input(a=a, b=b)
+        node.add_inputs(a=a, b=b)
         res = Signal(num.default())
         node.add_output(res)
         node.set_name('mul')
@@ -164,7 +164,7 @@ def add(a, b):
 
     node = SeqNode()
 
-    node.add_input(a=a, b=b)
+    node.add_inputs(a=a, b=b)
     res = Signal(num.default())
     node.add_output(res)
     node.set_name('add')
@@ -191,7 +191,7 @@ def sub_seq(clk, stage, node_input, node_output):
 def sub(a, b):
     node = SeqNode()
 
-    node.add_input(a=a, b=b)
+    node.add_inputs(a=a, b=b)
     res = Signal(num.default())
     node.add_output(res)
     node.set_name('sub')
@@ -218,7 +218,7 @@ def negate_seq(clk, stage, node_input, node_output):
 def negate(val):
     node = SeqNode()
 
-    node.add_input(val=val)
+    node.add_inputs(val=val)
     res = Signal(num.default())
     node.add_output(res)
     node.set_name('negate')
