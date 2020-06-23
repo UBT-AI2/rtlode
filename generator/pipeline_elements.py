@@ -189,6 +189,9 @@ def sub_seq(clk, stage, node_input, node_output):
 
 
 def sub(a, b):
+    if isinstance(a, int) and isinstance(b, int):
+        return a - b
+
     node = SeqNode()
 
     node.add_inputs(a=a, b=b)
@@ -216,6 +219,9 @@ def negate_seq(clk, stage, node_input, node_output):
 
 
 def negate(val):
+    if isinstance(val, int):
+        return -val
+
     node = SeqNode()
 
     node.add_inputs(val=val)

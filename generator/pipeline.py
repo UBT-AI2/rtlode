@@ -145,6 +145,7 @@ class Pipe:
                 raise NotImplementedError()
 
             if isinstance(node, _Node) and len(node.get_consumers()) == 0:
+                print('Dropped not needed node.')
                 # Result not needed, remove this node
                 for p in node.get_producers():
                     p.deregister_consumer(node)
