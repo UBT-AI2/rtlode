@@ -13,17 +13,19 @@ def solver_driver(clk, rst,
                   rdy_signal, rdy_ack, data_in, fifo_producer,
                   fin_signal, fin_ack, data_out, data_out_data, fifo_consumer):
 
-    @always_comb
-    def rdy_signal_driver():
-        rdy_signal.next = not fifo_producer.full
-
-    @always_seq(clk.posedge, reset=None)
+    @always(clk.posedge)
     def assign_data_in():
-        if data_in.rd and not data_in.empty and rdy_ack:
-            fifo_producer.wr.next = True
-            fifo_producer.data.next = data_in.data
-        else:
+        if rst:
             fifo_producer.wr.next = False
+            rdy_signal.next = True
+        else:
+            if data_in.rd and not data_in.empty and rdy_ack:
+                fifo_producer.data.next = data_in.data
+                fifo_producer.wr.next = True
+                rdy_signal.next = False
+            elif fifo_producer.wr and not fifo_producer.full:
+                fifo_producer.wr.next = False
+                rdy_signal.next = True
 
     @always(clk.posedge)
     def assign_data_out():
