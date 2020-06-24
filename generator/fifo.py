@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
-from myhdl import SignalType, Signal, instances, block, intbv, ConcatSignal, always_comb, always_seq, enum
+from myhdl import SignalType, Signal, instances, block, intbv, always_comb, always_seq, modbv
 
-from utils import num
+from generator.utils import clone_signal
 
 
 @dataclass
@@ -30,30 +30,8 @@ class FifoConsumer:
             self.empty = Signal(bool(1))
 
 
-@dataclass
-class ByteFifoProducer(FifoProducer):
-    data_size: SignalType = field(default=None)
-    fill_level: SignalType = field(default=None)
-
-    def __post_init__(self):
-        super().__post_init__()
-        if self.data_size is None:
-            self.data_size = Signal(num.integer(len(self.data) // 8))
-
-
-@dataclass
-class ByteFifoConsumer(FifoConsumer):
-    data_size: SignalType = field(default=None)
-    fill_level: SignalType = field(default=None)
-
-    def __post_init__(self):
-        super().__post_init__()
-        if self.data_size is None:
-            self.data_size = Signal(num.integer(len(self.data) // 8))
-
-
 @block
-def byte_fifo(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifoConsumer, buffer_size=None):
+def fifo(clk: SignalType, rst: SignalType, p: FifoProducer, c: FifoConsumer, buffer_size_bits=4):
     """
     Synchrone byte based fifo.
     Number of input and output bytes can be changed dynamically.
@@ -61,108 +39,55 @@ def byte_fifo(clk: SignalType, rst: SignalType, p: ByteFifoProducer, c: ByteFifo
     :param rst: rst signal
     :param p: all signals of the producer
     :param c: all signals of the consumer
-    :param buffer_size: size of internal buffer in bytes
+    :param buffer_size_bits: size of internal buffer
     :return: myhdl instances
     """
+    assert len(p.data) == len(c.data)
 
-    # Operating on a byte base
-    assert len(p.data) % 8 == 0
-    p_max_data_size = len(p.data) // 8
-    assert len(c.data) % 8 == 0
-    c_max_data_size = len(c.data) // 8
+    buffer_size = 2 ** buffer_size_bits
+    addr_max = 2 ** (buffer_size_bits + 1)
+    buffer = [clone_signal(p.data) for _ in range(buffer_size)]
 
-    # Handle buffer size
-    min_buffer_size = p_max_data_size + c_max_data_size
-    if buffer_size is None:
-        buffer_size = min_buffer_size
-    assert buffer_size >= min_buffer_size
+    p_addr = Signal(modbv(0, min=0, max=addr_max))
+    c_addr = Signal(modbv(0, min=0, max=addr_max))
 
-    buffer = [Signal(intbv(0, min=0, max=256)) for _ in range(buffer_size)]
-    p_addr = Signal(intbv(0, min=0, max=buffer_size))
-    c_addr = Signal(intbv(0, min=0, max=buffer_size))
-    fill_level = Signal(intbv(0, min=0, max=buffer_size - 1))
-
-    # Prepare max consumer length buffer
-    c_data_bytes = [Signal(intbv(0, min=0, max=256)) for _ in range(c_max_data_size)]
-    c_data = ConcatSignal(*reversed(c_data_bytes))
-
-    @always_comb
-    def calculate_fill_level():
-        if p_addr >= c_addr:
-            fill_level.next = p_addr - c_addr
-        else:
-            fill_level.next = buffer_size - c_addr + p_addr
+    do_write = Signal(bool(0))
+    do_read = Signal(bool(0))
 
     @always_comb
     def check_full():
-        p.full.next = buffer_size - 1 - fill_level < p.data_size
+        p.full.next = p_addr[:buffer_size_bits] != c_addr[:buffer_size_bits]\
+                      and p_addr[buffer_size_bits:] == c_addr[buffer_size_bits:]
+
+    @always_comb
+    def handle_do_wr():
+        do_write.next = p.wr and not p.full
+
+    @always_seq(clk.posedge, reset=rst)
+    def handle_wr_addr():
+        if do_write:
+            p_addr.next = p_addr + 1
 
     @always_seq(clk.posedge, reset=None)
     def handle_wr():
-        if rst:
-            p_addr.next = 0
-        else:
-            if p.wr and not p.full:
-                for i in range(p_max_data_size):
-                    if i < p.data_size:
-                        byte_addr = i << 3  # * 8
-                        if p_addr + i < buffer_size:
-                            buffer[p_addr + i].next = p.data[byte_addr + 8:byte_addr]
-                        else:
-                            buffer[i - (buffer_size - p_addr)].next = p.data[byte_addr + 8:byte_addr]
-
-                if (buffer_size - 1) - p_addr < p.data_size:
-                    p_addr.next = p.data_size - (buffer_size - p_addr)
-                else:
-                    p_addr.next = p_addr + p.data_size
-
-    t_state = enum('CPY', 'RDY')
-    rd_state = Signal(t_state.CPY)
+        if do_write:
+            buffer[p_addr[buffer_size_bits:0]].next = p.data
 
     @always_comb
     def check_empty():
-        if rd_state == t_state.CPY:
-            c.empty.next = True
-        else:
-            c.empty.next = fill_level < c.data_size
-
-    @always_seq(clk.posedge, reset=None)
-    def handle_rd():
-        if rst:
-            rd_state.next = t_state.CPY
-            c_addr.next = 0
-        else:
-            if rd_state == t_state.CPY:
-                # Provide output data
-                for i in range(c_max_data_size):
-                    if i < c.data_size:
-                        if c_addr + i < buffer_size:
-                            c_data_bytes[i].next = buffer[c_addr + i]
-                        else:
-                            c_data_bytes[i].next = buffer[i - (buffer_size - c_addr)]
-                if fill_level >= c.data_size:
-                    rd_state.next = t_state.RDY
-            if rd_state == t_state.RDY:
-                if c.rd and not c.empty:
-                    # Increase c_addr
-                    if (buffer_size - 1) - c_addr < c.data_size:
-                        c_addr.next = c.data_size - (buffer_size - c_addr)
-                    else:
-                        c_addr.next = c_addr + c.data_size
-                    rd_state.next = t_state.CPY
+        c.empty.next = p_addr == c_addr
 
     @always_comb
-    def assign_c_data():
-        c.data.next = c_data
+    def handle_do_rd():
+        do_read.next = c.rd and not c.empty
 
-    if p.fill_level is not None:
-        @always_comb
-        def assign_p_fill_level():
-            p.fill_level.next = fill_level
+    @always_seq(clk.posedge, reset=rst)
+    def handle_rd_addr():
+        if do_read:
+            c_addr.next = c_addr + 1
 
-    if c.fill_level is not None:
-        @always_comb
-        def assign_c_fill_level():
-            c.fill_level.next = fill_level
+    @always_comb
+    def handle_rd():
+        c.data.next = buffer[c_addr[buffer_size_bits:0]]
 
     return instances()
