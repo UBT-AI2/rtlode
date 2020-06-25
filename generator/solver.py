@@ -141,7 +141,7 @@ def solver(
             else:
                 pipe_input_valid.next = False
 
-            if pipe_data_out.pipe_valid and pipe_data_out.cn == pipe_data_out.n:
+            if pipe_data_out.pipe_valid and pipe_data_out.cn >= pipe_data_out.n:
                 # Solver data finished, send
                 solver_output.id.next = pipe_data_out.id
                 solver_output.x.next = pipe_data_out.x
