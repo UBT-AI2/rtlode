@@ -27,22 +27,21 @@ def mul_by_shift_right(node_input, node_output):
 @block
 def mul_dsp_c(clk, stage, node_input, node_output):
     reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
-    reg_data = clone_signal(node_output.default)
+    out = Signal(intbv(0, min=-reg_max, max=reg_max))
+    reg_data = clone_signal(out)
 
     @always_seq(clk.posedge, reset=None)
     def drive_data():
         if stage.data2out:
-            node_output.default.next = intbv(
-                intbv(node_input.static_value).signed() * node_input.dynamic_value,
-                min=-reg_max,
-                max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+            out.next = intbv(node_input.static_value).signed() * node_input.dynamic_value
         if stage.reg2out:
-            node_output.default.next = reg_data
+            out.next = reg_data
         if stage.data2reg:
-            reg_data.next = intbv(
-                intbv(node_input.static_value).signed() * node_input.dynamic_value,
-                min=-reg_max,
-                max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+            reg_data.next = intbv(node_input.static_value).signed() * node_input.dynamic_value
+
+    @always_comb
+    def resize():
+        node_output.default.next = out[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
 
     return instances()
 
@@ -50,22 +49,21 @@ def mul_dsp_c(clk, stage, node_input, node_output):
 @block
 def mul_dsp(clk, stage, node_input, node_output):
     reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
-    reg_data = clone_signal(node_output.default)
+    out = Signal(intbv(0, min=-reg_max, max=reg_max))
+    reg_data = clone_signal(out)
 
     @always_seq(clk.posedge, reset=None)
     def drive_data():
         if stage.data2out:
-            node_output.default.next = intbv(
-                node_input.a * node_input.b,
-                min=-reg_max,
-                max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+            out.next = node_input.a * node_input.b
         if stage.reg2out:
-            node_output.default.next = reg_data
+            out.next = reg_data
         if stage.data2reg:
-            reg_data.next = intbv(
-                node_input.a * node_input.b,
-                min=-reg_max,
-                max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+            reg_data.next = node_input.a * node_input.b
+
+    @always_comb
+    def resize():
+        node_output.default.next = out[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
 
     return instances()
 
