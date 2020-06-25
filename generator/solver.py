@@ -4,7 +4,7 @@ from common import data_desc
 from generator.fifo import FifoConsumer, FifoProducer
 from generator.pipeline import PipeInput, PipeOutput, Pipe
 from generator.pipeline_elements import add
-from generator.utils import assign, assign_2
+from generator.utils import assign, assign_3
 from utils import num
 from generator.config import Config
 from generator.rk_calc import pipe_calc_step
@@ -85,14 +85,15 @@ def solver(
             solver_input_reg_filled.next = False
         else:
             # Print debug informations
-            if __debug__ and pipe_data_out.pipe_valid:
-                for i in range(config.system_size):
-                    print('Id: %d\t[%d] %f = %f' % (
-                        pipe_data_out.id,
-                        i,
-                        num.to_float(pipe_data_out.x),
-                        num.to_float(pipe_data_out.y[i])
-                    ))
+            if __debug__:
+                if pipe_data_out.pipe_valid:
+                    for i in range(config.system_size):
+                        print('Id: %d\t[%d] %f = %f' % (
+                            pipe_data_out.id,
+                            i,
+                            num.to_float(pipe_data_out.x),
+                            num.to_float(pipe_data_out.y[i])
+                        ))
 
             if pipe_data_out.pipe_valid and pipe_data_out.cn < pipe_data_out.n:
                 pipe_input_id.next = pipe_data_out.id
@@ -111,7 +112,8 @@ def solver(
 
                     solver_input_reg_filled.next = True
                     data_in.rd.next = False
-                    print("Saved into reg: %d" % solver_input.id)
+                    if __debug__:
+                        print("Saved into reg: %d" % solver_input.id)
             elif data_in.rd and not data_in.empty:
                 pipe_input_id.next = solver_input.id
                 pipe_input_h.next = solver_input.h
@@ -120,7 +122,8 @@ def solver(
                 pipe_input_x.next = solver_input.x_start
                 pipe_input_valid.next = True
                 data_in.rd.next = True
-                print("Got input: %d" % solver_input.id)
+                if __debug__:
+                    print("Got input: %d" % solver_input.id)
             elif solver_input_reg_filled:
                 pipe_input_id.next = solver_input_reg.id
                 pipe_input_h.next = solver_input_reg.h
@@ -131,7 +134,8 @@ def solver(
 
                 solver_input_reg_filled.next = False
                 data_in.rd.next = True
-                print("Loaded from reg: %d" % solver_input_reg.id)
+                if __debug__:
+                    print("Loaded from reg: %d" % solver_input_reg.id)
             else:
                 pipe_input_valid.next = False
 
@@ -139,29 +143,49 @@ def solver(
                 # Solver data finished, send
                 solver_output.id.next = pipe_data_out.id
                 solver_output.x.next = pipe_data_out.x
-                print("Added output: %d" % pipe_data_out.id)
+                if __debug__:
+                    print("Added output: %d" % pipe_data_out.id)
                 data_out.wr.next = True
             else:
                 data_out.wr.next = False
 
+    do_data_store = Signal(bool(0))
     do_data_in = Signal(bool(0))
     do_data_cycle = Signal(bool(0))
+    do_data_load = Signal(bool(0))
     do_data_out = Signal(bool(0))
 
     @always_comb
+    def do_data_store_driver():
+        do_data_store.next = do_data_cycle and (data_in.rd and not data_in.empty)
+
+    @always_comb
     def do_data_in_driver():
-        do_data_in.next = not do_data_cycle and not data_in.empty
+        do_data_in.next = not do_data_cycle and (data_in.rd and not data_in.empty)
 
     @always_comb
     def do_data_cycle_driver():
         do_data_cycle.next = pipe_data_out.pipe_valid and pipe_data_out.cn < pipe_data_out.n
 
     @always_comb
+    def do_data_load_driver():
+        do_data_load.next = not do_data_cycle and not do_data_in and solver_input_reg_filled
+
+    @always_comb
     def do_data_out_driver():
         do_data_out.next = pipe_data_out.pipe_valid and pipe_data_out.cn == pipe_data_out.n
 
+    y_data_store = [
+        assign(clk, do_data_store, solver_input.y_start[i], solver_input_reg.y_start[i])
+        for i in range(config.system_size)
+    ]
+
     y_data_in = [
-        assign_2(clk, do_data_in, solver_input.y_start[i], do_data_cycle, pipe_data_out.y[i], pipe_input_y[i])
+        assign_3(clk,
+                 do_data_in, solver_input.y_start[i],
+                 do_data_cycle, pipe_data_out.y[i],
+                 do_data_load, solver_input_reg.y_start[i],
+                 pipe_input_y[i])
         for i in range(config.system_size)
     ]
 

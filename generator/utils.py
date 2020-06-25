@@ -32,6 +32,12 @@ def clone_signal_structure(sig_data, value=0):
         raise Exception('Can not clone signal data structure.')
 
 
+"""
+No easy eay to implement these assigns smarter because of limitations of the myhdl conversion.
+Each signal can only be driven by one instance.
+"""
+
+
 @block
 def assign(clk, condition, in_val, out_val):
     @always_seq(clk.posedge, reset=None)
@@ -49,4 +55,17 @@ def assign_2(clk, condition_1, in_val_1, condition_2, in_val_2, out_val):
             out_val.next = in_val_1
         if condition_2:
             out_val.next = in_val_2
+    return _assign
+
+
+@block
+def assign_3(clk, condition_1, in_val_1, condition_2, in_val_2, condition_3, in_val_3, out_val):
+    @always_seq(clk.posedge, reset=None)
+    def _assign():
+        if condition_1:
+            out_val.next = in_val_1
+        if condition_2:
+            out_val.next = in_val_2
+        if condition_3:
+            out_val.next = in_val_3
     return _assign
