@@ -157,8 +157,27 @@ def add_seq(clk, stage, node_input, node_output):
 
 
 def add(a, b):
+    """
+    Pipeline node which adds the two given parameters.
+    Optimization is performed where possible.
+    The return type is int if both parameters were integer and so the result is static.
+    Otherwise a SeqNode is returned.
+    :param a: parameter a
+    :param b: parameter b
+    :return: int or pipeline node
+    """
     if isinstance(a, int) and isinstance(b, int):
-        return a + b
+        return int(num.default(a) + num.default(b))
+    elif isinstance(a, int) or isinstance(b, int):
+        if isinstance(a, int):
+            static_value = a
+            dynamic_value = b
+        else:
+            static_value = b
+            dynamic_value = a
+
+        if static_value == 0:
+            return dynamic_value
 
     node = SeqNode()
 
@@ -187,8 +206,27 @@ def sub_seq(clk, stage, node_input, node_output):
 
 
 def sub(a, b):
+    """
+    Pipeline node which substracts b from a.
+    Optimization is performed where possible.
+    The return type is int if both parameters were integer and so the result is static.
+    Otherwise a SeqNode is returned.
+    :param a: parameter a
+    :param b: parameter b
+    :return: int or pipeline node
+    """
     if isinstance(a, int) and isinstance(b, int):
-        return a - b
+        return int(num.default(a) - num.default(b))
+    elif isinstance(a, int) or isinstance(b, int):
+        if isinstance(a, int):
+            static_value = a
+            dynamic_value = b
+        else:
+            static_value = b
+            dynamic_value = a
+
+        if static_value == 0:
+            return dynamic_value
 
     node = SeqNode()
 

@@ -132,10 +132,10 @@ class TestPipe(PipeTestCase):
         """
         def inner_pipe(data):
             val = reduce_sum([data])
-            res = add(val, 0)
+            res = add(val, num.int_from_float(1))
             return res
 
-        self.run_pipe(inner_pipe, list(range(40)), [i for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [i + 1 for i in range(40)])
 
     def test_comb_node_last(self):
         """

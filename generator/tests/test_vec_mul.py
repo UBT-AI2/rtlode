@@ -17,10 +17,11 @@ class TestVecMul(PipeTestCase):
         """Check if vector of length 0 is working."""
         def inner_pipe(data):
             vec_res = vec_mul([], [])
-            res = add(data, vec_res)
+            val = add(data, vec_res)
+            res = add(val, num.int_from_float(1))
             return res
 
-        self.run_pipe(inner_pipe, list(range(40)), [i for i in range(40)])
+        self.run_pipe(inner_pipe, list(range(40)), [i + 1 for i in range(40)])
 
     def test_lincomb_one_element(self):
         """Check if vector of length 1 is working."""
