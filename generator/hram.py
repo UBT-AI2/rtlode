@@ -213,6 +213,8 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
                 if not output_finished:
                     write_state.next = t_write_state.RDY
                     output_data_iter.next = 0
+                    for i in range(output_data_per_chunk):
+                        output_data[i].next = 0
                     data_in.rd.next = True
                 else:
                     write_state.next = t_write_state.FIN
