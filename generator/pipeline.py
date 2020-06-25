@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Set, Dict
+from typing import List, Set, Dict, Iterable
 
 from myhdl import SignalType, Signal, block, instances, always_seq
 
@@ -63,6 +63,32 @@ class _DynamicInterface:
             setattr(self, key, value)
 
 
+class _OrderedSet:
+    """
+    Utility providing the functionality of an ordered set.
+    The implementation is based on an internal list with checks on each insertion if the values is already present.
+    This is not very performant but sufficient for the purpose.
+    """
+    def __init__(self, values: Iterable = None):
+        self._data = []
+        if values is not None:
+            self.update(values)
+
+    def update(self, values: Iterable):
+        for val in values:
+            self.add(val)
+
+    def add(self, value):
+        if value not in self._data:
+            self._data.append(value)
+
+    def __len__(self):
+        return len(self._data)
+
+    def pop(self, index=0):
+        return self._data.pop(index)
+
+
 class _PipeSignal:
     """
     An internal signal of the pipe. Containing the signal itself but also the producers of the signal.
@@ -104,7 +130,7 @@ class Pipe:
             'by_type': {}
         }
         already_visited = [self.pipe_input]
-        to_visit = self.pipe_input.get_consumers()
+        to_visit = _OrderedSet(self.pipe_input.get_consumers())
         while len(to_visit) > 0:
             p = to_visit.pop()
             if p not in already_visited:
@@ -136,7 +162,7 @@ class Pipe:
 
     def resolve(self):
         # TODO recognize circles and abort
-        to_visit = self.pipe_input.get_consumers()
+        to_visit = _OrderedSet(self.pipe_input.get_consumers())
         while len(to_visit) > 0:
             node = to_visit.pop()
             if isinstance(node, PipeOutput):
