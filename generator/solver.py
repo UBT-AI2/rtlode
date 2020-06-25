@@ -3,11 +3,10 @@ from myhdl import block, instances, SignalType, always, Signal, always_comb, alw
 from common import data_desc
 from generator.fifo import FifoConsumer, FifoProducer
 from generator.pipeline import PipeInput, PipeOutput, Pipe
-from generator.pipeline_elements import add
+from generator.pipeline_elements import add, vec_mul, mul
 from generator.utils import assign, assign_3
 from utils import num
 from generator.config import Config
-from generator.rk_calc import pipe_calc_step
 from generator.rk_stage import stage
 
 
@@ -57,12 +56,15 @@ def solver(
         )
 
     x_n = add(pipe_data_in.x, pipe_data_in.h)
-    y_n = [pipe_calc_step(
-        [num.int_from_float(el) for el in config.b],
-        [el[i] for el in v],
-        pipe_data_in.h,
-        pipe_data_in.y[i]
-    ) for i in range(config.system_size)]
+    y_n = []
+    for i in range(config.system_size):
+        vec = vec_mul(
+            [num.int_from_float(el) for el in config.b],
+            [el[i] for el in v]
+        )
+        mul_res = mul(pipe_data_in.h, vec)
+        y_n.append(add(pipe_data_in.y[i], mul_res))
+
     cn_n = add(pipe_data_in.cn, 1)
 
     pipe_data_out = PipeOutput(pipe_output_busy,
