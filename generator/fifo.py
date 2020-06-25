@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from myhdl import SignalType, Signal, instances, block, intbv, always_comb, always_seq, modbv
+from myhdl import SignalType, Signal, instances, block, always_comb, always_seq, modbv
 
 from generator.utils import clone_signal
 

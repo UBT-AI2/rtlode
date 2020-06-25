@@ -1,7 +1,6 @@
-from myhdl import Signal, SignalType, block, always_seq, always_comb
+from myhdl import Signal, SignalType, block, always_seq
 
 from utils import num
-from generator.flow import FlowControl
 
 
 def clone_signal(sig, value=0):
@@ -33,19 +32,6 @@ def clone_signal_structure(sig_data, value=0):
         raise Exception('Can not clone signal data structure.')
 
 
-def bind(func, *args):
-    """
-    Bind some arguments to a function.
-
-    :param func: unbinded function
-    :param args: arguments to be bind
-    :return: binded function
-    """
-    def _bind(*unbind_args, _args=args):
-        return func(*args, *unbind_args)
-    return _bind
-
-
 @block
 def assign(clk, condition, in_val, out_val):
     @always_seq(clk.posedge, reset=None)
@@ -63,15 +49,4 @@ def assign_2(clk, condition_1, in_val_1, condition_2, in_val_2, out_val):
             out_val.next = in_val_1
         if condition_2:
             out_val.next = in_val_2
-    return _assign
-
-
-@block
-def assign_flow(in_val: SignalType, out_val: SignalType, flow: FlowControl):
-    @always_comb
-    def _assign():
-        if flow.enb:
-            out_val.next = in_val
-        flow.fin.next = flow.enb
-
     return _assign

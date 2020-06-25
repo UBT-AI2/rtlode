@@ -1,4 +1,4 @@
-from myhdl import block, always_seq, Signal, instances, always_comb, intbv, ConcatSignal, always
+from myhdl import block, Signal, instances, always_comb, intbv, ConcatSignal, always
 
 from generator.config import Config
 from generator.cdc_utils import AsyncFifoConsumer, AsyncFifoProducer
