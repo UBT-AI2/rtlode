@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from myhdl import SignalType, Signal, instances, block, always_comb, always_seq, modbv, intbv
+from myhdl import SignalType, Signal, instances, block, always_comb, always_seq, modbv
 
 from generator.utils import clone_signal
 
@@ -66,7 +66,7 @@ def fifo(clk: SignalType, rst: SignalType, p: FifoProducer, c: FifoConsumer, buf
     @always_seq(clk.posedge, reset=rst)
     def handle_wr_addr():
         if do_write:
-            p_addr.next = intbv(p_addr + 1)[buffer_size_bits + 1:]
+            p_addr.next = p_addr + 1
 
     @always_seq(clk.posedge, reset=None)
     def handle_wr():
@@ -84,7 +84,7 @@ def fifo(clk: SignalType, rst: SignalType, p: FifoProducer, c: FifoConsumer, buf
     @always_seq(clk.posedge, reset=rst)
     def handle_rd_addr():
         if do_read:
-            c_addr.next = intbv(c_addr + 1)[buffer_size_bits + 1:]
+            c_addr.next = c_addr + 1
 
     @always_comb
     def handle_rd():

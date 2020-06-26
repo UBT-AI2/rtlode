@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from myhdl import block, always_seq, always, Signal, ResetSignal, always_comb, SignalType, instances, modbv, intbv
+from myhdl import block, always_seq, always, Signal, ResetSignal, always_comb, SignalType, instances, modbv, bin
 
 from generator.fifo import FifoProducer, FifoConsumer
 from generator.utils import clone_signal
@@ -133,7 +133,7 @@ def async_fifo(p: AsyncFifoProducer, c: AsyncFifoConsumer, buffer_size_bits=8):
     @always_comb
     def wr_pointer_next():
         if do_write:
-            p_wr_addr_next.next = intbv(p_wr_addr + 1)[buffer_size_bits + 1]
+            p_wr_addr_next.next = p_wr_addr + 1
         else:
             p_wr_addr_next.next = p_wr_addr
 
@@ -169,7 +169,7 @@ def async_fifo(p: AsyncFifoProducer, c: AsyncFifoConsumer, buffer_size_bits=8):
     @always_comb
     def rd_pointer_next():
         if do_read:
-            c_rd_addr_next.next = intbv(c_rd_addr + 1)[buffer_size_bits + 1:]
+            c_rd_addr_next.next = c_rd_addr + 1
         else:
             c_rd_addr_next.next = c_rd_addr
 
