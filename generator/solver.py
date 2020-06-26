@@ -175,7 +175,7 @@ def solver(
 
     @always_comb
     def do_data_out_driver():
-        do_data_out.next = pipe_data_out.pipe_valid and pipe_data_out.cn == pipe_data_out.n
+        do_data_out.next = pipe_data_out.pipe_valid and pipe_data_out.cn >= pipe_data_out.n
 
     y_data_store = [
         assign(clk, do_data_store, solver_input.y_start[i], solver_input_reg.y_start[i])
