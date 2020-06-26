@@ -562,35 +562,39 @@ class Stage:
 def stage_logic(clk, rst, stage, in_valid, out_busy):
     @always_seq(clk.posedge, reset=None)
     def control():
-        stage.data2out.next = False
-        stage.reg2out.next = False
-        stage.data2reg.next = False
         if rst:
             stage.busy.next = False
             stage.valid.next = False
-        elif not out_busy:
-            # Next stage not busy
-            if not stage.busy:
-                # Buffer empty
+            stage.data2out.next = False
+            stage.reg2out.next = False
+            stage.data2reg.next = False
+        else:
+            stage.data2out.next = False
+            stage.reg2out.next = False
+            stage.data2reg.next = False
+            if not out_busy:
+                # Next stage not busy
+                if not stage.busy:
+                    # Buffer empty
+                    stage.valid.next = in_valid
+                    stage.data2out.next = True
+                else:
+                    # Push buffer data out
+                    stage.valid.next = True
+                    stage.reg2out.next = True
+
+                # Consumer not busy
+                stage.busy.next = False
+            elif not stage.valid:
+                # Just pass valid signals
                 stage.valid.next = in_valid
+                stage.busy.next = False
+
                 stage.data2out.next = True
-            else:
-                # Push buffer data out
-                stage.valid.next = True
-                stage.reg2out.next = True
+            elif in_valid and not stage.busy:
+                stage.busy.next = in_valid and stage.valid
 
-            # Consumer not busy
-            stage.busy.next = False
-        elif not stage.valid:
-            # Just pass valid signals
-            stage.valid.next = in_valid
-            stage.busy.next = False
-
-            stage.data2out.next = True
-        elif in_valid and not stage.busy:
-            stage.busy.next = in_valid and stage.valid
-
-        if not stage.busy:
-            stage.data2reg.next = True
+            if not stage.busy:
+                stage.data2reg.next = True
 
     return instances()
