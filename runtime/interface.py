@@ -51,6 +51,9 @@ class Solver:
         self._output_buffer = fpga.allocate_shared_buffer(self._handle, self._buffer_size)
         self._handle.write_csr64(self._csr_addresses['output_addr'], self._output_buffer.io_address() >> 6)
 
+        self._input_buffer.fill(0)
+        self._output_buffer.fill(0)
+
         self.stop()
 
         return self
