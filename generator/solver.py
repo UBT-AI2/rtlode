@@ -101,7 +101,7 @@ def solver(
                 pipe_input_id.next = pipe_data_out.id
                 pipe_input_h.next = pipe_data_out.h
                 pipe_input_n.next = pipe_data_out.n
-                pipe_input_cn.next = pipe_data_out.cn
+                pipe_input_cn.next = pipe_data_out.cn[num.INTEGER_SIZE:]
                 pipe_input_x.next = pipe_data_out.x
                 pipe_input_valid.next = True
 
