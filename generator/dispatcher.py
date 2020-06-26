@@ -107,11 +107,11 @@ def dispatcher(config: Config, data_in: AsyncFifoConsumer, data_out: AsyncFifoPr
 
     @always_comb
     def rd_driver():
-        data_in.rd.next = rdy_signals_vec
+        data_in.rd.next = rdy_signals_vec != 0
 
     @always_comb
     def wr_driver():
-        data_out.wr.next = fin_signals_vec
+        data_out.wr.next = fin_signals_vec != 0
 
     solver_wrapper_inst = [
         solver_driver(clk, rst,
