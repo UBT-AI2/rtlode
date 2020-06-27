@@ -21,6 +21,17 @@ class TestPipe(PipeTestCase):
 
         self.run_pipe(inner_pipe, list(range(40)), [(i + 3) * i for i in range(40)])
 
+    def test_node_operator(self):
+        """
+        Testing operators of nodes.
+        """
+        def inner_pipe(data):
+            res_add = data + num.int_from_float(5)
+            res = res_add * num.int_from_float(4)
+            return res
+
+        self.run_pipe(inner_pipe, list(range(40)), [(i + 5) * 4 for i in range(40)])
+
     def test_add(self):
         """
         Testing addition.
@@ -31,6 +42,26 @@ class TestPipe(PipeTestCase):
 
         self.run_pipe(inner_pipe, list(range(40)), [i + 5 for i in range(40)])
 
+    def test_add_operator(self):
+        """
+        Testing addition operator.
+        """
+        def inner_pipe(data):
+            res = data + num.int_from_float(5)
+            return res
+
+        self.run_pipe(inner_pipe, list(range(40)), [i + 5 for i in range(40)])
+
+    def test_add_reverse_operator(self):
+        """
+        Testing addition reverse operator.
+        """
+        def inner_pipe(data):
+            res = num.int_from_float(5) + data
+            return res
+
+        self.run_pipe(inner_pipe, list(range(40)), [5 + i for i in range(40)])
+
     def test_sub(self):
         """
         Testing substraction.
@@ -40,6 +71,26 @@ class TestPipe(PipeTestCase):
             return res
 
         self.run_pipe(inner_pipe, list(range(40)), [i - 5 for i in range(40)])
+
+    def test_sub_operator(self):
+        """
+        Testing substraction operator.
+        """
+        def inner_pipe(data):
+            res = data - num.int_from_float(5)
+            return res
+
+        self.run_pipe(inner_pipe, list(range(40)), [i - 5 for i in range(40)])
+
+    def test_sub_reverse_operator(self):
+        """
+        Testing substraction reverse operator.
+        """
+        def inner_pipe(data):
+            res = num.int_from_float(5) - data
+            return res
+
+        self.run_pipe(inner_pipe, list(range(40)), [5 - i for i in range(40)])
 
     def test_negate(self):
         """
@@ -105,6 +156,26 @@ class TestPipe(PipeTestCase):
             return mul1
 
         self.run_pipe(inner_pipe, list(range(40)), [(i + 3) * i for i in range(40)])
+
+    def test_mul_operator(self):
+        """
+        Testing multiplication operator.
+        """
+        def inner_pipe(data):
+            res = data * num.int_from_float(5)
+            return res
+
+        self.run_pipe(inner_pipe, list(range(40)), [i * 5 for i in range(40)])
+
+    def test_mul_reverse_operator(self):
+        """
+        Testing mutiplication reverse operator.
+        """
+        def inner_pipe(data):
+            res = num.int_from_float(5) * data
+            return res
+
+        self.run_pipe(inner_pipe, list(range(40)), [5 * i for i in range(40)])
 
     def test_comb_node_last(self):
         """

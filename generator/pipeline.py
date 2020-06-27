@@ -92,11 +92,13 @@ class _OrderedSet:
 class _PipeSignal:
     """
     An internal signal of the pipe. Containing the signal itself but also the producers of the signal.
+    Supporting basic numeric operations by operation overloading.
     """
     signal: SignalType
     producer: ProducerNode
 
-    def __init__(self, signal: SignalType, producer: ProducerNode):
+    def __init__(self, signal: SignalType = None, producer: ProducerNode = None):
+        super().__init__()
         self.signal = signal
         self.producer = producer
 
@@ -105,6 +107,54 @@ class _PipeSignal:
 
     def get_signal(self):
         return self.signal
+
+    def set_producer(self, producer):
+        self.producer = producer
+
+    def set_signal(self, signal):
+        self.signal = signal
+
+    def __add__(self, other):
+        if not isinstance(other, (int, _PipeSignal)):
+            return NotImplemented
+
+        from generator.pipeline_elements import add
+        return add(self, other)
+
+    def __radd__(self, other):
+        if not isinstance(other, (int, _PipeSignal)):
+            return NotImplemented
+
+        from generator.pipeline_elements import add
+        return add(other, self)
+
+    def __sub__(self, other):
+        if not isinstance(other, (int, _PipeSignal)):
+            return NotImplemented
+
+        from generator.pipeline_elements import sub
+        return sub(self, other)
+
+    def __rsub__(self, other):
+        if not isinstance(other, (int, _PipeSignal)):
+            return NotImplemented
+
+        from generator.pipeline_elements import sub
+        return sub(other, self)
+
+    def __mul__(self, other):
+        if not isinstance(other, (int, _PipeSignal)):
+            return NotImplemented
+
+        from generator.pipeline_elements import mul
+        return mul(self, other)
+
+    def __rmul__(self, other):
+        if not isinstance(other, (int, _PipeSignal)):
+            return NotImplemented
+
+        from generator.pipeline_elements import mul
+        return mul(other, self)
 
 
 class Pipe:
@@ -269,18 +319,19 @@ class Pipe:
         return stage_instances
 
 
-class ProducerNode:
+class ProducerNode(_PipeSignal):
     _consumer_nodes: Set[ConsumerNode]
     _output_signals: Dict
 
     def __init__(self):
-        super().__init__()
+        super().__init__(producer=self)
         self._consumer_nodes = set()
         self._output_signals = {}
 
     def add_output(self, default=None, **kwargs):
         if default is not None:
             self._output_signals['default'] = default
+            self.set_signal(default)
 
         self._output_signals.update(kwargs)
 
@@ -308,13 +359,6 @@ class ProducerNode:
             else:
                 return _PipeSignal(signal=signal, producer=self)
         raise AttributeError()
-
-    # Be compatible to Pipe Signal
-    def get_producer(self):
-        return self
-
-    def get_signal(self):
-        return self._output_signals['default']
 
 
 class ConsumerNode:
