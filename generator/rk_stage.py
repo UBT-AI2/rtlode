@@ -3,7 +3,8 @@ from typing import List
 from myhdl import SignalType
 
 from generator import expr_parser
-from generator.pipeline_elements import mul, add, vec_mul
+from generator.pipeline_elements import mul, add
+from generator.vector_utils import vec_mul
 from utils import num
 from generator.config import StageConfig
 

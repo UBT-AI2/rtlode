@@ -1,4 +1,4 @@
-from myhdl import Signal, block, always_seq, instances, SignalType, intbv, always_comb
+from myhdl import Signal, block, always_seq, instances, intbv, always_comb
 
 from generator.pipeline import SeqNode, CombNode
 from generator.utils import clone_signal
@@ -255,6 +255,13 @@ def negate_seq(clk, stage, node_input, node_output):
 
 
 def negate(val):
+    """
+    Pipeline node which negates the given parameter.
+    The return type is int if the type of the parameter is also int.
+    Otherwise a SeqNode is returned.
+    :param val: parameter val
+    :return: int or pipeline node
+    """
     if isinstance(val, int):
         return -val
 
@@ -267,53 +274,3 @@ def negate(val):
     node.set_logic(negate_seq)
 
     return node
-
-
-def reduce_sum(vec):
-    if len(vec) == 0:
-        return 0
-    elif len(vec) == 1:
-        return vec[0]
-    else:
-        res_vec = vec.copy()
-        while len(res_vec) >= 2:
-            in_vec = res_vec
-            res_vec = []
-            while len(in_vec) >= 2:
-                res_vec.append(
-                    add(in_vec.pop(), in_vec.pop())
-                )
-            if len(in_vec) == 1:
-                res_vec.append(in_vec[0])
-        return res_vec[0]
-
-
-class UnequalVectorLength(Exception):
-    pass
-
-
-def vec_mul(vec_a, vec_b):
-    if len(vec_a) != len(vec_b):
-        raise UnequalVectorLength("len(in_a) = %d != len(in_b) = %d" % (len(vec_a), len(vec_b)))
-    n_elements = len(vec_a)
-
-    # Remove elements where one factor is 0
-    valid = [
-        (isinstance(vec_a[i], SignalType) or vec_a[i] != 0)
-        and (isinstance(vec_b[i], SignalType) or vec_b[i] != 0)
-        for i in range(n_elements)
-    ]
-    vec_a = [vec_a[i] for i in range(n_elements) if valid[i]]
-    vec_b = [vec_b[i] for i in range(n_elements) if valid[i]]
-    n_elements = len(vec_a)
-
-    if n_elements == 0:
-        return 0
-    elif n_elements == 1:
-        return mul(vec_a[0], vec_b[0])
-    else:
-        partial_results = []
-        for i in range(n_elements):
-            partial_results.append(mul(vec_a[i], vec_b[i]))
-        return reduce_sum(partial_results)
-

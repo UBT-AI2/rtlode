@@ -3,7 +3,8 @@ from myhdl import block, instances, SignalType, always, Signal, always_comb, alw
 from common import data_desc
 from generator.fifo import FifoConsumer, FifoProducer
 from generator.pipeline import PipeInput, PipeOutput, Pipe
-from generator.pipeline_elements import add, vec_mul, mul
+from generator.pipeline_elements import add, mul
+from generator.vector_utils import vec_mul
 from generator.utils import assign, assign_3
 from utils import num
 from generator.config import Config
