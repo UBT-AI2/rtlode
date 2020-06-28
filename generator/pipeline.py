@@ -18,7 +18,7 @@ An example of a simple pipeline:
         out_busy = Signal(bool(0))
 
         data_in = PipeInput(in_valid, a=in_signal)
-        add1 = add(data_in.a, num.int_from_float(3))
+        add1 = add(data_in.a, PipeConstant.from_float(3))
         mul1 = mul(add1, data_in.a)
         data_out = PipeOutput(out_busy, res=mul1)
         myhdl_pipe_instances = Pipe(data_in, data_out).create(clk, rst)
@@ -58,6 +58,10 @@ class _DynamicInterface:
                 value = value.get_signal()
             except AttributeError:
                 pass
+            try:
+                value = value.get_value()
+            except AttributeError:
+                pass
             if not isinstance(value, SignalType) and not isinstance(value, int):
                 raise NotImplementedError()
             setattr(self, key, value)
@@ -89,7 +93,73 @@ class _OrderedSet:
         return self._data.pop(index)
 
 
-class _PipeSignal:
+class PipeNumeric:
+    """
+    Class overloading the python operators with the pipe base numerical nodes.
+    """
+    def __init__(self):
+        super().__init__()
+
+    def __add__(self, other):
+        if not isinstance(other, PipeNumeric):
+            return NotImplemented
+
+        from generator.pipeline_elements import add
+        return add(self, other)
+
+    def __radd__(self, other):
+        if not isinstance(other, PipeNumeric):
+            return NotImplemented
+
+        from generator.pipeline_elements import add
+        return add(other, self)
+
+    def __sub__(self, other):
+        if not isinstance(other, PipeNumeric):
+            return NotImplemented
+
+        from generator.pipeline_elements import sub
+        return sub(self, other)
+
+    def __rsub__(self, other):
+        if not isinstance(other, PipeNumeric):
+            return NotImplemented
+
+        from generator.pipeline_elements import sub
+        return sub(other, self)
+
+    def __mul__(self, other):
+        if not isinstance(other, PipeNumeric):
+            return NotImplemented
+
+        from generator.pipeline_elements import mul
+        return mul(self, other)
+
+    def __rmul__(self, other):
+        if not isinstance(other, PipeNumeric):
+            return NotImplemented
+
+        from generator.pipeline_elements import mul
+        return mul(other, self)
+
+
+class PipeConstant(PipeNumeric):
+    value: int
+
+    def __init__(self, value):
+        super().__init__()
+        self.value = value
+
+    def get_value(self):
+        return self.value
+
+    @staticmethod
+    def from_float(float_val):
+        from utils import num
+        return PipeConstant(num.int_from_float(float_val))
+
+
+class _PipeSignal(PipeNumeric):
     """
     An internal signal of the pipe. Containing the signal itself but also the producers of the signal.
     Supporting basic numeric operations by operation overloading.
@@ -113,48 +183,6 @@ class _PipeSignal:
 
     def set_signal(self, signal):
         self.signal = signal
-
-    def __add__(self, other):
-        if not isinstance(other, (int, _PipeSignal)):
-            return NotImplemented
-
-        from generator.pipeline_elements import add
-        return add(self, other)
-
-    def __radd__(self, other):
-        if not isinstance(other, (int, _PipeSignal)):
-            return NotImplemented
-
-        from generator.pipeline_elements import add
-        return add(other, self)
-
-    def __sub__(self, other):
-        if not isinstance(other, (int, _PipeSignal)):
-            return NotImplemented
-
-        from generator.pipeline_elements import sub
-        return sub(self, other)
-
-    def __rsub__(self, other):
-        if not isinstance(other, (int, _PipeSignal)):
-            return NotImplemented
-
-        from generator.pipeline_elements import sub
-        return sub(other, self)
-
-    def __mul__(self, other):
-        if not isinstance(other, (int, _PipeSignal)):
-            return NotImplemented
-
-        from generator.pipeline_elements import mul
-        return mul(self, other)
-
-    def __rmul__(self, other):
-        if not isinstance(other, (int, _PipeSignal)):
-            return NotImplemented
-
-        from generator.pipeline_elements import mul
-        return mul(other, self)
 
 
 class Pipe:

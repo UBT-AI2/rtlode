@@ -1,6 +1,6 @@
+from generator.pipeline import PipeConstant
 from generator.pipeline_elements import add, mul, sub, negate
 from generator.tests.helper import PipeTestCase
-from utils import num
 
 
 class TestPipe(PipeTestCase):
@@ -15,7 +15,7 @@ class TestPipe(PipeTestCase):
         Basic pipeline test, testing creation and function of a simple 2 node pipeline.
         """
         def inner_pipe(data):
-            add1 = add(data, num.int_from_float(3))
+            add1 = add(data, PipeConstant.from_float(3))
             mul1 = mul(add1, data)
             return mul1
 
@@ -26,8 +26,8 @@ class TestPipe(PipeTestCase):
         Testing operators of nodes.
         """
         def inner_pipe(data):
-            res_add = data + num.int_from_float(5)
-            res = res_add * num.int_from_float(4)
+            res_add = data + PipeConstant.from_float(5)
+            res = res_add * PipeConstant.from_float(4)
             return res
 
         self.run_pipe(inner_pipe, list(range(40)), [(i + 5) * 4 for i in range(40)])
@@ -37,7 +37,7 @@ class TestPipe(PipeTestCase):
         Testing addition.
         """
         def inner_pipe(data):
-            res = add(data, num.int_from_float(5))
+            res = add(data, PipeConstant.from_float(5))
             return res
 
         self.run_pipe(inner_pipe, list(range(40)), [i + 5 for i in range(40)])
@@ -47,7 +47,7 @@ class TestPipe(PipeTestCase):
         Testing addition operator.
         """
         def inner_pipe(data):
-            res = data + num.int_from_float(5)
+            res = data + PipeConstant.from_float(5)
             return res
 
         self.run_pipe(inner_pipe, list(range(40)), [i + 5 for i in range(40)])
@@ -57,7 +57,7 @@ class TestPipe(PipeTestCase):
         Testing addition reverse operator.
         """
         def inner_pipe(data):
-            res = num.int_from_float(5) + data
+            res = PipeConstant.from_float(5) + data
             return res
 
         self.run_pipe(inner_pipe, list(range(40)), [5 + i for i in range(40)])
@@ -67,7 +67,7 @@ class TestPipe(PipeTestCase):
         Testing substraction.
         """
         def inner_pipe(data):
-            res = sub(data, num.int_from_float(5))
+            res = sub(data, PipeConstant.from_float(5))
             return res
 
         self.run_pipe(inner_pipe, list(range(40)), [i - 5 for i in range(40)])
@@ -77,7 +77,7 @@ class TestPipe(PipeTestCase):
         Testing substraction operator.
         """
         def inner_pipe(data):
-            res = data - num.int_from_float(5)
+            res = data - PipeConstant.from_float(5)
             return res
 
         self.run_pipe(inner_pipe, list(range(40)), [i - 5 for i in range(40)])
@@ -87,7 +87,7 @@ class TestPipe(PipeTestCase):
         Testing substraction reverse operator.
         """
         def inner_pipe(data):
-            res = num.int_from_float(5) - data
+            res = PipeConstant.from_float(5) - data
             return res
 
         self.run_pipe(inner_pipe, list(range(40)), [5 - i for i in range(40)])
@@ -107,7 +107,7 @@ class TestPipe(PipeTestCase):
         Testing multiplication with two constants.
         """
         def inner_pipe(data):
-            mul1 = mul(num.int_from_float(2), num.int_from_float(3))
+            mul1 = mul(PipeConstant.from_float(2), PipeConstant.from_float(3))
             add1 = add(data, mul1)
             return add1
 
@@ -118,8 +118,8 @@ class TestPipe(PipeTestCase):
         Testing multiplication with constant factor.
         """
         def inner_pipe(data):
-            mul1 = mul(data, num.int_from_float(3))
-            add1 = add(mul1, num.int_from_float(3))
+            mul1 = mul(data, PipeConstant.from_float(3))
+            add1 = add(mul1, PipeConstant.from_float(3))
             return add1
 
         self.run_pipe(inner_pipe, list(range(40)), [(i * 3) + 3 for i in range(40)])
@@ -129,8 +129,8 @@ class TestPipe(PipeTestCase):
         Testing multiplication with constant factor on base 2 greater than 1 to test the shift left implementation.
         """
         def inner_pipe(data):
-            mul1 = mul(data, num.int_from_float(2))
-            add1 = add(mul1, num.int_from_float(3))
+            mul1 = mul(data, PipeConstant.from_float(2))
+            add1 = add(mul1, PipeConstant.from_float(3))
             return add1
 
         self.run_pipe(inner_pipe, list(range(40)), [(i * 2) + 3 for i in range(40)])
@@ -140,8 +140,8 @@ class TestPipe(PipeTestCase):
         Testing multiplication with constant factor on base 2 less than 1 to test the shift right implementation.
         """
         def inner_pipe(data):
-            mul1 = mul(data, num.int_from_float(0.5))
-            add1 = add(mul1, num.int_from_float(3))
+            mul1 = mul(data, PipeConstant.from_float(0.5))
+            add1 = add(mul1, PipeConstant.from_float(3))
             return add1
 
         self.run_pipe(inner_pipe, list(range(40)), [(i * 0.5) + 3 for i in range(40)])
@@ -151,7 +151,7 @@ class TestPipe(PipeTestCase):
         Testing multiplication with constant factor on base 2 less than 1 to test the shift right implementation.
         """
         def inner_pipe(data):
-            add1 = add(data, num.int_from_float(3))
+            add1 = add(data, PipeConstant.from_float(3))
             mul1 = mul(add1, data)
             return mul1
 
@@ -162,7 +162,7 @@ class TestPipe(PipeTestCase):
         Testing multiplication operator.
         """
         def inner_pipe(data):
-            res = data * num.int_from_float(5)
+            res = data * PipeConstant.from_float(5)
             return res
 
         self.run_pipe(inner_pipe, list(range(40)), [i * 5 for i in range(40)])
@@ -172,7 +172,7 @@ class TestPipe(PipeTestCase):
         Testing mutiplication reverse operator.
         """
         def inner_pipe(data):
-            res = num.int_from_float(5) * data
+            res = PipeConstant.from_float(5) * data
             return res
 
         self.run_pipe(inner_pipe, list(range(40)), [5 * i for i in range(40)])
@@ -182,8 +182,8 @@ class TestPipe(PipeTestCase):
         Testing what happens if comb nodes is last node in pipe.
         """
         def inner_pipe(data):
-            add1 = add(data, num.int_from_float(3))
-            mul1 = mul(add1, num.int_from_float(2))
+            add1 = add(data, PipeConstant.from_float(3))
+            mul1 = mul(add1, PipeConstant.from_float(2))
             return mul1
 
         self.run_pipe(inner_pipe, list(range(40)), [(i + 3) * 2 for i in range(40)])
@@ -193,8 +193,8 @@ class TestPipe(PipeTestCase):
         Testing what happens if two comb nodes are after each other.
         """
         def inner_pipe(data):
-            mul1 = mul(data, num.int_from_float(4))
-            mul2 = mul(mul1, num.int_from_float(0.5))
+            mul1 = mul(data, PipeConstant.from_float(4))
+            mul2 = mul(mul1, PipeConstant.from_float(0.5))
             res = add(mul2, data)
             return res
 
@@ -205,7 +205,7 @@ class TestPipe(PipeTestCase):
         Testing what happens if comb nodes is the only node in pipe.
         """
         def inner_pipe(data):
-            mul1 = mul(data, num.int_from_float(2))
+            mul1 = mul(data, PipeConstant.from_float(2))
             return mul1
 
         stats = self.run_pipe(inner_pipe, list(range(40)), [i * 2 for i in range(40)])
@@ -216,9 +216,9 @@ class TestPipe(PipeTestCase):
         Testing what happens if comb nodes is the only node in pipe.
         """
         def inner_pipe(data):
-            add1 = add(data, num.int_from_float(4))
-            add2 = add(add1, num.int_from_float(2))
-            mul1 = mul(add1, num.int_from_float(2))
+            add1 = add(data, PipeConstant.from_float(4))
+            add2 = add(add1, PipeConstant.from_float(2))
+            mul1 = mul(add1, PipeConstant.from_float(2))
             return mul1
 
         stats = self.run_pipe(inner_pipe, list(range(40)), [(i + 4) * 2 for i in range(40)])
@@ -229,13 +229,13 @@ class TestPipe(PipeTestCase):
         Testing if registers are reused if two nodes need the same signal in later stage.
         """
         def inner_pipe(data):
-            add1 = add(data, num.int_from_float(1))
-            add2 = add(add1, num.int_from_float(1))
-            add3 = add(add2, num.int_from_float(1))
-            add4 = add(add3, num.int_from_float(1))
-            add5 = add(add4, num.int_from_float(1))
-            add6 = add(add5, num.int_from_float(1))
-            add7 = add(add6, num.int_from_float(1))
+            add1 = add(data, PipeConstant.from_float(1))
+            add2 = add(add1, PipeConstant.from_float(1))
+            add3 = add(add2, PipeConstant.from_float(1))
+            add4 = add(add3, PipeConstant.from_float(1))
+            add5 = add(add4, PipeConstant.from_float(1))
+            add6 = add(add5, PipeConstant.from_float(1))
+            add7 = add(add6, PipeConstant.from_float(1))
             mul1 = mul(data, add7)
             mul2 = mul(data, add6)
             res = add(mul1, mul2)

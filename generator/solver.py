@@ -2,8 +2,7 @@ from myhdl import block, instances, SignalType, always, Signal, always_comb, alw
 
 from common import data_desc
 from generator.fifo import FifoConsumer, FifoProducer
-from generator.pipeline import PipeInput, PipeOutput, Pipe
-from generator.pipeline_elements import add, mul
+from generator.pipeline import PipeInput, PipeOutput, Pipe, PipeConstant
 from generator.vector_utils import vec_mul
 from generator.utils import assign, assign_3
 from utils import num
@@ -56,24 +55,19 @@ def solver(
             stage(config.get_stage_config(si), pipe_data_in.h, pipe_data_in.x, pipe_data_in.y, v)
         )
 
-    x_n = add(pipe_data_in.x, pipe_data_in.h)
-    y_n = []
-    for i in range(config.system_size):
-        vec = vec_mul(
-            [num.int_from_float(el) for el in config.b],
+    y_n = [
+        pipe_data_in.y[i] + pipe_data_in.h * vec_mul(
+            [PipeConstant.from_float(el) for el in config.b],
             [el[i] for el in v]
-        )
-        mul_res = mul(pipe_data_in.h, vec)
-        y_n.append(add(pipe_data_in.y[i], mul_res))
-
-    cn_n = add(pipe_data_in.cn, 1)
+        ) for i in range(config.system_size)
+    ]
 
     pipe_data_out = PipeOutput(pipe_output_busy,
                                id=pipe_data_in.id,
                                h=pipe_data_in.h,
                                n=pipe_data_in.n,
-                               cn=cn_n,
-                               x=x_n,
+                               cn=pipe_data_in.cn + PipeConstant(1),
+                               x=pipe_data_in.x + pipe_data_in.h,
                                y=y_n)
     pipe = Pipe(pipe_data_in, pipe_data_out)
     print(pipe.get_stats())

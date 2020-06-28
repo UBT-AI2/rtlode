@@ -3,9 +3,8 @@ from typing import List
 from myhdl import SignalType
 
 from generator import expr_parser
-from generator.pipeline_elements import mul, add
+from generator.pipeline import PipeConstant
 from generator.vector_utils import vec_mul
-from utils import num
 from generator.config import StageConfig
 
 
@@ -32,16 +31,12 @@ def stage(
     if not config.is_explicit():
         raise MethodNotExplicit()
 
-    step = mul(num.int_from_float(config.c), h)
-    rhs_x = add(x, step)
-    rhs_y = []
-    for i in range(config.system_size):
-        vec = vec_mul(
-            [num.int_from_float(el) for el in config.a],
+    step = PipeConstant.from_float(config.c) * h
+    rhs_x = x + step
+    rhs_y = [y[i] + h * vec_mul(
+            [PipeConstant.from_float(el) for el in config.a],
             [el[i] for el in v[:config.stage_index]]
-        )
-        mul_res = mul(h, vec)
-        rhs_y.append(add(y[i], mul_res))
+        ) for i in range(config.system_size)]
 
     return [expr_parser.expr(rhs_expr, {
         'x': rhs_x,

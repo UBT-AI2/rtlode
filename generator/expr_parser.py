@@ -2,8 +2,8 @@ import typing
 
 from pyparsing import *
 
+from generator.pipeline import PipeConstant
 from generator.pipeline_elements import add, sub, mul, negate
-from utils import num
 
 
 class ExprParserException(Exception):
@@ -77,7 +77,7 @@ def _generate_logic(parse_tree, scope):
                 rhs = _generate_logic(parse_tree[0], scope)
             return mod(lhs, rhs)
     elif isinstance(parse_tree, float):
-        return num.int_from_float(parse_tree)
+        return PipeConstant.from_float(parse_tree)
     raise ExprParserException('Unknown Parse Error')
 
 

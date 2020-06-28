@@ -1,6 +1,6 @@
 from myhdl import SignalType
 
-from generator.pipeline_elements import add, mul
+from generator.pipeline import PipeConstant
 
 
 class UnequalVectorLength(Exception):
@@ -9,7 +9,7 @@ class UnequalVectorLength(Exception):
 
 def reduce_sum(vec):
     if len(vec) == 0:
-        return 0
+        return PipeConstant.from_float(0)
     elif len(vec) == 1:
         return vec[0]
     else:
@@ -19,7 +19,7 @@ def reduce_sum(vec):
             res_vec = []
             while len(in_vec) >= 2:
                 res_vec.append(
-                    add(in_vec.pop(), in_vec.pop())
+                    in_vec.pop() + in_vec.pop()
                 )
             if len(in_vec) == 1:
                 res_vec.append(in_vec[0])
@@ -42,11 +42,11 @@ def vec_mul(vec_a, vec_b):
     n_elements = len(vec_a)
 
     if n_elements == 0:
-        return 0
+        return PipeConstant.from_float(0)
     elif n_elements == 1:
-        return mul(vec_a[0], vec_b[0])
+        return vec_a[0] * vec_b[0]
     else:
         partial_results = []
         for i in range(n_elements):
-            partial_results.append(mul(vec_a[i], vec_b[i]))
+            partial_results.append(vec_a[i] * vec_b[i])
         return reduce_sum(partial_results)

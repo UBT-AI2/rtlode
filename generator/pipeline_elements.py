@@ -1,6 +1,6 @@
 from myhdl import Signal, block, always_seq, instances, intbv, always_comb
 
-from generator.pipeline import SeqNode, CombNode
+from generator.pipeline import SeqNode, CombNode, PipeConstant
 from generator.utils import clone_signal
 from utils import num
 from utils.num import FRACTION_SIZE, NONFRACTION_SIZE
@@ -78,22 +78,22 @@ def mul(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    if isinstance(a, int) and isinstance(b, int):
+    if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
         reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
-        return int(intbv(
-                        num.default(a) * num.default(b),
+        return PipeConstant(int(intbv(
+                        num.default(a.get_value()) * num.default(b.get_value()),
                         min=-reg_max,
-                        max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed())
-    elif isinstance(a, int) or isinstance(b, int):
-        if isinstance(a, int):
-            static_value = a
+                        max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()))
+    elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
+        if isinstance(a, PipeConstant):
+            static_value = a.get_value()
             dynamic_value = b
         else:
-            static_value = b
+            static_value = b.get_value()
             dynamic_value = a
 
         if static_value == 0:
-            return 0
+            return PipeConstant.from_float(0)
         elif bin(static_value).count('1') == 1:
             # This multiplication can be implemented ny shifts.
             bin_repr = bin(static_value)
@@ -166,14 +166,14 @@ def add(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    if isinstance(a, int) and isinstance(b, int):
-        return int(num.default(a) + num.default(b))
-    elif isinstance(a, int) or isinstance(b, int):
-        if isinstance(a, int):
-            static_value = a
+    if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
+        return PipeConstant(int(num.default(a.get_value()) + num.default(b.get_value())))
+    elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
+        if isinstance(a, PipeConstant):
+            static_value = a.get_value()
             dynamic_value = b
         else:
-            static_value = b
+            static_value = b.get_value()
             dynamic_value = a
 
         if static_value == 0:
@@ -215,14 +215,14 @@ def sub(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    if isinstance(a, int) and isinstance(b, int):
-        return int(num.default(a) - num.default(b))
-    elif isinstance(a, int) or isinstance(b, int):
-        if isinstance(a, int):
-            static_value = a
+    if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
+        return PipeConstant(int(num.default(a.get_value()) - num.default(b.get_value())))
+    elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
+        if isinstance(a, PipeConstant):
+            static_value = a.get_value()
             dynamic_value = b
         else:
-            static_value = b
+            static_value = b.get_value()
             dynamic_value = a
 
         if static_value == 0:
@@ -262,8 +262,8 @@ def negate(val):
     :param val: parameter val
     :return: int or pipeline node
     """
-    if isinstance(val, int):
-        return -val
+    if isinstance(val, PipeConstant):
+        return PipeConstant(-val.get_value())
 
     node = SeqNode()
 

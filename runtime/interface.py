@@ -1,7 +1,6 @@
 import math
 from typing import List, Dict
 
-import struct
 from opae import fpga
 
 from common import data_desc
