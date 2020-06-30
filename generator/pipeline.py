@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import List, Set, Dict, Iterable
 
-from myhdl import SignalType, Signal, block, instances, always_seq
+from myhdl import SignalType, Signal, block, instances, always_seq, always_comb
 
 from generator.utils import clone_signal
 
@@ -634,9 +634,6 @@ class Stage:
 def stage_logic(clk, rst, stage, in_valid, out_busy):
     @always_seq(clk.posedge, reset=None)
     def control():
-        stage.data2out.next = False
-        stage.reg2out.next = False
-        stage.data2reg.next = False
         if rst:
             stage.busy.next = False
             stage.valid.next = False
@@ -645,11 +642,9 @@ def stage_logic(clk, rst, stage, in_valid, out_busy):
             if not stage.busy:
                 # Buffer empty
                 stage.valid.next = in_valid
-                stage.data2out.next = True
             else:
                 # Push buffer data out
                 stage.valid.next = True
-                stage.reg2out.next = True
 
             # Consumer not busy
             stage.busy.next = False
@@ -658,9 +653,21 @@ def stage_logic(clk, rst, stage, in_valid, out_busy):
             stage.valid.next = in_valid
             stage.busy.next = False
 
-            stage.data2out.next = True
         elif in_valid and not stage.busy:
             stage.busy.next = in_valid and stage.valid
+
+    @always_comb
+    def flag_driver():
+        stage.data2out.next = False
+        stage.reg2out.next = False
+        stage.data2reg.next = False
+        if not out_busy:
+            if not stage.busy:
+                stage.data2out.next = True
+            else:
+                stage.reg2out.next = True
+        elif not stage.valid:
+            stage.data2out.next = True
 
         if not stage.busy:
             stage.data2reg.next = True

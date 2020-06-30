@@ -1,4 +1,4 @@
-from generator.pipeline import PipeConstant
+from generator.pipeline import PipeConstant, Register
 from generator.pipeline_elements import add, mul, sub, negate
 from generator.tests.helper import PipeTestCase
 
@@ -9,6 +9,17 @@ class TestPipe(PipeTestCase):
         - PipeOutput with multiple results from different stages
         - Pipe behaviour without any stage
     """
+
+    def test_reg(self):
+        """
+        Basic pipeline test, testing if data is correctly passed trough two registers.
+        """
+        def inner_pipe(data):
+            reg1 = Register(data)
+            reg2 = Register(reg1)
+            return reg2
+
+        self.run_pipe(inner_pipe, list(range(40)), list(range(40)))
 
     def test_simple(self):
         """
