@@ -11,6 +11,7 @@ from generator import csr
 from generator.afu import afu
 from generator.ccip import CcipTx, CcipRx, CcipC0ReqMmioHdr, CcipC0RspMemHdr
 from generator.generator import _load_config
+from generator.sim.cosim import afu_cosim
 from utils import num
 from utils.dict_update import deep_update
 
@@ -23,10 +24,10 @@ class Fim:
 
         self._mem_read_request_buffer = []
 
-        self._mem_input = bytearray(2048)
+        self._mem_input = bytearray(4096)
         self._mem_input_chunk_offset = 0
         self._mem_input_data_offset = 0
-        self._mem_output = bytearray(2048)
+        self._mem_output = bytearray(4096)
         self._mem_output_chunk_offset = 0
         self._mem_output_data_offset = 0
         self._mem_last_write_addr = 0
@@ -163,6 +164,8 @@ class Fim:
                         })
                     random.shuffle(responses)
 
+                    yield delay(random.randrange(3, 10, 1) * 45)
+
                     # Send responses
                     for resp in responses:
                         yield clk.posedge
@@ -210,7 +213,7 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
         cp2af_port = BitVector(len(CcipRx)).create_instance()
         af2cp_port = BitVector(len(CcipTx)).create_instance()
 
-        afu_inst = afu(config, clk, usr_clk, reset, cp2af_port, af2cp_port)
+        afu_inst = afu_cosim(config, clk, usr_clk, reset, cp2af_port, af2cp_port)
 
         fim = Fim(config)
         fim_inst = fim.instance(clk, cp2af_port, af2cp_port)
@@ -222,10 +225,10 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
             """
             clk.next = not clk
 
-        @always(delay(23))
+        @always(delay(20))
         def usr_clk_driver():
             """
-            Rising usr_clk edge every 46 steps.
+            Rising usr_clk edge every 40 steps.
             """
             usr_clk.next = not usr_clk
 
@@ -241,23 +244,15 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
         @instance
         def runtime():
             yield delay(200)
-            fim.queue_csr_write(csr.csr_addresses['buffer_size'], 1)
+            fim.queue_csr_write(csr.csr_addresses['buffer_size'], 15)
             yield delay(20)
-            fim.add_input(0, [2, 1], 0.1, 100)
-            fim.add_input(0, [2, 1], 0.1, 100)
-            fim.add_input(0, [2, 1], 0.1, 100)
-            fim.add_input(0, [2, 1], 0.1, 100)
-            fim.add_input(0, [2, 1], 0.1, 100)
-            fim.add_input(0, [2, 1], 0.1, 100)
+            for i in range(100):
+                fim.add_input(0, [2, 1], 0.1, 100)
             yield delay(40)
             fim.queue_csr_write(csr.csr_addresses['enb'], 1)
             yield delay(1000000)
-            print(fim.get_output())
-            print(fim.get_output())
-            print(fim.get_output())
-            print(fim.get_output())
-            print(fim.get_output())
-            print(fim.get_output())
+            for i in range(107):
+                print(fim.get_output())
 
         return instances()
 
