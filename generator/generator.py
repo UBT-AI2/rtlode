@@ -153,18 +153,27 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
         def usr_clk_driver():
             usr_clk.next = not usr_clk
 
+        awaiting_ids = {1: False}
+        input_finished = Signal(bool(0))
+
         @instance
         def p_write():
+            yield delay(400)
+            in_fifo_p.wr.next = True
             while True:
                 yield clk.posedge
-                in_fifo_p.wr.next = True
                 if in_fifo_p.wr and not in_fifo_p.full:
-                    in_fifo_p.data.next = create_input_data(
-                        config_dict['problem']['x'],
-                        config_dict['problem']['y'],
-                        config_dict['problem']['h'],
-                        config_dict['problem']['n']
-                    )
+                    if len(awaiting_ids) < nbr_datasets:
+                        awaiting_ids[len(awaiting_ids) + 1] = False
+                        in_fifo_p.data.next = create_input_data(
+                            config_dict['problem']['x'],
+                            config_dict['problem']['y'],
+                            config_dict['problem']['h'],
+                            config_dict['problem']['n']
+                        )
+                    else:
+                        in_fifo_p.wr.next = False
+                        input_finished.next = True
 
         clks = 0
         usr_clks = 0
@@ -175,23 +184,38 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
             usr_clks = usr_clks + 1
 
         @always_seq(out_fifo_c.clk.posedge, reset=None)
-        def c_read():
+        def clk_counter():
             nonlocal clks
             clks = clks + 1
-            out_fifo_c.rd.next = True
-            if out_fifo_c.rd and not out_fifo_c.empty:
-                y = []
-                for el in parsed_output_data.y:
-                    y.append(num.to_float(el))
 
-                print("Out: %r" % {
-                    'x': num.to_float(parsed_output_data.x),
-                    'y': y,
-                    'id': parsed_output_data.id
-                })
-                if parsed_output_data.id == nbr_datasets:
-                    print("Finished after %i pclk cycles and %i usr_clk cycles." % (clks, usr_clks))
-                    raise StopSimulation()
+        @instance
+        def c_read():
+            while True:
+                for _ in range(20):
+                    yield out_fifo_c.clk.posedge
+                out_fifo_c.rd.next = True
+                yield out_fifo_c.clk.posedge
+                if out_fifo_c.rd and not out_fifo_c.empty:
+                    y = []
+                    for el in parsed_output_data.y:
+                        y.append(num.to_float(el))
+
+                    print("Out: %r" % {
+                        'x': num.to_float(parsed_output_data.x),
+                        'y': y,
+                        'id': parsed_output_data.id
+                    })
+
+                    pack_id = int(parsed_output_data.id)
+                    assert pack_id in awaiting_ids
+                    assert not awaiting_ids[pack_id]
+                    awaiting_ids[pack_id] = True
+
+                    if input_finished and all(awaiting_ids.values()):
+                        print("Finished after %i pclk cycles and %i usr_clk cycles. Received %d packets."
+                              % (clks, usr_clks, len(awaiting_ids)))
+                        raise StopSimulation()
+                out_fifo_c.rd.next = False
 
         return instances()
 
