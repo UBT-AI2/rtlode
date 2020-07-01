@@ -241,8 +241,8 @@ def solver(
     do_pipe_output_reg_to_solver_output = Signal(bool(0))
     do_pipe_output_to_solver_output_reg = Signal(bool(0))
     do_cycle_input_reg_to_cycle_input = Signal(bool(0))
-    do_pipe_output_reg_to_cycle_input = Signal(bool(0))
-    do_pipe_output_reg_to_cycle_input_reg = Signal(bool(0))
+    do_pipe_output_to_cycle_input = Signal(bool(0))
+    do_pipe_output_to_cycle_input_reg = Signal(bool(0))
 
     @always_comb
     def output_state_driver():
@@ -262,8 +262,8 @@ def solver(
                 do_pipe_output_to_solver_output_reg.next = True
 
         do_cycle_input_reg_to_cycle_input.next = False
-        do_pipe_output_reg_to_cycle_input.next = False
-        do_pipe_output_reg_to_cycle_input_reg.next = False
+        do_pipe_output_to_cycle_input.next = False
+        do_pipe_output_to_cycle_input_reg.next = False
 
         if not cycle_p.full:
             if cycle_input_reg_filled:
@@ -272,11 +272,11 @@ def solver(
             elif not pipe_output_busy and pipe_data_out.pipe_valid \
                     and pipe_data_out.cn < pipe_data_out.n:
                 # Directly pass
-                do_pipe_output_reg_to_cycle_input.next = True
+                do_pipe_output_to_cycle_input.next = True
         else:
             if not pipe_output_busy and pipe_data_out.pipe_valid and pipe_data_out.cn < pipe_data_out.n:
                 # Save to reg
-                do_pipe_output_reg_to_cycle_input_reg.next = True
+                do_pipe_output_to_cycle_input_reg.next = True
 
     @always_comb
     def pipe_output_busy_driver():
@@ -324,13 +324,13 @@ def solver(
     y_cycle_in = [
         assign_2(clk,
                  do_cycle_input_reg_to_cycle_input, cycle_input_reg.y[i],
-                 do_pipe_output_reg_to_cycle_input, pipe_data_out.y[i],
+                 do_pipe_output_to_cycle_input, pipe_data_out.y[i],
                  cycle_input.y[i])
         for i in range(config.system_size)
     ]
 
     y_cycle_store = [
-        assign(clk, do_pipe_output_reg_to_cycle_input_reg, pipe_data_out.y[i], cycle_input_reg.y[i])
+        assign(clk, do_pipe_output_to_cycle_input_reg, pipe_data_out.y[i], cycle_input_reg.y[i])
         for i in range(config.system_size)
     ]
 

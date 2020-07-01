@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from myhdl import SignalType, Signal, instances, block, always_comb, always_seq, modbv
+from myhdl import SignalType, Signal, instances, block, always_comb, always_seq, modbv, always
 
 from generator.utils import clone_signal
 
@@ -49,45 +49,65 @@ def fifo(clk: SignalType, rst: SignalType, p: FifoProducer, c: FifoConsumer, buf
     buffer = [clone_signal(p.data) for _ in range(buffer_size)]
 
     p_addr = Signal(modbv(0, min=0, max=addr_max))
+    p_addr_next = Signal(modbv(0, min=0, max=addr_max))
     c_addr = Signal(modbv(0, min=0, max=addr_max))
+    c_addr_next = Signal(modbv(0, min=0, max=addr_max))
 
     do_write = Signal(bool(0))
     do_read = Signal(bool(0))
 
-    @always_comb
+    @always(clk.posedge)
     def check_full():
-        p.full.next = p_addr[:buffer_size_bits] != c_addr[:buffer_size_bits]\
-                      and p_addr[buffer_size_bits:] == c_addr[buffer_size_bits:]
+        p.full.next = p_addr_next[:buffer_size_bits] != c_addr[:buffer_size_bits]\
+                      and p_addr_next[buffer_size_bits:] == c_addr[buffer_size_bits:]
 
     @always_comb
     def handle_do_wr():
         do_write.next = p.wr and not p.full
 
-    @always_seq(clk.posedge, reset=rst)
-    def handle_wr_addr():
+    @always_comb
+    def handle_wr_addr_next():
         if do_write:
-            p_addr.next = p_addr + 1
+            p_addr_next.next = p_addr + 1
+        else:
+            p_addr_next.next = p_addr
 
-    @always_seq(clk.posedge, reset=None)
+    @always(clk.posedge)
+    def handle_wr_addr():
+        if rst:
+            p_addr.next = 0
+        else:
+            p_addr.next = p_addr_next
+
+    @always(clk.posedge)
     def handle_wr():
         if do_write:
             buffer[p_addr[buffer_size_bits:0]].next = p.data
 
-    @always_comb
+    @always(clk.posedge)
     def check_empty():
-        c.empty.next = p_addr == c_addr
+        c.empty.next = p_addr == c_addr_next
 
     @always_comb
     def handle_do_rd():
         do_read.next = c.rd and not c.empty
 
-    @always_seq(clk.posedge, reset=rst)
-    def handle_rd_addr():
-        if do_read:
-            c_addr.next = c_addr + 1
-
     @always_comb
+    def handle_rd_addr_next():
+        if do_read:
+            c_addr_next.next = c_addr + 1
+        else:
+            c_addr_next.next = c_addr
+
+    @always(clk.posedge)
+    def handle_rd_addr():
+        if rst:
+            c_addr.next = 0
+        else:
+            c_addr.next = c_addr_next
+
+    @always(clk.posedge)
     def handle_rd():
-        c.data.next = buffer[c_addr[buffer_size_bits:0]]
+        c.data.next = buffer[c_addr_next[buffer_size_bits:0]]
 
     return instances()
