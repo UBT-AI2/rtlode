@@ -2,8 +2,8 @@ import typing
 
 from pyparsing import *
 
-from generator.pipeline import PipeConstant
-from generator.pipeline_elements import add, sub, mul, negate
+from framework.pipeline import PipeConstant
+from framework.pipeline_elements import add, sub, mul, negate
 
 
 class ExprParserException(Exception):

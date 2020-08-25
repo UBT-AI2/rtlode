@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from myhdl import block, Signal, ResetSignal, always, delay, StopSimulation, instances
 
-from generator.pipeline import PipeInput, PipeOutput, Pipe
+from framework.pipeline import PipeInput, PipeOutput, Pipe
 from utils import num
 
 

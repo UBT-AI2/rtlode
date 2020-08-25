@@ -3,8 +3,8 @@ from myhdl import block, instances, SignalType, always, Signal, always_comb, alw
 from framework import data_desc
 from framework.packed_struct import StructDescription, StructDescriptionMetaclass, List, BitVector
 from generator.fifo import FifoConsumer, FifoProducer, fifo
-from generator.pipeline import PipeInput, PipeOutput, Pipe, PipeConstant
-from generator.vector_utils import vec_mul
+from framework.pipeline import PipeInput, PipeOutput, Pipe, PipeConstant
+from framework.vector_utils import vec_mul
 from generator.utils import assign, assign_3, assign_2
 from utils import num
 from generator.config import Config

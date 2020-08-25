@@ -1,6 +1,6 @@
 from myhdl import Signal, block, always_seq, instances, intbv, always_comb
 
-from generator.pipeline import SeqNode, CombNode, PipeConstant
+from framework.pipeline import SeqNode, CombNode, PipeConstant
 from generator.utils import clone_signal
 from utils import num
 from utils.num import FRACTION_SIZE, NONFRACTION_SIZE

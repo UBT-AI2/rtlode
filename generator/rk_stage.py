@@ -2,9 +2,9 @@ from typing import List
 
 from myhdl import SignalType
 
-from generator import expr_parser
-from generator.pipeline import PipeConstant
-from generator.vector_utils import vec_mul
+from framework import expr_parser
+from framework.pipeline import PipeConstant
+from framework.vector_utils import vec_mul
 from generator.config import StageConfig
 
 

@@ -1,6 +1,6 @@
-from generator.pipeline import PipeConstant
-from generator.pipeline_elements import add, mul
-from generator.vector_utils import UnequalVectorLength, vec_mul, reduce_sum
+from framework.pipeline import PipeConstant
+from framework.pipeline_elements import add, mul
+from framework.vector_utils import UnequalVectorLength, vec_mul, reduce_sum
 from generator.tests.helper import PipeTestCase
 
 

@@ -104,42 +104,42 @@ class PipeNumeric:
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
-        from generator.pipeline_elements import add
+        from framework.pipeline_elements import add
         return add(self, other)
 
     def __radd__(self, other):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
-        from generator.pipeline_elements import add
+        from framework.pipeline_elements import add
         return add(other, self)
 
     def __sub__(self, other):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
-        from generator.pipeline_elements import sub
+        from framework.pipeline_elements import sub
         return sub(self, other)
 
     def __rsub__(self, other):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
-        from generator.pipeline_elements import sub
+        from framework.pipeline_elements import sub
         return sub(other, self)
 
     def __mul__(self, other):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
-        from generator.pipeline_elements import mul
+        from framework.pipeline_elements import mul
         return mul(self, other)
 
     def __rmul__(self, other):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
-        from generator.pipeline_elements import mul
+        from framework.pipeline_elements import mul
         return mul(other, self)
 
 

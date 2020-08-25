@@ -1,4 +1,4 @@
-from generator.expr_parser import expr
+from framework.expr_parser import expr
 from generator.tests.helper import PipeTestCase
 from utils import num
 

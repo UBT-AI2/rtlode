@@ -4,8 +4,6 @@ from myhdl import block, always_seq, always, Signal, ResetSignal, always_comb, S
 from generator.fifo import FifoProducer, FifoConsumer
 from generator.utils import clone_signal
 
-# TODO Add missing unit tests
-
 
 @block
 def assign(clk, rst, out_val, in_val):

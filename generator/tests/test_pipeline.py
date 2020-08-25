@@ -1,5 +1,5 @@
-from generator.pipeline import PipeConstant, Register
-from generator.pipeline_elements import add, mul, sub, negate
+from framework.pipeline import PipeConstant, Register
+from framework.pipeline_elements import add, mul, sub, negate
 from generator.tests.helper import PipeTestCase
 
 

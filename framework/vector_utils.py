@@ -1,6 +1,6 @@
 from myhdl import SignalType
 
-from generator.pipeline import PipeConstant
+from framework.pipeline import PipeConstant
 
 
 class UnequalVectorLength(Exception):
