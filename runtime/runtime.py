@@ -59,6 +59,8 @@ def run(slv_path: str, runtime_config=None):
         solver.stop()
         print('Solver finished...')
         res = solver.fetch_output()
+        while res['id'] != input_id:
+            res = solver.fetch_output()
     return res
 
 
