@@ -31,8 +31,7 @@ def stage(
     if not config.is_explicit():
         raise MethodNotExplicit()
 
-    step = PipeConstant.from_float(config.c) * h
-    rhs_x = x + step
+    rhs_x = x + PipeConstant.from_float(config.c) * h
     rhs_y = [y[i] + h * vec_mul(
             [PipeConstant.from_float(el) for el in config.a],
             [el[i] for el in v[:config.stage_index]]

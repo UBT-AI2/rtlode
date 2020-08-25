@@ -247,7 +247,12 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
             fim.queue_csr_write(csr.csr_addresses['buffer_size'], 15)
             yield delay(20)
             for i in range(100):
-                fim.add_input(0, [2, 1], 0.1, 100)
+                fim.add_input(
+                    config_dict['problem']['x'],
+                    config_dict['problem']['y'],
+                    config_dict['problem']['h'],
+                    config_dict['problem']['n']
+                )
             yield delay(40)
             fim.queue_csr_write(csr.csr_addresses['enb'], 1)
             yield delay(1000000)
