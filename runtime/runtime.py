@@ -19,7 +19,7 @@ def _load_bitstream(gbs_path: str):
         device.reconfigure(0, fd)
 
 
-def run(slv_path: str, runtime_config=None, amount_data=1000):
+def run(slv_path: str, runtime_config=None):
     """
     Loads and run a given solver.
     :return:
@@ -40,15 +40,56 @@ def run(slv_path: str, runtime_config=None, amount_data=1000):
     print('Aquiring ownership of afu...')
     with Solver(config, 2097152) as solver:
         print('Preparing input...')
-        nbr_inputs = 0
-        while nbr_inputs < amount_data and not solver.input_full():
+        if solver.input_full():
+            raise Exception('Input full.')
+        else:
             input_id = solver.add_input(
                 config['problem']['x'],
                 config['problem']['y'],
                 config['problem']['h'],
                 config['problem']['n']
             )
-            print('  Added input: %r' % input_id)
+
+        print('Starting solver...')
+
+        while not solver.fin:
+            pass
+
+        solver.stop()
+        print('Solver finished...')
+        res = solver.fetch_output()
+    return res
+
+
+def benchmark(slv_path: str, runtime_config=None, amount_data=1000):
+    """
+    Loads and benchmark a given solver.
+    :return:
+    """
+    runtime_path = os.path.dirname(os.path.realpath(__file__))
+    gbs_path = os.path.join(runtime_path, 'solver.gbs')
+    config = slv.unpack(slv_path, gbs_path)
+
+    # Patch loaded configs with runtime configuration
+    if runtime_config is not None:
+        deep_update(config, runtime_config)
+
+    # Load bitstream on FPGA
+    print('Loading bitstream on fpga...')
+    _load_bitstream(gbs_path)
+
+    # Access AFU (get Interface Object)
+    print('Aquiring ownership of afu...')
+    with Solver(config, 2097152) as solver:
+        print('Preparing input...')
+        nbr_inputs = 0
+        while nbr_inputs < amount_data and not solver.input_full():
+            solver.add_input(
+                config['problem']['x'],
+                config['problem']['y'],
+                config['problem']['h'],
+                config['problem']['n']
+            )
             nbr_inputs += 1
 
         print('Starting solver...')
@@ -60,9 +101,5 @@ def run(slv_path: str, runtime_config=None, amount_data=1000):
 
         timing_end = time.time()
         solver.stop()
-        print('Solver finished in: %s' % (timing_end - timing_start))
-
-        for i in range(nbr_inputs):
-            data = solver.fetch_output()
-            if nbr_inputs - i < 20:
-                print('Res: %r' % data)
+        print('Solver finished...')
+    return timing_end - timing_start
