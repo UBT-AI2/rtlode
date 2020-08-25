@@ -8,13 +8,13 @@ from typing import List
 import yaml
 from myhdl import Signal, ResetSignal, instance, delay, always, always_seq, instances, block, StopSimulation
 
-from common import data_desc
+from framework import data_desc
 from generator.ccip import CcipRx, CcipTx
 from generator.config import Config
 from generator.afu import afu
 from generator.cdc_utils import AsyncFifoProducer, AsyncFifoConsumer, async_fifo
 from generator.csr import csr_addresses
-from common.packed_struct import BitVector
+from framework.packed_struct import BitVector
 from generator.dispatcher import dispatcher
 from generator.sim.cosim import dispatcher_cosim
 from utils import slv, num

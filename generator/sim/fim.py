@@ -3,10 +3,10 @@ from typing import List
 
 from myhdl import block, Signal, ResetSignal, always, delay, instance, SignalType, always_seq, always_comb, instances
 
-from common import data_desc
-from common.data_desc import unpack_output_data
+from framework import data_desc
+from framework.data_desc import unpack_output_data
 from generator.config import Config
-from common.packed_struct import BitVector
+from framework.packed_struct import BitVector
 from generator import csr
 from generator.afu import afu
 from generator.ccip import CcipTx, CcipRx, CcipC0ReqMmioHdr, CcipC0RspMemHdr

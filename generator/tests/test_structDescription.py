@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from myhdl import intbv, Signal
 
-from common.packed_struct import StructDescription, BitVector, List
+from framework.packed_struct import StructDescription, BitVector, List
 
 
 class TestA(StructDescription):

@@ -1,7 +1,7 @@
 from bitarray import bitarray
 from myhdl import intbv
 
-from common.packed_struct import StructDescription, BitVector, List, StructDescriptionMetaclass
+from framework.packed_struct import StructDescription, BitVector, List, StructDescriptionMetaclass
 from utils import num
 
 

@@ -1,7 +1,7 @@
 from myhdl import block, instances, SignalType, always, Signal, always_comb, always_seq
 
-from common import data_desc
-from common.packed_struct import StructDescription, StructDescriptionMetaclass, List, BitVector
+from framework import data_desc
+from framework.packed_struct import StructDescription, StructDescriptionMetaclass, List, BitVector
 from generator.fifo import FifoConsumer, FifoProducer, fifo
 from generator.pipeline import PipeInput, PipeOutput, Pipe, PipeConstant
 from generator.vector_utils import vec_mul

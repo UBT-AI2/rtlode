@@ -6,8 +6,8 @@ from generator.ccip import CcipRx, CcipTx
 from generator.config import Config
 from generator.dispatcher import dispatcher
 from generator.hram import hram_handler
-from common.data_desc import get_input_desc, get_output_desc
-from common.packed_struct import BitVector
+from framework.data_desc import get_input_desc, get_output_desc
+from framework.packed_struct import BitVector
 
 
 @block

@@ -1,7 +1,7 @@
 from myhdl import block, always_seq, Signal, instances, ConcatSignal, enum, ResetSignal, always_comb
 
-from common.data_desc import get_input_desc, get_output_desc
-from common.packed_struct import BitVector
+from framework.data_desc import get_input_desc, get_output_desc
+from framework.packed_struct import BitVector
 from generator.ccip import CcipClData
 from generator.cdc_utils import AsyncFifoProducer, AsyncFifoConsumer
 from generator.csr import CsrSignals

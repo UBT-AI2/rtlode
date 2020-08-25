@@ -3,7 +3,7 @@ from typing import List, Dict
 
 from opae import fpga
 
-from common import data_desc
+from framework import data_desc
 from utils import num
 
 CHUNK_SIZE = 256
