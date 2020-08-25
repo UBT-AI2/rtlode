@@ -52,8 +52,6 @@ The most commonly used git commands are:
         parser.add_argument('--runtime_config', help='overwrites the default config')
         args = parser.parse_args(sys.argv[2:])
 
-        print('Running git fetch, repository=%s' % args.repository)
-
         from runtime import runtime
         for adata in [1, 10, 100, 1000, 10000]:
             timing = runtime.benchmark(args.solver, args.runtime_config, amount_data=adata)
