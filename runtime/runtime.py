@@ -51,6 +51,7 @@ def run(slv_path: str, runtime_config=None):
             )
 
         print('Starting solver...')
+        solver.start()
 
         while not solver.fin:
             pass
