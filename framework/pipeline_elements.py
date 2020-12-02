@@ -3,7 +3,6 @@ from myhdl import Signal, block, always_seq, instances, intbv, always_comb
 from framework.pipeline import SeqNode, CombNode, PipeConstant
 from generator.utils import clone_signal
 from utils import num
-from utils.num import FRACTION_SIZE, NONFRACTION_SIZE
 
 
 @block
@@ -26,7 +25,8 @@ def mul_by_shift_right(node_input, node_output):
 
 @block
 def mul_dsp_c(clk, stage, node_input, node_output):
-    reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
+    num_factory = num.get_default_factory()
+    reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
     reg_data = clone_signal(out)
 
@@ -41,14 +41,16 @@ def mul_dsp_c(clk, stage, node_input, node_output):
 
     @always_comb
     def resize():
-        node_output.default.next = out[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+        node_output.default.next = \
+            out[1 + num_factory.nonfraction_bits + 2 * num_factory.fraction_bits:num_factory.fraction_bits].signed()
 
     return instances()
 
 
 @block
 def mul_dsp(clk, stage, node_input, node_output):
-    reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
+    num_factory = num.get_default_factory()
+    reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
     reg_data = clone_signal(out)
 
@@ -63,7 +65,8 @@ def mul_dsp(clk, stage, node_input, node_output):
 
     @always_comb
     def resize():
-        node_output.default.next = out[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()
+        node_output.default.next = \
+            out[1 + num_factory.nonfraction_bits + 2 * num_factory.fraction_bits:num_factory.fraction_bits].signed()
 
     return instances()
 
@@ -78,12 +81,14 @@ def mul(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
+    num_factory = num.get_default_factory()
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
-        reg_max = 2 ** (NONFRACTION_SIZE + 2 * FRACTION_SIZE)
+        reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
         return PipeConstant(int(intbv(
-                        num.default(a.get_value()) * num.default(b.get_value()),
-                        min=-reg_max,
-                        max=reg_max)[1 + NONFRACTION_SIZE + 2 * FRACTION_SIZE:FRACTION_SIZE].signed()))
+            num_factory.create_constant(a.get_value()) * num_factory.create_constant(b.get_value()),
+            min=-reg_max,
+            max=reg_max
+        )[1 + num_factory.nonfraction_bits + 2 * num_factory.fraction_bits:num_factory.fraction_bits].signed()))
     elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
         if isinstance(a, PipeConstant):
             static_value = a.get_value()
@@ -97,7 +102,7 @@ def mul(a, b):
         elif bin(static_value).count('1') == 1:
             # This multiplication can be implemented ny shifts.
             bin_repr = bin(static_value)
-            shift_by = len(bin_repr) - 1 - bin_repr.index('1') - FRACTION_SIZE
+            shift_by = len(bin_repr) - 1 - bin_repr.index('1') - num_factory.fraction_bits
             print('Implemented multiplication as shift by: ', shift_by)
             if shift_by == 0:
                 # Just return the dynamic_value
@@ -105,7 +110,7 @@ def mul(a, b):
 
             node = CombNode()
             node.add_inputs(value=dynamic_value)
-            res = Signal(num.default())
+            res = Signal(num_factory.create())
             node.add_output(res)
             node.set_name('mul_by_shift')
 
@@ -123,7 +128,7 @@ def mul(a, b):
             node = SeqNode()
 
             node.add_inputs(dynamic_value=dynamic_value, static_value=static_value)
-            res = Signal(num.default())
+            res = Signal(num_factory.create())
             node.add_output(res)
             node.set_name('mul')
 
@@ -133,7 +138,7 @@ def mul(a, b):
         node = SeqNode()
 
         node.add_inputs(a=a, b=b)
-        res = Signal(num.default())
+        res = Signal(num_factory.create())
         node.add_output(res)
         node.set_name('mul')
 
@@ -153,6 +158,7 @@ def add_seq(clk, stage, node_input, node_output):
             node_output.default.next = reg_data
         if stage.data2reg:
             reg_data.next = node_input.a + node_input.b
+
     return instances()
 
 
@@ -166,8 +172,13 @@ def add(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
+    num_factory = num.get_default_factory()
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
-        return PipeConstant(int(num.default(a.get_value()) + num.default(b.get_value())))
+        return PipeConstant(
+            int(
+                num_factory.create_from_constant(a.get_value()) + num_factory.create_from_constant(b.get_value())
+            )
+        )
     elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
         if isinstance(a, PipeConstant):
             static_value = a.get_value()
@@ -182,7 +193,7 @@ def add(a, b):
     node = SeqNode()
 
     node.add_inputs(a=a, b=b)
-    res = Signal(num.default())
+    res = Signal(num_factory.create())
     node.add_output(res)
     node.set_name('add')
     node.set_logic(add_seq)
@@ -202,6 +213,7 @@ def sub_seq(clk, stage, node_input, node_output):
             node_output.default.next = reg_data
         if stage.data2reg:
             reg_data.next = node_input.a - node_input.b
+
     return instances()
 
 
@@ -215,8 +227,13 @@ def sub(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
+    num_factory = num.get_default_factory()
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
-        return PipeConstant(int(num.default(a.get_value()) - num.default(b.get_value())))
+        return PipeConstant(
+            int(
+                num_factory.create_from_constant(a.get_value()) - num_factory.create_from_constant(b.get_value())
+            )
+        )
     elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
         if isinstance(a, PipeConstant):
             static_value = a.get_value()
@@ -231,7 +248,7 @@ def sub(a, b):
     node = SeqNode()
 
     node.add_inputs(a=a, b=b)
-    res = Signal(num.default())
+    res = Signal(num_factory.create())
     node.add_output(res)
     node.set_name('sub')
     node.set_logic(sub_seq)
@@ -251,6 +268,7 @@ def negate_seq(clk, stage, node_input, node_output):
             node_output.default.next = reg_data
         if stage.data2reg:
             reg_data.next = -node_input.val
+
     return instances()
 
 
@@ -268,7 +286,7 @@ def negate(val):
     node = SeqNode()
 
     node.add_inputs(val=val)
-    res = Signal(num.default())
+    res = Signal(num.get_default_factory().create())
     node.add_output(res)
     node.set_name('negate')
     node.set_logic(negate_seq)

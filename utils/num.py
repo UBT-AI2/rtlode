@@ -1,64 +1,161 @@
-from myhdl import intbv, modbv, SignalType
+from enum import Enum
+from typing import Union
 
-INTEGER_SIZE = 32
-
-# Define globals at module level
-NONFRACTION_SIZE = None
-FRACTION_SIZE = None
-
-TOTAL_SIZE = None
-MAX_VALUE = None
-MIN_VALUE = None
+from myhdl import intbv
 
 
-def from_config(numeric_cfg: dict):
-    global FRACTION_SIZE, NONFRACTION_SIZE
-    FRACTION_SIZE = numeric_cfg.get('fixed_point_fraction_size', 37)
-    NONFRACTION_SIZE = numeric_cfg.get('fixed_point_nonfraction_size', 16)
-    # Recalculate dependent values
-    global TOTAL_SIZE, MAX_VALUE, MIN_VALUE
-    TOTAL_SIZE = 1 + NONFRACTION_SIZE + FRACTION_SIZE
-    MAX_VALUE = 2 ** (NONFRACTION_SIZE + FRACTION_SIZE)
-    MIN_VALUE = - MAX_VALUE
+class NumberFactory:
+    def __init__(self, nbr_bits):
+        self.nbr_bits = nbr_bits
+
+    def create(self, val=0):
+        return self.create_from_constant(self.create_constant(val))
+
+    def create_from_constant(self, const_val):
+        raise NotImplementedError
+
+    def create_constant(self, val):
+        raise NotImplementedError
+
+    def value_of(self, val):
+        raise NotImplementedError
+
+    @staticmethod
+    def from_config(numeric_cfg: dict):
+        numeric_type = numeric_cfg.get('type', 'fixed')
+
+        if numeric_type == 'fixed':
+            SignedFixedNumberFactory.from_config(numeric_cfg)
+        elif numeric_type == 'floating':
+            FloatingNumberFactory.from_config(numeric_cfg)
+        else:
+            raise NotImplementedError('Unknwown numeric_type specified in config.')
 
 
-# Initialize globals
-from_config({})
+class BoolNumberFactory(NumberFactory):
+    def __init__(self):
+        super().__init__(1)
+
+    def create_from_constant(self, const_val):
+        return bool(const_val)
+
+    def create_constant(self, val):
+        return bool(val)
+
+    def value_of(self, val):
+        return bool(val)
+
+    @staticmethod
+    def from_config(numeric_cfg: dict):
+        raise NotImplementedError()
 
 
-def integer(val=0, max=2 ** INTEGER_SIZE):
-    return intbv(val, min=0, max=max)
+class IntegerNumberFactory(NumberFactory):
+    def create_from_constant(self, const_val):
+        return intbv(const_val, min=0, max=2 ** self.nbr_bits)
+
+    def create_constant(self, val):
+        return int(val)
+
+    def value_of(self, val):
+        return int(val)
+
+    @staticmethod
+    def from_config(numeric_cfg: dict):
+        raise NotImplementedError()
 
 
-bool = bool
+class SignedFixedNumberFactory(NumberFactory):
+    nonfraction_bits = None
+    fraction_bits = None
+
+    def __init__(self, fraction_size, nonfraction_size):
+        self.fraction_bits = fraction_size
+        self.nonfraction_bits = nonfraction_size
+        super().__init__(1 + self.nonfraction_bits + self.fraction_bits)
+
+    def create_from_constant(self, const_val):
+        max_value = 2 ** (self.nonfraction_bits + self.fraction_bits)
+        return intbv(const_val, min=-max_value, max=max_value)
+
+    def create_constant(self, val):
+        return int(round(val * 2 ** self.fraction_bits))
+
+    def value_of(self, val):
+        if val < 0:
+            return -(float(-val) / 2 ** self.fraction_bits)
+        else:
+            return float(val) / 2 ** self.fraction_bits
+
+    @staticmethod
+    def from_config(numeric_cfg: dict):
+        fraction_size = numeric_cfg.get('fixed_point_fraction_size', 37)
+        nonfraction_size = numeric_cfg.get('fixed_point_nonfraction_size', 16)
+        return SignedFixedNumberFactory(fraction_size, nonfraction_size)
 
 
-def default(val=0):
-    return intbv(val, min=MIN_VALUE, max=MAX_VALUE)
+class FloatingPrecission(Enum):
+    SINGLE = 32
+    DOUBLE = 64
 
 
-def same_as(signal: SignalType, val=0):
-    if isinstance(signal.val, modbv):
-        return modbv(val, min=signal.min, max=signal.max)
-    elif isinstance(signal.val, intbv):
-        return intbv(val, min=signal.min, max=signal.max)
-    else:
-        raise NotImplemented()
+class FloatingNumberFactory(NumberFactory):
+    def __init__(self, precission: Union[FloatingPrecission, str]):
+        if isinstance(precission, str):
+            precission = FloatingPrecission[precission.upper()]
+        super().__init__(precission.value)
+
+    def create_from_constant(self, const_val):
+        return intbv(const_val, min=0, max=2 ** self.nbr_bits)
+
+    def create_constant(self, val):
+        # TODO
+        raise NotImplementedError
+
+    def value_of(self, val):
+        # TODO
+        raise NotImplementedError
+
+    @staticmethod
+    def from_config(numeric_cfg: dict):
+        precission = FloatingPrecission[
+            numeric_cfg.get('floating_precission', 'double').upper()
+        ]
+        return FloatingNumberFactory(precission)
 
 
-def int_from_float(float_val):
-    return int(round(float_val * 2 ** FRACTION_SIZE))
+"""
+Default Type Handling
+
+Use the method set_default() to set a default NumberFactory for the whole logic.
+The get_default() method is used by the logic to retrieve the type.
+"""
+default_factory = SignedFixedNumberFactory(37, 16)
 
 
-def from_float(float_val, size=None):
-    raw = int_from_float(float_val)
-    if size is not None:
-        return same_as(size, val=raw)
-    return default(raw)
+def get_default_factory():
+    return default_factory
 
 
-def to_float(fixed_val):
-    if fixed_val < 0:
-        return -(float(-fixed_val) / 2 ** FRACTION_SIZE)
-    else:
-        return float(fixed_val) / 2 ** FRACTION_SIZE
+def set_default_factory(number_type: NumberFactory):
+    global default_factory
+    default_factory = number_type
+
+
+integer_factory = IntegerNumberFactory(32)
+
+
+def get_integer_factory():
+    return integer_factory
+
+
+def set_integer_factory(number_type: IntegerNumberFactory):
+    global integer_factory
+    integer_factory = number_type
+
+
+bool_factory = BoolNumberFactory()
+
+
+def get_bool_factory():
+    return bool_factory

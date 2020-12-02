@@ -6,26 +6,28 @@ from utils import num
 
 
 def get_input_desc(system_size):
-    len_without_padding = 2 * num.INTEGER_SIZE + (2 + system_size) * num.TOTAL_SIZE
+    integer_size = num.get_integer_factory().nbr_bits
+    default_size = num.get_default_factory().nbr_bits
+    len_without_padding = 2 * integer_size + (2 + system_size) * default_size
     if len_without_padding % 8 != 0:
         len_padding = 8 - len_without_padding % 8
 
         class InputData(StructDescription, metaclass=StructDescriptionMetaclass):
-            id = BitVector(num.INTEGER_SIZE)
-            x_start = BitVector(num.TOTAL_SIZE)
-            y_start = List(system_size, BitVector(num.TOTAL_SIZE))
-            h = BitVector(num.TOTAL_SIZE)
-            n = BitVector(num.INTEGER_SIZE)
+            id = BitVector(integer_size)
+            x_start = BitVector(default_size)
+            y_start = List(system_size, BitVector(default_size))
+            h = BitVector(default_size)
+            n = BitVector(integer_size)
             _bit_padding = BitVector(len_padding)
     else:
         len_padding = 0
 
         class InputData(StructDescription, metaclass=StructDescriptionMetaclass):
-            id = BitVector(num.INTEGER_SIZE)
-            x_start = BitVector(num.TOTAL_SIZE)
-            y_start = List(system_size, BitVector(num.TOTAL_SIZE))
-            h = BitVector(num.TOTAL_SIZE)
-            n = BitVector(num.INTEGER_SIZE)
+            id = BitVector(integer_size)
+            x_start = BitVector(default_size)
+            y_start = List(system_size, BitVector(default_size))
+            h = BitVector(default_size)
+            n = BitVector(integer_size)
 
     assert (len_without_padding + len_padding) % 8 == 0
     assert len(InputData) == len_without_padding + len_padding
@@ -68,23 +70,25 @@ def pack_input_data(system_size, input_data: dict) -> bytes:
 
 
 def get_output_desc(system_size):
-    len_without_padding = num.INTEGER_SIZE + (1 + system_size) * num.TOTAL_SIZE
+    integer_size = num.get_integer_factory().nbr_bits
+    default_size = num.get_default_factory().nbr_bits
+    len_without_padding = integer_size + (1 + system_size) * default_size
     if len_without_padding % 8 != 0:
         len_padding = 8 - len_without_padding % 8
 
         class OutputData(StructDescription, metaclass=StructDescriptionMetaclass):
-            id = BitVector(num.INTEGER_SIZE)
-            x = BitVector(num.TOTAL_SIZE)
-            y = List(system_size, BitVector(num.TOTAL_SIZE))
+            id = BitVector(integer_size)
+            x = BitVector(default_size)
+            y = List(system_size, BitVector(default_size))
             _bit_padding = BitVector(len_padding)
 
     else:
         len_padding = 0
 
         class OutputData(StructDescription, metaclass=StructDescriptionMetaclass):
-            id = BitVector(num.INTEGER_SIZE)
-            x = BitVector(num.TOTAL_SIZE)
-            y = List(system_size, BitVector(num.TOTAL_SIZE))
+            id = BitVector(integer_size)
+            x = BitVector(default_size)
+            y = List(system_size, BitVector(default_size))
 
     assert (len_without_padding + len_padding) % 8 == 0
     assert len(OutputData) == len_without_padding + len_padding

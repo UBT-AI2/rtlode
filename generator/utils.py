@@ -1,19 +1,25 @@
-from myhdl import Signal, SignalType, block, always_seq
-
-from utils import num
+from myhdl import Signal, SignalType, block, always_seq, modbv, intbv
 
 
-def clone_signal(sig, value=0):
+def clone_signal(sig, reset_value=0):
     """
     Clone a single signal.
 
     :param sig: signal to be cloned
-    :param value: reset value of new signal
+    :param reset_value: reset value of new signal
     :return: new signal
     """
     if sig._type == bool:
-        return Signal(bool(value))
-    return Signal(num.same_as(sig, val=value))
+        return Signal(bool(reset_value))
+
+    if isinstance(sig.val, modbv):
+        value = modbv(reset_value, min=sig.min, max=sig.max)
+    elif isinstance(sig.val, intbv):
+        value = intbv(reset_value, min=sig.min, max=sig.max)
+    else:
+        raise NotImplemented()
+
+    return Signal(value)
 
 
 def clone_signal_structure(sig_data, value=0):
@@ -25,7 +31,7 @@ def clone_signal_structure(sig_data, value=0):
     :return: new signal structure
     """
     if isinstance(sig_data, SignalType):
-        return clone_signal(sig_data, value=value)
+        return clone_signal(sig_data, reset_value=value)
     elif isinstance(sig_data, list):
         return [clone_signal_structure(sub_sig, value) for sub_sig in sig_data]
     else:

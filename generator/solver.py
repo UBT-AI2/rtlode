@@ -35,23 +35,26 @@ def solver(
         def drive_output_bit_padding():
             solver_output._bit_padding.next = 0
 
+    integer_factory = num.get_integer_factory()
+    default_factory = num.get_default_factory()
+
     class PipeData(StructDescription, metaclass=StructDescriptionMetaclass):
-        id = BitVector(num.INTEGER_SIZE)
-        h = BitVector(num.TOTAL_SIZE)
-        n = BitVector(num.TOTAL_SIZE)
-        cn = BitVector(num.TOTAL_SIZE)
-        x = BitVector(num.TOTAL_SIZE)
-        y = List(config.system_size, BitVector(num.TOTAL_SIZE))
+        id = BitVector(integer_factory.nbr_bits)
+        h = BitVector(default_factory.nbr_bits)
+        n = BitVector(default_factory.nbr_bits)
+        cn = BitVector(default_factory.nbr_bits)
+        x = BitVector(default_factory.nbr_bits)
+        y = List(config.system_size, BitVector(default_factory.nbr_bits))
 
     pipe_input_valid = Signal(bool(0))
     pipe_output_busy = Signal(bool(0))
 
-    pipe_input_id = Signal(num.integer())
-    pipe_input_h = Signal(num.default())
-    pipe_input_n = Signal(num.integer())
-    pipe_input_cn = Signal(num.integer())
-    pipe_input_x = Signal(num.default())
-    pipe_input_y = [Signal(num.default()) for _ in range(config.system_size)]
+    pipe_input_id = Signal(integer_factory.create())
+    pipe_input_h = Signal(default_factory.create())
+    pipe_input_n = Signal(integer_factory.create())
+    pipe_input_cn = Signal(integer_factory.create())
+    pipe_input_x = Signal(default_factory.create())
+    pipe_input_y = [Signal(default_factory.create()) for _ in range(config.system_size)]
 
     cycle_p = FifoProducer(BitVector(len(PipeData)).create_instance())
     cycle_c = FifoConsumer(BitVector(len(PipeData)).create_instance())

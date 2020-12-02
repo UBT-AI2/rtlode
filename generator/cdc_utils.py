@@ -35,7 +35,7 @@ def ff_synchronizer(clk, rst, chain_out, chain_in, stages=2, chain_rst_value=0):
     :param chain_rst_value: reset value for the flip flops
     :return: myhdl instances
     """
-    ff_values = [chain_in, *[clone_signal(chain_in, value=chain_rst_value) for _ in range(stages - 1)], chain_out]
+    ff_values = [chain_in, *[clone_signal(chain_in, reset_value=chain_rst_value) for _ in range(stages - 1)], chain_out]
     return [
         assign(clk, rst, ff_values[stage_index + 1], ff_values[stage_index])
         for stage_index in range(stages)

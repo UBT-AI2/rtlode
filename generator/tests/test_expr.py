@@ -29,7 +29,7 @@ class TestExpr(PipeTestCase):
 
             def convert_scope(data):
                 if isinstance(data, int) or isinstance(data, float):
-                    return num.from_float(data)
+                    return num.get_default_factory().value_of(data)
                 elif isinstance(data, list):
                     return list(map(convert_scope, data))
                 elif isinstance(data, dict):
