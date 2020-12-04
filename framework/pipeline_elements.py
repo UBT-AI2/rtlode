@@ -25,7 +25,7 @@ def mul_by_shift_right(node_input, node_output):
 
 @block
 def mul_dsp_c(clk, stage, node_input, node_output):
-    num_factory = num.get_default_factory()
+    num_factory = num.get_numeric_factory()
     reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
     reg_data = clone_signal(out)
@@ -49,7 +49,7 @@ def mul_dsp_c(clk, stage, node_input, node_output):
 
 @block
 def mul_dsp(clk, stage, node_input, node_output):
-    num_factory = num.get_default_factory()
+    num_factory = num.get_numeric_factory()
     reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
     reg_data = clone_signal(out)
@@ -81,7 +81,7 @@ def mul(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    num_factory = num.get_default_factory()
+    num_factory = num.get_numeric_factory()
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
         reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
         return PipeConstant(int(intbv(
@@ -172,7 +172,7 @@ def add(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    num_factory = num.get_default_factory()
+    num_factory = num.get_numeric_factory()
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
         return PipeConstant(
             int(
@@ -227,7 +227,7 @@ def sub(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    num_factory = num.get_default_factory()
+    num_factory = num.get_numeric_factory()
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
         return PipeConstant(
             int(
@@ -286,7 +286,7 @@ def negate(val):
     node = SeqNode()
 
     node.add_inputs(val=val)
-    res = Signal(num.get_default_factory().create())
+    res = Signal(num.get_numeric_factory().create())
     node.add_output(res)
     node.set_name('negate')
     node.set_logic(negate_seq)

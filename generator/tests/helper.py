@@ -19,7 +19,7 @@ class PipeTestCase(TestCase):
             rst = ResetSignal(False, True, False)
 
             in_valid = Signal(bool(0))
-            in_signal = Signal(num.get_default_factory().create())
+            in_signal = Signal(num.get_numeric_factory().create())
 
             out_busy = Signal(bool(0))
 
@@ -41,13 +41,13 @@ class PipeTestCase(TestCase):
             valid_counter = Signal(num.get_integer_factory().create())
 
             in_valid.next = True
-            in_signal.next = num.get_default_factory().create(input_data[0])
+            in_signal.next = num.get_numeric_factory().create(input_data[0])
 
             @always(clk.posedge)
             def input_driver():
                 if in_valid and not data_in.pipe_busy:
                     in_counter.next = in_counter + 1
-                    in_signal.next = num.get_default_factory().create(input_data[min(in_counter, len(input_data) - 1)])
+                    in_signal.next = num.get_numeric_factory().create(input_data[min(in_counter, len(input_data) - 1)])
                 if valid_counter == 5:
                     in_valid.next = not in_valid
                     valid_counter.next = 0
@@ -61,7 +61,7 @@ class PipeTestCase(TestCase):
             def output_driver():
                 if data_out.pipe_valid and not out_busy:
                     out_counter.next += 1
-                    self.assertEqual(num.get_default_factory().create_constant(output_data[out_counter]), data_out.res)
+                    self.assertEqual(num.get_numeric_factory().create_constant(output_data[out_counter]), data_out.res)
                 if busy_counter == 20:
                     out_busy.next = not out_busy
                     busy_counter.next = 0

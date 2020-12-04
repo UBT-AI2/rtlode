@@ -88,10 +88,10 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
         input_desc = data_desc.get_input_desc(system_size)
         input_data = input_desc.create_write_instance()
 
-        input_data.x_start.next = num.get_default_factory().create(x_start)
+        input_data.x_start.next = num.get_numeric_factory().create(x_start)
         for i in range(system_size):
-            input_data.y_start[i].next = num.get_default_factory().create(y_start[i])
-        input_data.h.next = num.get_default_factory().create(h)
+            input_data.y_start[i].next = num.get_numeric_factory().create(y_start[i])
+        input_data.h.next = num.get_numeric_factory().create(h)
         input_data.n.next = int(n)
 
         current_input_id = current_input_id + 1
@@ -198,10 +198,10 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
                 if out_fifo_c.rd and not out_fifo_c.empty:
                     y = []
                     for el in parsed_output_data.y:
-                        y.append(num.get_default_factory().value_of(el))
+                        y.append(num.get_numeric_factory().value_of(el))
 
                     print("Out: %r" % {
-                        'x': num.get_default_factory().value_of(parsed_output_data.x),
+                        'x': num.get_numeric_factory().value_of(parsed_output_data.x),
                         'y': y,
                         'id': parsed_output_data.id
                     })
@@ -226,7 +226,7 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
 
 def convert(config):
     default_factory = num.NumberFactory.from_config(config.get('numeric', {}))
-    num.set_default_factory(default_factory)
+    num.set_numeric_factory(default_factory)
     cfg = Config.from_dict(config)
 
     clk = Signal(num.get_bool_factory().create())

@@ -36,7 +36,7 @@ def solver(
             solver_output._bit_padding.next = 0
 
     integer_factory = num.get_integer_factory()
-    default_factory = num.get_default_factory()
+    default_factory = num.get_numeric_factory()
 
     class PipeData(StructDescription, metaclass=StructDescriptionMetaclass):
         id = BitVector(integer_factory.nbr_bits)

@@ -13,7 +13,7 @@ This file provides all necessary parts to generate a parallized pipeline from a 
 An example of a simple pipeline:
 ```
         in_valid = Signal(bool(0))
-        in_signal = Signal(num.get_default_factory().create())
+        in_signal = Signal(num.get_numeric_factory().create())
 
         out_busy = Signal(bool(0))
 
@@ -156,7 +156,7 @@ class PipeConstant(PipeNumeric):
     @staticmethod
     def from_float(float_val):
         from utils import num
-        return PipeConstant(num.get_default_factory().create_constant(float_val))
+        return PipeConstant(num.get_numeric_factory().create_constant(float_val))
 
 
 class _PipeSignal(PipeNumeric):

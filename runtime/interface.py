@@ -111,9 +111,9 @@ class Solver:
 
         packed_data = data_desc.pack_input_data(self._system_size, {
             'id': int(self._current_input_id),
-            'x_start': num.get_default_factory().create_constant(x_start),
-            'y_start': list(map(num.get_default_factory().create_constant, reversed(y_start))),
-            'h': num.get_default_factory().create_constant(h),
+            'x_start': num.get_numeric_factory().create_constant(x_start),
+            'y_start': list(map(num.get_numeric_factory().create_constant, reversed(y_start))),
+            'h': num.get_numeric_factory().create_constant(h),
             'n': int(n)
         })
         packed_data_len = len(packed_data)
@@ -148,8 +148,8 @@ class Solver:
 
         return {
             'id': unpacked_data['id'],
-            'x': num.get_default_factory().value_of(unpacked_data['x']),
-            'y': list(map(num.get_default_factory().value_of, reversed(unpacked_data['y'])))
+            'x': num.get_numeric_factory().value_of(unpacked_data['x']),
+            'y': list(map(num.get_numeric_factory().value_of, reversed(unpacked_data['y'])))
         }
 
     @property

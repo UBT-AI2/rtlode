@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Union
 
+import struct
 from myhdl import intbv
 
 
@@ -100,21 +101,26 @@ class FloatingPrecission(Enum):
 
 
 class FloatingNumberFactory(NumberFactory):
+    precission_struct_id_map = {
+        FloatingPrecission.SINGLE: '!f',
+        FloatingPrecission.DOUBLE: '!d'
+    }
+
     def __init__(self, precission: Union[FloatingPrecission, str]):
         if isinstance(precission, str):
             precission = FloatingPrecission[precission.upper()]
         super().__init__(precission.value)
 
+        self.precission = precission
+
     def create_from_constant(self, const_val):
         return intbv(const_val, min=0, max=2 ** self.nbr_bits)
 
     def create_constant(self, val):
-        # TODO
-        raise NotImplementedError
+        return struct.unpack('!I', struct.pack(self.precission_struct_id_map[self.precission], val))[0]
 
     def value_of(self, val):
-        # TODO
-        raise NotImplementedError
+        return struct.unpack(self.precission_struct_id_map[self.precission], struct.pack('!I', val))[0]
 
     @staticmethod
     def from_config(numeric_cfg: dict):
@@ -125,19 +131,19 @@ class FloatingNumberFactory(NumberFactory):
 
 
 """
-Default Type Handling
+Numeric Type Handling
 
-Use the method set_default() to set a default NumberFactory for the whole logic.
+Use the method set_default() to set a default NumberFactory for the whole numeric logic.
 The get_default() method is used by the logic to retrieve the type.
 """
 default_factory = SignedFixedNumberFactory(37, 16)
 
 
-def get_default_factory():
+def get_numeric_factory():
     return default_factory
 
 
-def set_default_factory(number_type: NumberFactory):
+def set_numeric_factory(number_type: NumberFactory):
     global default_factory
     default_factory = number_type
 
