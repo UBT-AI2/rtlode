@@ -102,8 +102,8 @@ class FloatingPrecission(Enum):
 
 class FloatingNumberFactory(NumberFactory):
     precission_struct_id_map = {
-        FloatingPrecission.SINGLE: '!f',
-        FloatingPrecission.DOUBLE: '!d'
+        FloatingPrecission.SINGLE: ('!I', '!f'),
+        FloatingPrecission.DOUBLE: ('!Q', '!d')
     }
 
     def __init__(self, precission: Union[FloatingPrecission, str]):
@@ -117,10 +117,12 @@ class FloatingNumberFactory(NumberFactory):
         return intbv(const_val, min=0, max=2 ** self.nbr_bits)
 
     def create_constant(self, val):
-        return struct.unpack('!I', struct.pack(self.precission_struct_id_map[self.precission], val))[0]
+        unpack_mod, pack_mod = self.precission_struct_id_map[self.precission]
+        return struct.unpack(unpack_mod, struct.pack(pack_mod, val))[0]
 
     def value_of(self, val):
-        return struct.unpack(self.precission_struct_id_map[self.precission], struct.pack('!I', val))[0]
+        pack_mod, unpack_mod = self.precission_struct_id_map[self.precission]
+        return struct.unpack(unpack_mod, struct.pack(pack_mod, val))[0]
 
     @staticmethod
     def from_config(numeric_cfg: dict):
