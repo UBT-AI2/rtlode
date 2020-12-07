@@ -337,7 +337,7 @@ class Pipe:
                 node_input = _DynamicInterface(**node.get_inputs())
                 node_output = _DynamicInterface(**node.get_outputs())
                 if isinstance(node, SeqNode):
-                    instance = node.logic(clk, stage, node_input, node_output)
+                    instance = node.logic(clk, rst, stage, node_input, node_output)
                 elif isinstance(node, CombNode):
                     instance = node.logic(node_input, node_output)
                 else:
@@ -511,7 +511,7 @@ class SeqNode(_Node):
     A sequential node of the pipeline. The nodes logic must take exactly one clk cycle.
 
     The provided logic must be of the following function signature:
-        def logic(clk, stage, node_input, node_output)
+        def logic(clk, rst, stage, node_input, node_output)
     """
     def __init__(self):
         super().__init__()
@@ -590,7 +590,7 @@ class Register(SeqNode):
 
 
 @block
-def register(clk, stage, node_input, node_output):
+def register(clk, rst, stage, node_input, node_output):
     reg_data = clone_signal(node_output.default)
 
     @always_seq(clk.posedge, reset=None)

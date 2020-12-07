@@ -24,7 +24,7 @@ def mul_by_shift_right(node_input, node_output):
 
 
 @block
-def mul_dsp_c(clk, stage, node_input, node_output):
+def mul_dsp_c(clk, rst, stage, node_input, node_output):
     num_factory = num.get_numeric_factory()
     reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
@@ -48,7 +48,7 @@ def mul_dsp_c(clk, stage, node_input, node_output):
 
 
 @block
-def mul_dsp(clk, stage, node_input, node_output):
+def mul_dsp(clk, rst, stage, node_input, node_output):
     num_factory = num.get_numeric_factory()
     reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
@@ -147,7 +147,7 @@ def mul(a, b):
 
 
 @block
-def add_seq(clk, stage, node_input, node_output):
+def add_seq(clk, rst, stage, node_input, node_output):
     reg_data = clone_signal(node_output.default)
 
     @always_seq(clk.posedge, reset=None)
@@ -202,7 +202,7 @@ def add(a, b):
 
 
 @block
-def sub_seq(clk, stage, node_input, node_output):
+def sub_seq(clk, rst, stage, node_input, node_output):
     reg_data = clone_signal(node_output.default)
 
     @always_seq(clk.posedge, reset=None)
@@ -257,7 +257,7 @@ def sub(a, b):
 
 
 @block
-def negate_seq(clk, stage, node_input, node_output):
+def negate_seq(clk, rst, stage, node_input, node_output):
     reg_data = clone_signal(node_output.default)
 
     @always_seq(clk.posedge, reset=None)
