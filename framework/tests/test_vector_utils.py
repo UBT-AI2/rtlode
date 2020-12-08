@@ -1,7 +1,7 @@
 from framework.pipeline import PipeConstant
 from framework.pipeline_elements import add, mul
 from framework.vector_utils import UnequalVectorLength, vec_mul, reduce_sum
-from generator.tests.helper import PipeTestCase
+from framework.tests.helper import PipeTestCase
 
 
 class TestVectorUtils(PipeTestCase):

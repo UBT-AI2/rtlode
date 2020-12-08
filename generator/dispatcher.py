@@ -2,7 +2,7 @@ from myhdl import block, Signal, instances, always_comb, intbv, ConcatSignal, al
 
 from generator.config import Config
 from generator.cdc_utils import AsyncFifoConsumer, AsyncFifoProducer
-from generator.fifo import FifoProducer, FifoConsumer, fifo
+from framework.fifo import FifoProducer, FifoConsumer, fifo
 from generator.priority_encoder import priority_encoder_one_hot
 from generator.solver import solver
 from generator.utils import clone_signal

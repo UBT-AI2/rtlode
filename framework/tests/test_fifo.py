@@ -2,7 +2,7 @@ from unittest import TestCase
 
 from myhdl import Signal, ResetSignal, delay, always, intbv, instances, block, instance
 
-from generator.fifo import FifoProducer, FifoConsumer, fifo
+from framework.fifo import FifoProducer, FifoConsumer, fifo
 
 
 class Test(TestCase):

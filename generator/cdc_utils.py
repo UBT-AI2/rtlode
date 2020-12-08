@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
-from myhdl import block, always_seq, always, Signal, ResetSignal, always_comb, SignalType, instances, modbv, bin
+from myhdl import block, always_seq, always, Signal, ResetSignal, always_comb, SignalType, instances, modbv
 
-from generator.fifo import FifoProducer, FifoConsumer
+from framework.fifo import FifoProducer, FifoConsumer
 from generator.utils import clone_signal
 
 
