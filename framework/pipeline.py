@@ -38,6 +38,9 @@ def _next_stage(p):
             min_reg_stage = p.stage_index + 1
     elif isinstance(p, CombNode):
         min_reg_stage = p.stage_index
+    elif isinstance(p, PipelineNode):
+        if p.stage_index is not None:
+            min_reg_stage = p.stage_index + 1
     else:
         raise NotImplementedError()
     return min_reg_stage
@@ -234,7 +237,7 @@ class Pipe:
     def add_to_stage(self, node: _Node):
         assert node.stage_index is not None
 
-        if len(self.stages) <= node.stage_index:
+        while len(self.stages) <= node.stage_index:
             self.stages.append(Stage())
         self.stages[node.stage_index].add(node)
 
@@ -264,7 +267,12 @@ class Pipe:
                 stage = max(stage, lowest_possible_stage)
             else:
                 if isinstance(node, _Node):
-                    node.stage_index = stage
+                    if isinstance(node, PipelineNode):
+                        # Add PipelineNodes to last stage
+                        node.stage_index = stage + (node.latency - 1)
+                    else:
+                        node.stage_index = stage
+
                     self.add_to_stage(node)
                     to_visit.update(node.get_consumers())
                 elif isinstance(node, PipeOutput):
@@ -309,6 +317,26 @@ class Pipe:
 
         return self.stages
 
+    def get_control_signals(self, stage_id):
+        stage = self.stages[stage_id]
+
+        if stage_id == 0:
+            # First stage after Input
+            previous_valid = self.pipe_input.valid
+            self.pipe_input.set_pipe_busy(stage.busy)
+        else:
+            previous_valid = self.stages[stage_id - 1].valid
+
+        if stage_id == len(self.stages) - 1:
+            # Last stage before Output
+            next_busy = self.pipe_output.busy
+            self.pipe_output.set_pipe_valid(stage.valid)
+        else:
+            next_busy = self.stages[stage_id + 1].busy
+
+        return previous_valid, next_busy
+
+
     @block
     def create(self, clk, rst):
         if len(self.stages) == 0:
@@ -316,19 +344,7 @@ class Pipe:
         stage_instances = []
 
         for stage_id, stage in enumerate(self.stages):
-            if stage_id == 0:
-                # First stage after Input
-                previous_valid = self.pipe_input.valid
-                self.pipe_input.set_pipe_busy(stage.busy)
-            else:
-                previous_valid = self.stages[stage_id - 1].valid
-
-            if stage_id == len(self.stages) - 1:
-                # Last stage before Output
-                next_busy = self.pipe_output.busy
-                self.pipe_output.set_pipe_valid(stage.valid)
-            else:
-                next_busy = self.stages[stage_id + 1].busy
+            previous_valid, next_busy = self.get_control_signals(stage_id)
 
             stage_instances.append(
                 stage_logic(clk, rst, stage, previous_valid, next_busy)
@@ -337,9 +353,18 @@ class Pipe:
                 node_input = _DynamicInterface(**node.get_inputs())
                 node_output = _DynamicInterface(**node.get_outputs())
                 if isinstance(node, SeqNode):
-                    instance = node.logic(clk, rst, stage, node_input, node_output)
+                    instance = node.logic(clk, rst, stage, node_input, node_output, **node.logic_kwargs)
+                elif isinstance(node, PipelineNode):
+                    in_stage_id = stage_id - (node.latency - 1)
+                    in_stage_valid, _ = self.get_control_signals(in_stage_id)
+                    in_stage_busy = self.stages[in_stage_id].busy
+                    instance = node.logic(
+                        clk, rst,
+                        in_stage_valid, in_stage_busy, stage, next_busy, node_input, node_output,
+                        **node.logic_kwargs
+                    )
                 elif isinstance(node, CombNode):
-                    instance = node.logic(node_input, node_output)
+                    instance = node.logic(node_input, node_output, **node.logic_kwargs)
                 else:
                     raise NotImplementedError()
                 stage_instances.append(instance)
@@ -493,14 +518,19 @@ class _Node(ProducerNode, ConsumerNode):
         super().__init__()
 
         self.logic = None
+        self.logic_kwargs = {}
         self.stage_index = None
         self.name = 'N/A'
 
-    def set_logic(self, logic):
+    def set_logic(self, logic, **kwargs):
         self.logic = logic
+        self.logic_kwargs = kwargs
 
     def get_logic(self):
         return self.logic
+
+    def get_logic_kwargs(self):
+        return self.logic_kwargs
 
     def set_name(self, name):
         self.name = name
@@ -515,6 +545,20 @@ class SeqNode(_Node):
     """
     def __init__(self):
         super().__init__()
+
+
+class PipelineNode(_Node):
+    """
+    A node implementating an inner pipeline.
+    The nodes logic must take a constant number of clk cycles (latency) and must be pipelined internally.
+
+    The provided logic must be of the following function signature:
+        def logic(clk, stages: List, node_input, node_output)
+    """
+    def __init__(self, latency):
+        super().__init__()
+        assert latency > 0
+        self.latency = latency
 
 
 class CombNode(_Node):
