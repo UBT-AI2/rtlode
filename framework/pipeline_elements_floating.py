@@ -218,7 +218,7 @@ def add(a, b):
     node.add_inputs(a=a, b=b)
     res = Signal(num_factory.create())
     node.add_output(res)
-    node.set_name('mul')
+    node.set_name('add')
 
     node.set_logic(mul_wrapper, inner_latency=inner_latency, inner_pipeline=add_altfp_double)
     return node
@@ -297,7 +297,7 @@ def sub(a, b):
     node.add_inputs(a=a, b=b)
     res = Signal(num_factory.create())
     node.add_output(res)
-    node.set_name('mul')
+    node.set_name('sub')
 
     node.set_logic(mul_wrapper, inner_latency=inner_latency, inner_pipeline=sub_altfp_double)
     return node

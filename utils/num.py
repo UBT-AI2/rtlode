@@ -26,9 +26,9 @@ class NumberFactory:
         numeric_type = numeric_cfg.get('type', 'fixed')
 
         if numeric_type == 'fixed':
-            SignedFixedNumberFactory.from_config(numeric_cfg)
+            return SignedFixedNumberFactory.from_config(numeric_cfg)
         elif numeric_type == 'floating':
-            FloatingNumberFactory.from_config(numeric_cfg)
+            return FloatingNumberFactory.from_config(numeric_cfg)
         else:
             raise NotImplementedError('Unknwown numeric_type specified in config.')
 
@@ -127,7 +127,7 @@ class FloatingNumberFactory(NumberFactory):
     @staticmethod
     def from_config(numeric_cfg: dict):
         precission = FloatingPrecission[
-            numeric_cfg.get('floating_precission', 'double').upper()
+            numeric_cfg.get('floating_precision', 'double').upper()
         ]
         return FloatingNumberFactory(precission)
 

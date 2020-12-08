@@ -1,0 +1,3 @@
+numeric:
+    type: 'floating'
+    floating_precision: 'double'

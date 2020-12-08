@@ -108,6 +108,9 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
             deep_update(config_dict, runtime_config)
         config = Config.from_dict(config_dict)
 
+        default_factory = num.NumberFactory.from_config(config_dict.get('numeric', {}))
+        num.set_numeric_factory(default_factory)
+
         clk = Signal(bool(0))
         reset = ResetSignal(True, True, False)
         usr_clk = Signal(bool(0))
