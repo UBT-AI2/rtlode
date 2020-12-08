@@ -19,7 +19,7 @@ class PipeTestCase(TestCase):
             rst = ResetSignal(False, True, False)
 
             in_valid = Signal(bool(0))
-            in_signal = Signal(num.get_numeric_factory().create())
+            in_signal = Signal(num.get_numeric_factory().create(input_data[0]))
 
             out_busy = Signal(bool(0))
 
@@ -41,7 +41,6 @@ class PipeTestCase(TestCase):
             valid_counter = Signal(num.get_integer_factory().create())
 
             in_valid.next = True
-            in_signal.next = num.get_numeric_factory().create(input_data[0])
 
             @always(clk.posedge)
             def input_driver():
