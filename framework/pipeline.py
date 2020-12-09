@@ -336,7 +336,6 @@ class Pipe:
 
         return previous_valid, next_busy
 
-
     @block
     def create(self, clk, rst):
         if len(self.stages) == 0:
@@ -358,9 +357,13 @@ class Pipe:
                     in_stage_id = stage_id - (node.latency - 1)
                     in_stage_valid, _ = self.get_control_signals(in_stage_id)
                     in_stage_busy = self.stages[in_stage_id].busy
+                    out_stage_valid = stage.valid
+                    out_stage_busy = next_busy
                     instance = node.logic(
                         clk, rst,
-                        in_stage_valid, in_stage_busy, stage, next_busy, node_input, node_output,
+                        in_stage_valid, in_stage_busy,
+                        out_stage_valid, out_stage_busy,
+                        node_input, node_output,
                         **node.logic_kwargs
                     )
                 elif isinstance(node, CombNode):

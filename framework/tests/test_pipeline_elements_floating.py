@@ -9,9 +9,8 @@ class TestPipe(PipeTestCase):
         # Run twice for each floating precission
         num.set_numeric_factory(num.FloatingNumberFactory(num.FloatingPrecission.DOUBLE))
         super().run(result)
-        # TODO add additional run with single
-        # num.set_numeric_factory(num.FloatingNumberFactory(num.FloatingPrecission.SINGLE))
-        # super().run(result)
+        num.set_numeric_factory(num.FloatingNumberFactory(num.FloatingPrecission.SINGLE))
+        super().run(result)
 
     def test_add(self):
         """
