@@ -16,10 +16,13 @@ nbr_solver: 1
 
 # Internal numeric value representation
 numeric:
-    type: 'fixed'  # Currently nothing else supported
+    type: 'fixed'  # or 'floating'
+    # Fixed point parameters, will be ignored if type != 'fixed'
     fixed_point_signed: True
-    fixed_point_fraction_size: 41
-    fixed_point_nonfraction_size : 12
+    fixed_point_fraction_size: 37
+    fixed_point_nonfraction_size : 16
+    # Floating point parameters, will be ignored if type != 'floating'
+    floating_precision: 'double' # or 'single'
 
 # Definition of runge kutta method to be used.
 method:
