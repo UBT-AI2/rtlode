@@ -18,7 +18,7 @@ nbr_solver: 1
 numeric:
     type: 'fixed'  # or 'floating'
     # Fixed point parameters, will be ignored if type != 'fixed'
-    fixed_point_signed: True
+    fixed_point_signed: True # Currently only signed supported
     fixed_point_fraction_size: 37
     fixed_point_nonfraction_size : 16
     # Floating point parameters, will be ignored if type != 'floating'
