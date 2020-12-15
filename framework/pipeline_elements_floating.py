@@ -121,7 +121,7 @@ def mul_altfp(clk, dataa, datab, result, pipeline_latency=5, width_exp=11, width
 
 mul_altfp.verilog_code = \
     """
-altfp_mult	altfp_mult_component (
+altfp_mult  altfp_mult_component_$inst (
                 .clock ($clk),
                 .dataa ($dataa),
                 .datab ($datab),
@@ -210,7 +210,7 @@ def add_sub_altfp(clk, dataa, datab, result, pipeline_latency=7, direction='ADD'
 
 add_sub_altfp.verilog_code = \
     """
-altfp_add_sub	altfp_add_sub_component (
+altfp_add_sub   altfp_add_sub_component_$inst (
                 .clock ($clk),
                 .dataa ($dataa),
                 .datab ($datab),
