@@ -85,11 +85,13 @@ def solver(
         ) for i in range(config.system_size)
     ]
 
+    from framework import pipeline_elements_fixed
+
     pipe_data_out = PipeOutput(pipe_output_busy,
                                id=pipe_data_in.id,
                                h=pipe_data_in.h,
                                n=pipe_data_in.n,
-                               cn=pipe_data_in.cn + PipeConstant(1),
+                               cn=pipeline_elements_fixed.add(pipe_data_in.cn, PipeConstant(1)),
                                x=pipe_data_in.x + pipe_data_in.h,
                                y=y_n)
     pipe = Pipe(pipe_data_in, pipe_data_out)
