@@ -1,4 +1,4 @@
-from myhdl import block, Signal, instances, always_seq, always_comb
+from myhdl import block, Signal, instances, always_seq, always_comb, SignalType
 
 from framework.pipeline import PipelineNode, PipeConstant
 from framework.fifo import FifoProducer, FifoConsumer, fifo
@@ -112,6 +112,9 @@ def mul_altfp(clk, dataa, datab, result, pipeline_latency=5, width_exp=11, width
         result.next = internal_pipeline.pop()
 
     result.driven = 'reg'
+    for d in [dataa, datab]:
+        if isinstance(d, SignalType):
+            d.read = True
 
     return instances()
 
@@ -198,6 +201,9 @@ def add_sub_altfp(clk, dataa, datab, result, pipeline_latency=7, direction='ADD'
         result.next = internal_pipeline.pop()
 
     result.driven = 'reg'
+    for d in [dataa, datab]:
+        if isinstance(d, SignalType):
+            d.read = True
 
     return instances()
 
