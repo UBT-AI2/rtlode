@@ -5,6 +5,14 @@ from framework.fifo import FifoProducer, FifoConsumer, fifo
 from utils import num
 
 
+def _handle_inputs(sig, data_width):
+    if isinstance(sig, int):
+        return "{}'d{}".format(data_width, sig)
+    elif isinstance(sig, SignalType):
+        sig.read = True
+        return sig
+
+
 @block
 def register(clk, rst, previous_signal, next_signal):
 
@@ -95,11 +103,19 @@ def altfp_wrapper(
     return instances()
 
 
+mul_inst_counter = 0
+
+
 @block
 def mul_altfp(clk, dataa, datab, result, pipeline_latency=5, width_exp=11, width_man=52):
     num_factory = num.get_numeric_factory()
 
     internal_pipeline = [0 for _ in range(pipeline_latency - 1)]
+
+    data_width = 1 + width_exp + width_man
+
+    dataa_desc = _handle_inputs(dataa, data_width)
+    datab_desc = _handle_inputs(datab, data_width)
 
     @always_seq(clk.posedge, reset=None)
     def logic():
@@ -116,15 +132,18 @@ def mul_altfp(clk, dataa, datab, result, pipeline_latency=5, width_exp=11, width
         if isinstance(d, SignalType):
             d.read = True
 
+    global mul_inst_counter
+    mul_inst_counter += 1
+
     return instances()
 
 
 mul_altfp.verilog_code = \
     """
-altfp_mult  altfp_mult_component_$inst (
+altfp_mult altfp_mult_component_$mul_inst_counter (
                 .clock ($clk),
-                .dataa ($dataa),
-                .datab ($datab),
+                .dataa ($dataa_desc),
+                .datab ($datab_desc),
                 .result ($result));
     defparam
         altfp_mult_component.denormal_support = "NO",
@@ -183,11 +202,19 @@ def mul(a, b):
     return node
 
 
+add_sub_inst_counter = 0
+
+
 @block
 def add_sub_altfp(clk, dataa, datab, result, pipeline_latency=7, direction='ADD', width_exp=11, width_man=52):
     num_factory = num.get_numeric_factory()
 
     internal_pipeline = [0 for _ in range(pipeline_latency - 1)]
+
+    data_width = 1 + width_exp + width_man
+
+    dataa_desc = _handle_inputs(dataa, data_width)
+    datab_desc = _handle_inputs(datab, data_width)
 
     @always_seq(clk.posedge, reset=None)
     def logic():
@@ -205,15 +232,18 @@ def add_sub_altfp(clk, dataa, datab, result, pipeline_latency=7, direction='ADD'
         if isinstance(d, SignalType):
             d.read = True
 
+    global add_sub_inst_counter
+    add_sub_inst_counter += 1
+
     return instances()
 
 
 add_sub_altfp.verilog_code = \
     """
-altfp_add_sub   altfp_add_sub_component_$inst (
+altfp_add_sub altfp_add_sub_component_$add_sub_inst_counter (
                 .clock ($clk),
-                .dataa ($dataa),
-                .datab ($datab),
+                .dataa ($dataa_desc),
+                .datab ($datab_desc),
                 .result ($result));
     defparam
         altfp_mult_component.denormal_support = "NO",
