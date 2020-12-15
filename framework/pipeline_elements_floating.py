@@ -146,12 +146,12 @@ altfp_mult altfp_mult_component_$mul_inst_counter (
                 .datab ($datab_desc),
                 .result ($result));
     defparam
-        altfp_mult_component.denormal_support = "NO",
-        altfp_mult_component.lpm_type = "altfp_mult",
-        altfp_mult_component.reduced_functionality = "NO",
-        altfp_mult_component.pipeline = $pipeline_latency,
-        altfp_mult_component.width_exp = $width_exp,
-        altfp_mult_component.width_man = $width_man;
+        altfp_mult_component_$mul_inst_counter.denormal_support = "NO",
+        altfp_mult_component_$mul_inst_counter.lpm_type = "altfp_mult",
+        altfp_mult_component_$mul_inst_counter.reduced_functionality = "NO",
+        altfp_mult_component_$mul_inst_counter.pipeline = $pipeline_latency,
+        altfp_mult_component_$mul_inst_counter.width_exp = $width_exp,
+        altfp_mult_component_$mul_inst_counter.width_man = $width_man;
     """
 
 
@@ -246,14 +246,14 @@ altfp_add_sub altfp_add_sub_component_$add_sub_inst_counter (
                 .datab ($datab_desc),
                 .result ($result));
     defparam
-        altfp_mult_component.denormal_support = "NO",
-        altfp_mult_component.lpm_type = "altfp_add_sub",
-        altfp_mult_component.reduced_functionality = "NO",
-        altfp_mult_component.direction = "$direction",
-        altfp_mult_component.rounding = "TO_NEAREST",
-        altfp_mult_component.pipeline = $pipeline_latency,
-        altfp_mult_component.width_exp = $width_exp,
-        altfp_mult_component.width_man = $width_man;
+        altfp_add_sub_component_$add_sub_inst_counter.denormal_support = "NO",
+        altfp_add_sub_component_$add_sub_inst_counter.lpm_type = "altfp_add_sub",
+        altfp_add_sub_component_$add_sub_inst_counter.reduced_functionality = "NO",
+        altfp_add_sub_component_$add_sub_inst_counter.direction = "$direction",
+        altfp_add_sub_component_$add_sub_inst_counter.rounding = "TO_NEAREST",
+        altfp_add_sub_component_$add_sub_inst_counter.pipeline = $pipeline_latency,
+        altfp_add_sub_component_$add_sub_inst_counter.width_exp = $width_exp,
+        altfp_add_sub_component_$add_sub_inst_counter.width_man = $width_man;
     """
 
 
