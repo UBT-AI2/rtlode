@@ -15,7 +15,6 @@ def _handle_inputs(sig, data_width):
 
 @block
 def register(clk, rst, previous_signal, next_signal):
-
     @always_seq(clk.posedge, reset=rst)
     def logic():
         next_signal.next = previous_signal
