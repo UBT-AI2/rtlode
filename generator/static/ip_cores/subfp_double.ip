@@ -349,7 +349,7 @@
         <spirit:parameter>
           <spirit:name>latency_target</spirit:name>
           <spirit:displayName>Target</spirit:displayName>
-          <spirit:value spirit:format="long" spirit:id="latency_target">3</spirit:value>
+          <spirit:value spirit:format="long" spirit:id="latency_target">7</spirit:value>
         </spirit:parameter>
         <spirit:parameter>
           <spirit:name>performance_goal</spirit:name>
@@ -429,7 +429,7 @@
         <spirit:parameter>
           <spirit:name>frequency_feedback</spirit:name>
           <spirit:displayName>frequency_feedback</spirit:displayName>
-          <spirit:value spirit:format="long" spirit:id="frequency_feedback">0</spirit:value>
+          <spirit:value spirit:format="long" spirit:id="frequency_feedback">157</spirit:value>
         </spirit:parameter>
         <spirit:parameter>
           <spirit:name>latency_feedback</spirit:name>
@@ -514,7 +514,7 @@
         <spirit:parameter>
           <spirit:name>RES_LUT_param</spirit:name>
           <spirit:displayName>LUTs</spirit:displayName>
-          <spirit:value spirit:format="long" spirit:id="RES_LUT_param">0</spirit:value>
+          <spirit:value spirit:format="long" spirit:id="RES_LUT_param">1778</spirit:value>
         </spirit:parameter>
         <spirit:parameter>
           <spirit:name>RES_MBIT_param</spirit:name>

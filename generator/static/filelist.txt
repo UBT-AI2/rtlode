@@ -2,8 +2,10 @@
 
 ip_cores/multfp_double.ip
 ip_cores/multfp_single.ip
-ip_cores/addsubfp_double.ip
-ip_cores/addsubfp_single.ip
+ip_cores/addfp_double.ip
+ip_cores/addfp_single.ip
+ip_cores/subfp_double.ip
+ip_cores/subfp_single.ip
 
 ccip_interface_reg.sv
 ccip_std_afu.sv

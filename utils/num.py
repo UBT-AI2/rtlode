@@ -124,24 +124,6 @@ class FloatingNumberFactory(NumberFactory):
         pack_mod, unpack_mod = self.precission_struct_id_map[self.precission]
         return struct.unpack(unpack_mod, struct.pack(pack_mod, val))[0]
 
-    @property
-    def width_exp(self):
-        if self.precission == FloatingPrecission.SINGLE:
-            return 8
-        elif self.precission == FloatingPrecission.DOUBLE:
-            return 11
-        else:
-            raise NotImplementedError
-
-    @property
-    def width_man(self):
-        if self.precission == FloatingPrecission.SINGLE:
-            return 23
-        elif self.precission == FloatingPrecission.DOUBLE:
-            return 52
-        else:
-            raise NotImplementedError
-
     @staticmethod
     def from_config(numeric_cfg: dict):
         precission = FloatingPrecission[

@@ -1,8 +1,62 @@
+from enum import Enum, auto
+
 from myhdl import block, Signal, instances, always_seq, always_comb, SignalType
 
 from framework.pipeline import PipelineNode, PipeConstant
 from framework.fifo import FifoProducer, FifoConsumer, fifo
 from utils import num
+from utils.num import FloatingPrecission
+
+
+class NumericFunction(Enum):
+    MUL = auto()
+    ADD = auto()
+    SUB = auto()
+
+
+_ip_core_infos = {
+    NumericFunction.MUL: {
+        'analog_function': lambda x, y: x * y,
+        FloatingPrecission.SINGLE: {
+            'latency': 3,
+            'component': 'multfp_single'
+        },
+        FloatingPrecission.DOUBLE: {
+            'latency': 5,
+            'component': 'multfp_double'
+        }
+    },
+    NumericFunction.ADD: {
+        'analog_function': lambda x, y: x + y,
+        FloatingPrecission.SINGLE: {
+            'latency': 3,
+            'component': 'addfp_single'
+        },
+        FloatingPrecission.DOUBLE: {
+            'latency': 7,
+            'component': 'addfp_double'
+        }
+    },
+    NumericFunction.SUB: {
+        'analog_function': lambda x, y: x - y,
+        FloatingPrecission.SINGLE: {
+            'latency': 3,
+            'component': 'subfp_single'
+        },
+        FloatingPrecission.DOUBLE: {
+            'latency': 7,
+            'component': 'subfp_double'
+        }
+    },
+}
+
+
+def _get_ip_core_info(function: NumericFunction, num_factory: num.FloatingNumberFactory):
+    return _ip_core_infos[function][num_factory.precission]
+
+
+def _calc_analog(function: NumericFunction, a, b):
+    return _ip_core_infos[function]['analog_function'](a, b)
 
 
 def _handle_inputs(sig, data_width):
@@ -22,13 +76,66 @@ def register(clk, rst, previous_signal, next_signal):
     return instances()
 
 
+altfp_inst_counter = 0
+
+
+@block
+def altfp(clk, dataa, datab, result, num_factory: num.FloatingNumberFactory = None, function: NumericFunction = None):
+    assert num_factory is not None
+    assert function is not None
+
+    ip_core = _get_ip_core_info(function, num_factory)
+    component = ip_core['component']
+
+    internal_pipeline = [0 for _ in range(ip_core['latency'] - 1)]
+
+    data_width = num_factory.nbr_bits
+
+    dataa_desc = _handle_inputs(dataa, data_width)
+    datab_desc = _handle_inputs(datab, data_width)
+
+    @always_seq(clk.posedge, reset=None)
+    def logic():
+        if function == NumericFunction.MUL:
+            calc_res = num_factory.value_of(dataa) * num_factory.value_of(datab)
+        elif function == NumericFunction.ADD:
+            calc_res = num_factory.value_of(dataa) + num_factory.value_of(datab)
+        elif function == NumericFunction.SUB:
+            calc_res = num_factory.value_of(dataa) - num_factory.value_of(datab)
+        else:
+            raise NotImplementedError
+
+        internal_pipeline.insert(0, num_factory.create_constant(calc_res))
+        result.next = internal_pipeline.pop()
+
+    result.driven = 'reg'
+    for d in [dataa, datab]:
+        if isinstance(d, SignalType):
+            d.read = True
+
+    global altfp_inst_counter
+    altfp_inst_counter += 1
+
+    return instances()
+
+
+altfp.verilog_code = \
+    """
+$component altfp_component_$altfp_inst_counter (
+                .clk ($clk),
+                .a ($dataa_desc),
+                .b ($datab_desc),
+                .q ($result));
+    """
+
+
 @block
 def altfp_wrapper(
         clk, rst,
         in_stage_valid, in_stage_busy,
         out_stage_valid, out_stage_busy,
         node_input, node_output,
-        pipeline=None, pipeline_latency=5,
+        pipeline_latency=5,
         **kwargs):
     """
     Wrapper functio for altfp instances.
@@ -42,7 +149,6 @@ def altfp_wrapper(
     :param out_stage_busy: is output stage currently signaling that it is busy?
     :param node_input: input values of the node
     :param node_output: output values of the node
-    :param pipeline: altfp function
     :param pipeline_latency: latency of the altfp pipeline
     :return: myhdl instances
     """
@@ -51,8 +157,8 @@ def altfp_wrapper(
     num_factory = num.get_numeric_factory()
 
     inner_pipe_res = Signal(num_factory.create())
-    inner_pipe = pipeline(
-        clk, node_input.a, node_input.b, inner_pipe_res, pipeline_latency=pipeline_latency, **kwargs
+    inner_pipe = altfp(
+        clk, node_input.a, node_input.b, inner_pipe_res, **kwargs
     )
 
     in_valid = Signal(num.get_bool_factory().create())
@@ -102,56 +208,50 @@ def altfp_wrapper(
     return instances()
 
 
-mul_inst_counter = 0
+def generic(function: NumericFunction, a, b):
+    # TODO docstring
 
-
-@block
-def mul_altfp(clk, dataa, datab, result, pipeline_latency=5, width_exp=11, width_man=52):
     num_factory = num.get_numeric_factory()
+    assert isinstance(num_factory, num.FloatingNumberFactory)
 
-    internal_pipeline = [0 for _ in range(pipeline_latency - 1)]
-
-    data_width = 1 + width_exp + width_man
-
-    dataa_desc = _handle_inputs(dataa, data_width)
-    datab_desc = _handle_inputs(datab, data_width)
-
-    @always_seq(clk.posedge, reset=None)
-    def logic():
-        internal_pipeline.insert(
-            0,
-            num_factory.create_constant(
-                num_factory.value_of(dataa) * num_factory.value_of(datab)
-            )
+    if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
+        return PipeConstant.from_float(
+            _calc_analog(function, num_factory.value_of(a.get_value()), num_factory.value_of(b.get_value()))
         )
-        result.next = internal_pipeline.pop()
+    elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
+        if isinstance(a, PipeConstant):
+            static_value = a.get_value()
+            dynamic_value = b
+        else:
+            static_value = b.get_value()
+            dynamic_value = a
 
-    result.driven = 'reg'
-    for d in [dataa, datab]:
-        if isinstance(d, SignalType):
-            d.read = True
+        # function dependent optimation
+        if function == NumericFunction.MUL:
+            if static_value == 0:
+                return PipeConstant.from_float(0)
+            elif static_value == 1:
+                return dynamic_value
+        elif function == NumericFunction.ADD or function == NumericFunction.SUB:
+            if static_value == 0:
+                return dynamic_value
 
-    global mul_inst_counter
-    mul_inst_counter += 1
+    latency = _get_ip_core_info(function, num_factory)['latency']
 
-    return instances()
+    node = PipelineNode(latency + 1)
 
+    node.add_inputs(a=a, b=b)
+    res = Signal(num_factory.create())
+    node.add_output(res)
+    node.set_name(function.name.lower())
 
-mul_altfp.verilog_code = \
-    """
-altfp_mult altfp_mult_component_$mul_inst_counter (
-                .clock ($clk),
-                .dataa ($dataa_desc),
-                .datab ($datab_desc),
-                .result ($result));
-    defparam
-        altfp_mult_component_$mul_inst_counter.denormal_support = "NO",
-        altfp_mult_component_$mul_inst_counter.lpm_type = "altfp_mult",
-        altfp_mult_component_$mul_inst_counter.reduced_functionality = "NO",
-        altfp_mult_component_$mul_inst_counter.pipeline = $pipeline_latency,
-        altfp_mult_component_$mul_inst_counter.width_exp = $width_exp,
-        altfp_mult_component_$mul_inst_counter.width_man = $width_man;
-    """
+    node.set_logic(
+        altfp_wrapper,
+        pipeline_latency=latency,
+        num_factory=num_factory,
+        function=function
+    )
+    return node
 
 
 def mul(a, b):
@@ -164,96 +264,7 @@ def mul(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    inner_latency = 5
-
-    num_factory = num.get_numeric_factory()
-    if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
-        return PipeConstant.from_float(
-            num_factory.value_of(a.get_value()) * num_factory.value_of(b.get_value())
-        )
-    elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
-        if isinstance(a, PipeConstant):
-            static_value = a.get_value()
-            dynamic_value = b
-        else:
-            static_value = b.get_value()
-            dynamic_value = a
-
-        if static_value == 0:
-            return PipeConstant.from_float(0)
-        elif static_value == 1:
-            return dynamic_value
-
-    node = PipelineNode(inner_latency + 1)
-
-    node.add_inputs(a=a, b=b)
-    res = Signal(num_factory.create())
-    node.add_output(res)
-    node.set_name('mul')
-
-    node.set_logic(
-        altfp_wrapper,
-        pipeline_latency=inner_latency,
-        pipeline=mul_altfp,
-        width_exp=num_factory.width_exp,
-        width_man=num_factory.width_man
-    )
-    return node
-
-
-add_sub_inst_counter = 0
-
-
-@block
-def add_sub_altfp(clk, dataa, datab, result, pipeline_latency=7, direction='ADD', width_exp=11, width_man=52):
-    num_factory = num.get_numeric_factory()
-
-    internal_pipeline = [0 for _ in range(pipeline_latency - 1)]
-
-    data_width = 1 + width_exp + width_man
-
-    dataa_desc = _handle_inputs(dataa, data_width)
-    datab_desc = _handle_inputs(datab, data_width)
-
-    @always_seq(clk.posedge, reset=None)
-    def logic():
-        internal_pipeline.insert(
-            0,
-            num_factory.create_constant(
-                num_factory.value_of(dataa) + num_factory.value_of(datab) if direction == 'ADD' else
-                num_factory.value_of(dataa) - num_factory.value_of(datab)
-            )
-        )
-        result.next = internal_pipeline.pop()
-
-    result.driven = 'reg'
-    for d in [dataa, datab]:
-        if isinstance(d, SignalType):
-            d.read = True
-
-    global add_sub_inst_counter
-    add_sub_inst_counter += 1
-
-    return instances()
-
-
-add_sub_altfp.verilog_code = \
-    """
-altfp_add_sub altfp_add_sub_component_$add_sub_inst_counter (
-                .clock ($clk),
-                .dataa ($dataa_desc),
-                .datab ($datab_desc),
-                .result ($result));
-    defparam
-        altfp_add_sub_component_$add_sub_inst_counter.denormal_support = "NO",
-        altfp_add_sub_component_$add_sub_inst_counter.lpm_type = "altfp_add_sub",
-        altfp_add_sub_component_$add_sub_inst_counter.reduced_functionality = "NO",
-        altfp_add_sub_component_$add_sub_inst_counter.direction = "$direction",
-        altfp_add_sub_component_$add_sub_inst_counter.rounding = "TO_NEAREST",
-        altfp_add_sub_component_$add_sub_inst_counter.pipeline = $pipeline_latency,
-        altfp_add_sub_component_$add_sub_inst_counter.width_exp = $width_exp,
-        altfp_add_sub_component_$add_sub_inst_counter.width_man = $width_man;
-    """
+    return generic(NumericFunction.MUL, a, b)
 
 
 def add(a, b):
@@ -266,39 +277,7 @@ def add(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    inner_latency = 7
-
-    num_factory = num.get_numeric_factory()
-    if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
-        return PipeConstant.from_float(
-            num_factory.value_of(a.get_value()) + num_factory.value_of(b.get_value())
-        )
-    elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
-        if isinstance(a, PipeConstant):
-            static_value = a.get_value()
-            dynamic_value = b
-        else:
-            static_value = b.get_value()
-            dynamic_value = a
-
-        if static_value == 0:
-            return dynamic_value
-
-    node = PipelineNode(inner_latency + 1)
-
-    node.add_inputs(a=a, b=b)
-    res = Signal(num_factory.create())
-    node.add_output(res)
-    node.set_name('add')
-
-    node.set_logic(
-        altfp_wrapper,
-        pipeline_latency=inner_latency,
-        pipeline=add_sub_altfp,
-        width_exp=num_factory.width_exp,
-        width_man=num_factory.width_man
-    )
-    return node
+    return generic(NumericFunction.ADD, a, b)
 
 
 def sub(a, b):
@@ -311,40 +290,7 @@ def sub(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    inner_latency = 7
-
-    num_factory = num.get_numeric_factory()
-    if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
-        return PipeConstant.from_float(
-            num_factory.value_of(a.get_value()) - num_factory.value_of(b.get_value())
-        )
-    elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
-        if isinstance(a, PipeConstant):
-            static_value = a.get_value()
-            dynamic_value = b
-        else:
-            static_value = b.get_value()
-            dynamic_value = a
-
-        if static_value == 0:
-            return dynamic_value
-
-    node = PipelineNode(inner_latency + 1)
-
-    node.add_inputs(a=a, b=b)
-    res = Signal(num_factory.create())
-    node.add_output(res)
-    node.set_name('sub')
-
-    node.set_logic(
-        altfp_wrapper,
-        pipeline_latency=inner_latency,
-        pipeline=add_sub_altfp,
-        width_exp=num_factory.width_exp,
-        width_man=num_factory.width_man,
-        direction='SUB'
-    )
-    return node
+    return generic(NumericFunction.SUB, a, b)
 
 
 def negate(val):
