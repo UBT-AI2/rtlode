@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <spirit:component xmlns:altera="http://www.altera.com/XMLSchema/IPXact/extensions" xmlns:spirit="http://www.spiritconsortium.org/XMLSchema/SPIRIT/1685-2009">
   <spirit:vendor>Intel Corporation</spirit:vendor>
-  <spirit:library>addsubfp_single</spirit:library>
+  <spirit:library>subfp_single</spirit:library>
   <spirit:name>fp_functions_0</spirit:name>
   <spirit:version>17.1</spirit:version>
   <spirit:busInterfaces>
@@ -125,38 +125,6 @@
           <spirit:name>ptfSchematicName</spirit:name>
           <spirit:displayName>PTF schematic name</spirit:displayName>
           <spirit:value spirit:format="string" spirit:id="ptfSchematicName"></spirit:value>
-        </spirit:parameter>
-      </spirit:parameters>
-    </spirit:busInterface>
-    <spirit:busInterface>
-      <spirit:name>opSel</spirit:name>
-      <spirit:busType spirit:vendor="altera" spirit:library="altera" spirit:name="conduit" spirit:version="17.1"></spirit:busType>
-      <spirit:slave></spirit:slave>
-      <spirit:portMaps>
-        <spirit:portMap>
-          <spirit:logicalPort>
-            <spirit:name>opSel</spirit:name>
-          </spirit:logicalPort>
-          <spirit:physicalPort>
-            <spirit:name>opSel</spirit:name>
-          </spirit:physicalPort>
-        </spirit:portMap>
-      </spirit:portMaps>
-      <spirit:parameters>
-        <spirit:parameter>
-          <spirit:name>associatedClock</spirit:name>
-          <spirit:displayName>associatedClock</spirit:displayName>
-          <spirit:value spirit:format="string" spirit:id="associatedClock">clk</spirit:value>
-        </spirit:parameter>
-        <spirit:parameter>
-          <spirit:name>associatedReset</spirit:name>
-          <spirit:displayName>associatedReset</spirit:displayName>
-          <spirit:value spirit:format="string" spirit:id="associatedReset">areset</spirit:value>
-        </spirit:parameter>
-        <spirit:parameter>
-          <spirit:name>prSafe</spirit:name>
-          <spirit:displayName>Partial Reconfiguration Safe</spirit:displayName>
-          <spirit:value spirit:format="bool" spirit:id="prSafe">false</spirit:value>
         </spirit:parameter>
       </spirit:parameters>
     </spirit:busInterface>
@@ -287,24 +255,12 @@
           </spirit:wireTypeDefs>
         </spirit:wire>
       </spirit:port>
-      <spirit:port>
-        <spirit:name>opSel</spirit:name>
-        <spirit:wire>
-          <spirit:direction>in</spirit:direction>
-          <spirit:wireTypeDefs>
-            <spirit:wireTypeDef>
-              <spirit:typeName>STD_LOGIC_VECTOR</spirit:typeName>
-              <spirit:viewNameRef>QUARTUS_SYNTH</spirit:viewNameRef>
-            </spirit:wireTypeDef>
-          </spirit:wireTypeDefs>
-        </spirit:wire>
-      </spirit:port>
     </spirit:ports>
   </spirit:model>
   <spirit:vendorExtensions>
     <altera:entity_info>
       <spirit:vendor>Intel Corporation</spirit:vendor>
-      <spirit:library>addsubfp_single</spirit:library>
+      <spirit:library>subfp_single</spirit:library>
       <spirit:name>altera_fp_functions</spirit:name>
       <spirit:version>17.1</spirit:version>
     </altera:entity_info>
@@ -318,7 +274,7 @@
         <spirit:parameter>
           <spirit:name>ARITH_function</spirit:name>
           <spirit:displayName>Name</spirit:displayName>
-          <spirit:value spirit:format="string" spirit:id="ARITH_function">ADDSUB</spirit:value>
+          <spirit:value spirit:format="string" spirit:id="ARITH_function">SUB</spirit:value>
         </spirit:parameter>
         <spirit:parameter>
           <spirit:name>CONVERT_function</spirit:name>
@@ -353,7 +309,7 @@
         <spirit:parameter>
           <spirit:name>derivedfunction</spirit:name>
           <spirit:displayName>derivedfunction</spirit:displayName>
-          <spirit:value spirit:format="string" spirit:id="derivedfunction">ADDSUB</spirit:value>
+          <spirit:value spirit:format="string" spirit:id="derivedfunction">SUB</spirit:value>
         </spirit:parameter>
         <spirit:parameter>
           <spirit:name>fp_format</spirit:name>
@@ -473,12 +429,12 @@
         <spirit:parameter>
           <spirit:name>frequency_feedback</spirit:name>
           <spirit:displayName>frequency_feedback</spirit:displayName>
-          <spirit:value spirit:format="long" spirit:id="frequency_feedback">803</spirit:value>
+          <spirit:value spirit:format="long" spirit:id="frequency_feedback">0</spirit:value>
         </spirit:parameter>
         <spirit:parameter>
           <spirit:name>latency_feedback</spirit:name>
           <spirit:displayName>latency_feedback</spirit:displayName>
-          <spirit:value spirit:format="long" spirit:id="latency_feedback">3</spirit:value>
+          <spirit:value spirit:format="long" spirit:id="latency_feedback">0</spirit:value>
         </spirit:parameter>
         <spirit:parameter>
           <spirit:name>force_elaborate</spirit:name>
@@ -553,12 +509,12 @@
         <spirit:parameter>
           <spirit:name>RES_DSP_param</spirit:name>
           <spirit:displayName>Multiplies</spirit:displayName>
-          <spirit:value spirit:format="long" spirit:id="RES_DSP_param">2</spirit:value>
+          <spirit:value spirit:format="long" spirit:id="RES_DSP_param">0</spirit:value>
         </spirit:parameter>
         <spirit:parameter>
           <spirit:name>RES_LUT_param</spirit:name>
           <spirit:displayName>LUTs</spirit:displayName>
-          <spirit:value spirit:format="long" spirit:id="RES_LUT_param">1</spirit:value>
+          <spirit:value spirit:format="long" spirit:id="RES_LUT_param">0</spirit:value>
         </spirit:parameter>
         <spirit:parameter>
           <spirit:name>RES_MBIT_param</spirit:name>
@@ -657,9 +613,7 @@
       <altera:interface_mapping altera:name="clk" altera:internal="fp_functions_0.clk" altera:type="clock" altera:dir="end">
         <altera:port_mapping altera:name="clk" altera:internal="clk"></altera:port_mapping>
       </altera:interface_mapping>
-      <altera:interface_mapping altera:name="opSel" altera:internal="fp_functions_0.opSel" altera:type="conduit" altera:dir="end">
-        <altera:port_mapping altera:name="opSel" altera:internal="opSel"></altera:port_mapping>
-      </altera:interface_mapping>
+      <altera:interface_mapping altera:name="opSel" altera:internal="fp_functions_0.opSel"></altera:interface_mapping>
       <altera:interface_mapping altera:name="q" altera:internal="fp_functions_0.q" altera:type="conduit" altera:dir="end">
         <altera:port_mapping altera:name="q" altera:internal="q"></altera:port_mapping>
       </altera:interface_mapping>
