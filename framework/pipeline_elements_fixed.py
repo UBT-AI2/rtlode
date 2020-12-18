@@ -30,7 +30,7 @@ def mul_dsp_c(clk, rst, stage, node_input, node_output):
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
     reg_data = clone_signal(out)
 
-    @always_seq(clk.posedge, reset=None)
+    @always_seq(clk.posedge, reset=rst)
     def drive_data():
         if stage.data2out:
             out.next = intbv(node_input.static_value).signed() * node_input.dynamic_value
@@ -54,7 +54,7 @@ def mul_dsp(clk, rst, stage, node_input, node_output):
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
     reg_data = clone_signal(out)
 
-    @always_seq(clk.posedge, reset=None)
+    @always_seq(clk.posedge, reset=rst)
     def drive_data():
         if stage.data2out:
             out.next = node_input.a * node_input.b
@@ -150,7 +150,7 @@ def mul(a, b):
 def add_seq(clk, rst, stage, node_input, node_output):
     reg_data = clone_signal(node_output.default)
 
-    @always_seq(clk.posedge, reset=None)
+    @always_seq(clk.posedge, reset=rst)
     def drive_data():
         if stage.data2out:
             node_output.default.next = node_input.a + node_input.b
@@ -205,7 +205,7 @@ def add(a, b):
 def sub_seq(clk, rst, stage, node_input, node_output):
     reg_data = clone_signal(node_output.default)
 
-    @always_seq(clk.posedge, reset=None)
+    @always_seq(clk.posedge, reset=rst)
     def drive_data():
         if stage.data2out:
             node_output.default.next = node_input.a - node_input.b
@@ -260,7 +260,7 @@ def sub(a, b):
 def negate_seq(clk, rst, stage, node_input, node_output):
     reg_data = clone_signal(node_output.default)
 
-    @always_seq(clk.posedge, reset=None)
+    @always_seq(clk.posedge, reset=rst)
     def drive_data():
         if stage.data2out:
             node_output.default.next = -node_input.val

@@ -640,7 +640,7 @@ class Register(SeqNode):
 def register(clk, rst, stage, node_input, node_output):
     reg_data = clone_signal(node_output.default)
 
-    @always_seq(clk.posedge, reset=None)
+    @always_seq(clk.posedge, reset=rst)
     def drive_data():
         if stage.data2out:
             node_output.default.next = node_input.default
