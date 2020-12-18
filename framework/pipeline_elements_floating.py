@@ -2,7 +2,7 @@ from enum import Enum, auto
 
 from myhdl import block, Signal, instances, always_seq, always_comb, SignalType
 
-from framework.pipeline import PipelineNode, PipeConstant
+from framework.pipeline import PipelineNode, PipeConstant, PipeNumeric
 from framework.fifo import FifoProducer, FifoConsumer, fifo
 from utils import num
 from utils.num import FloatingPrecission
@@ -68,7 +68,7 @@ def _handle_inputs(sig, data_width):
 
 
 @block
-def register(clk, rst, previous_signal, next_signal):
+def stupid_register(clk, rst, previous_signal, next_signal):
     @always_seq(clk.posedge, reset=rst)
     def logic():
         next_signal.next = previous_signal
@@ -76,13 +76,24 @@ def register(clk, rst, previous_signal, next_signal):
     return instances()
 
 
-altfp_inst_counter = 0
+# Global counter needed to provide unique instance names
+fp_core_inst_counter = 0
 
 
 @block
-def altfp(clk, dataa, datab, result, num_factory: num.FloatingNumberFactory = None, function: NumericFunction = None):
-    assert num_factory is not None
-    assert function is not None
+def fp_core(clk, dataa, datab, result, num_factory: num.FloatingNumberFactory = None, function: NumericFunction = None):
+    """
+    Implementing a floating point ip core instance.
+    Ip Core must be described in _ip_core_info. Analog myhdl simulation logic is implemented.
+    :param clk: clock signal
+    :param dataa: parameter a
+    :param datab: parameter b
+    :param result: result signal
+    :param num_factory: NumberFactory to be used
+    :param function: NumericFunction to implement
+    :return: myhdl instances
+    """
+    assert num_factory is not None and function is not None
 
     ip_core = _get_ip_core_info(function, num_factory)
     component = ip_core['component']
@@ -113,15 +124,15 @@ def altfp(clk, dataa, datab, result, num_factory: num.FloatingNumberFactory = No
         if isinstance(d, SignalType):
             d.read = True
 
-    global altfp_inst_counter
-    altfp_inst_counter += 1
+    global fp_core_inst_counter
+    fp_core_inst_counter += 1
 
     return instances()
 
 
-altfp.verilog_code = \
+fp_core.verilog_code = \
     """
-$component altfp_component_$altfp_inst_counter (
+$component fp_core_component_$fp_core_inst_counter (
                 .clk ($clk),
                 .a ($dataa_desc),
                 .b ($datab_desc),
@@ -130,15 +141,15 @@ $component altfp_component_$altfp_inst_counter (
 
 
 @block
-def altfp_wrapper(
+def fp_core_wrapper(
         clk, rst,
         in_stage_valid, in_stage_busy,
         out_stage_valid, out_stage_busy,
         node_input, node_output,
-        pipeline_latency=5,
+        pipeline_latency,
         **kwargs):
     """
-    Wrapper functio for altfp instances.
+    Wrapper functio for floating point ip core instances.
     Implements additional logic to track value validity and proper handling while pipeline stalls.
 
     :param clk: clock signal
@@ -157,7 +168,7 @@ def altfp_wrapper(
     num_factory = num.get_numeric_factory()
 
     inner_pipe_res = Signal(num_factory.create())
-    inner_pipe = altfp(
+    inner_pipe = fp_core(
         clk, node_input.a, node_input.b, inner_pipe_res, **kwargs
     )
 
@@ -173,7 +184,7 @@ def altfp_wrapper(
     previous_signal = in_valid
     for next_signal in valid_signals:
         valid_reg.append(
-            register(clk, rst, previous_signal, next_signal)
+            stupid_register(clk, rst, previous_signal, next_signal)
         )
         previous_signal = next_signal
     valid = previous_signal
@@ -208,9 +219,17 @@ def altfp_wrapper(
     return instances()
 
 
-def generic(function: NumericFunction, a, b):
-    # TODO docstring
-
+def generic(function: NumericFunction, a: PipeNumeric, b: PipeNumeric):
+    """
+    Pipeline node which is able to apply the given NumericFunction to the two parameters (a, b).
+    Optimization is performed where possible.
+    The return type is PipeConstant if both parameters were integer and so the result is static.
+    In other cases the return type is defined by the used ip core - usually PipelineNode.
+    :param function: NumericFunction to be applied
+    :param a: parameter a
+    :param b: parameter b
+    :return: PipeConstant for static results or pipeline node
+    """
     num_factory = num.get_numeric_factory()
     assert isinstance(num_factory, num.FloatingNumberFactory)
 
@@ -246,7 +265,7 @@ def generic(function: NumericFunction, a, b):
     node.set_name(function.name.lower())
 
     node.set_logic(
-        altfp_wrapper,
+        fp_core_wrapper,
         pipeline_latency=latency,
         num_factory=num_factory,
         function=function
@@ -258,11 +277,11 @@ def mul(a, b):
     """
     Pipeline node which multiplies the two given parameters.
     Optimization is performed where possible.
-    The return type is int if both parameters were integer and so the result is static. Depending of the multiplication
-    implementation used the return type is CombNode or SeqNode in other cases.
+    The return type is PipeConstant if both parameters were integer and so the result is static.
+    In other cases the return type is defined by the used ip core - usually PipelineNode.
     :param a: parameter a
     :param b: parameter b
-    :return: int or pipeline node
+    :return: PipeConstant for static results or pipeline node
     """
     return generic(NumericFunction.MUL, a, b)
 
@@ -271,11 +290,11 @@ def add(a, b):
     """
     Pipeline node which adds the two given parameters.
     Optimization is performed where possible.
-    The return type is int if both parameters were integer and so the result is static.
-    Otherwise a SeqNode is returned.
+    The return type is PipeConstant if both parameters were integer and so the result is static.
+    In other cases the return type is defined by the used ip core - usually PipelineNode.
     :param a: parameter a
     :param b: parameter b
-    :return: int or pipeline node
+    :return: PipeConstant for static results or pipeline node
     """
     return generic(NumericFunction.ADD, a, b)
 
@@ -284,21 +303,19 @@ def sub(a, b):
     """
     Pipeline node which substracts b from a.
     Optimization is performed where possible.
-    The return type is int if both parameters were integer and so the result is static.
-    Otherwise a SeqNode is returned.
+    The return type is PipeConstant if both parameters were integer and so the result is static.
+    In other cases the return type is defined by the used ip core - usually PipelineNode.
     :param a: parameter a
     :param b: parameter b
-    :return: int or pipeline node
+    :return: PipeConstant for static results or pipeline node
     """
     return generic(NumericFunction.SUB, a, b)
 
 
 def negate(val):
     """
-    Pipeline node which negates the given parameter.
-    The return type is int if the type of the parameter is also int.
-    Otherwise a SeqNode is returned.
+    Pipeline function which negates the given parameter by multiplying it with -1.\
     :param val: parameter val
-    :return: int or pipeline node
+    :return: PipeConstant for static results or pipeline node
     """
     return val * PipeConstant.from_float(-1.0)

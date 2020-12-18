@@ -43,6 +43,6 @@ class Test(TestCase):
             return instances()
 
         tb = testbench()
-        tb.config_sim(trace=True)
+        # tb.config_sim(trace=True)
         tb.run_sim(500)
         tb.quit_sim()
