@@ -20,6 +20,8 @@ class Solver:
         self._config = config
         self._system_size = len(config['problem']['components'])
         self._csr_addresses = config['build_info']['csr_addresses']
+        default_factory = num.NumberFactory.from_config(config.get('numeric', {}))
+        num.set_numeric_factory(default_factory)
         # Shift all addresses
         for key, val in self._csr_addresses.items():
             self._csr_addresses[key] = val << 2
