@@ -3,6 +3,8 @@
 import argparse
 import sys
 
+import json
+
 
 class RtlOde(object):
 
@@ -38,23 +40,27 @@ The most commonly used git commands are:
         parser = argparse.ArgumentParser(description='Solve a single initial value problem in a given solver')
 
         parser.add_argument('solver', help='solver file to execute')
-        parser.add_argument('--runtime_config', help='overwrites the default config')
+        parser.add_argument('--runtime_config', help='overwrites the default config, must be an json string')
         args = parser.parse_args(sys.argv[2:])
 
         from runtime import runtime
-        res = runtime.run(args.solver, args.runtime_config)
+        res = runtime.run(args.solver, json.loads(args.runtime_config) if args.runtime_config is not None else None)
         print('Result: %r' % res)
 
     def benchmark(self):
         parser = argparse.ArgumentParser(description='Bechmark a given solver')
 
         parser.add_argument('solver', help='solver file to execute')
-        parser.add_argument('--runtime_config', help='overwrites the default config')
+        parser.add_argument('--runtime_config', help='overwrites the default config, must be an json string')
         args = parser.parse_args(sys.argv[2:])
 
         from runtime import runtime
         for adata in [1, 10, 100, 1000, 10000]:
-            timing = runtime.benchmark(args.solver, args.runtime_config, amount_data=adata)
+            timing = runtime.benchmark(
+                args.solver,
+                json.loads(args.runtime_config) if args.runtime_config is not None else None,
+                amount_data=adata
+            )
             print('For %s ivp the solver finished in: %s' % (adata, timing))
 
 
