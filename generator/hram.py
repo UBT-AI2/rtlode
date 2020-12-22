@@ -139,10 +139,17 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     output_data_per_chunk = (len(CcipClData) * 4) // len(output_desc)
     output_data_iter = Signal(num.get_integer_factory().create(0))
     output_data = [BitVector(len(output_desc)).create_instance() for _ in range(output_data_per_chunk)]
-    output_data_chunk_padding = BitVector(
-        (len(CcipClData) * 4) - (output_data_per_chunk * len(output_desc))
-    ).create_instance()
-    output_data_chunk = ConcatSignal(output_data_chunk_padding, *reversed(output_data))
+    output_data_chunk_padding_size = (len(CcipClData) * 4) - (output_data_per_chunk * len(output_desc))
+    if output_data_chunk_padding_size != 0:
+        output_data_chunk_padding = BitVector(output_data_chunk_padding_size).create_instance()
+        output_data_chunk = ConcatSignal(output_data_chunk_padding, *reversed(output_data))
+
+        @always_seq(clk.posedge, reset=None)
+        def reset_padding():
+            if reset:
+                output_data_chunk_padding.next = 0
+    else:
+        output_data_chunk = ConcatSignal(*reversed(output_data))
 
     t_write_state = enum('RDY', 'CL0', 'CL1', 'CL2', 'CL3', 'FIN')
     write_state = Signal(t_write_state.RDY)
@@ -168,7 +175,6 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
             data_in.rd.next = True
             csr.fin.next = False
             output_data_iter.next = 0
-            output_data_chunk_padding.next = 0
 
             nbr_outputs.next = 0
             for i in range(output_data_per_chunk):
