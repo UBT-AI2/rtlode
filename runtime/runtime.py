@@ -61,12 +61,12 @@ def run(slv_path: str, runtime_config=None, amount_data=None):
         solver.stop()
         print('Solver finished...')
 
-        results = {}
+        results = []
         while not all(awaiting_ids.values()):
             package_res = solver.fetch_output()
             if package_res['id'] in awaiting_ids:
                 awaiting_ids[package_res['id']] = True
-                results[package_res['id']] = package_res
+                results.append(package_res)
     return results
 
 
