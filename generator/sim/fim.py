@@ -5,6 +5,7 @@ from myhdl import block, Signal, ResetSignal, always, delay, instance, SignalTyp
 
 from framework import data_desc
 from framework.data_desc import unpack_output_data
+from generator.afu import afu
 from generator.config import Config
 from framework.packed_struct import BitVector
 from generator import csr
@@ -203,6 +204,9 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
         deep_update(config_dict, runtime_config)
     config = Config.from_dict(config_dict)
 
+    default_factory = num.NumberFactory.from_config(config_dict.get('numeric', {}))
+    num.set_numeric_factory(default_factory)
+
     @block
     def sim():
         clk = Signal(bool(0))
@@ -212,7 +216,7 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
         cp2af_port = BitVector(len(CcipRx)).create_instance()
         af2cp_port = BitVector(len(CcipTx)).create_instance()
 
-        afu_inst = afu_cosim(config, clk, usr_clk, reset, cp2af_port, af2cp_port)
+        afu_inst = afu(config, clk, usr_clk, reset, cp2af_port, af2cp_port)
 
         fim = Fim(config)
         fim_inst = fim.instance(clk, cp2af_port, af2cp_port)
