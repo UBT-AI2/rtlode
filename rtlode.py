@@ -37,18 +37,25 @@ The most commonly used git commands are:
         generator.build(*args.configuration)
 
     def run(self):
-        parser = argparse.ArgumentParser(description='Solve a single initial value problem in a given solver')
+        parser = argparse.ArgumentParser(
+            description='Solve a the given number (default: 0) of initial value problems in a given solver'
+        )
 
         parser.add_argument('solver', help='solver file to execute')
         parser.add_argument('--runtime_config', help='overwrites the default config, must be an json string')
+        parser.add_argument('--amount', type=int, help='number of initial value problems to solve', default=0)
         args = parser.parse_args(sys.argv[2:])
 
         from runtime import runtime
-        res = runtime.run(args.solver, json.loads(args.runtime_config) if args.runtime_config is not None else None)
-        print('Result: %r' % res)
+        res = runtime.run(
+            args.solver,
+            json.loads(args.runtime_config) if args.runtime_config is not None else None,
+            amount_data=args.amount
+        )
+        print('Result:\n%r' % json.dumps(res, sort_keys=True, indent=4))
 
     def benchmark(self):
-        parser = argparse.ArgumentParser(description='Bechmark a given solver')
+        parser = argparse.ArgumentParser(description='Benchmark a given solver')
 
         parser.add_argument('solver', help='solver file to execute')
         parser.add_argument('--runtime_config', help='overwrites the default config, must be an json string')

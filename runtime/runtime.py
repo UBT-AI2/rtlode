@@ -19,7 +19,7 @@ def _load_bitstream(gbs_path: str):
         device.reconfigure(0, fd)
 
 
-def run(slv_path: str, runtime_config=None):
+def run(slv_path: str, runtime_config=None, amount_data=None):
     """
     Loads and run a given solver.
     :return:
@@ -40,15 +40,17 @@ def run(slv_path: str, runtime_config=None):
     print('Aquiring ownership of afu...')
     with Solver(config, 2097152) as solver:
         print('Preparing input...')
-        if solver.input_full():
-            raise Exception('Input full.')
-        else:
-            input_id = solver.add_input(
+        nbr_inputs = 0
+        awaiting_ids = {}
+        while nbr_inputs < amount_data and not solver.input_full():
+            package_id = solver.add_input(
                 config['problem']['x'],
                 config['problem']['y'],
                 config['problem']['h'],
                 config['problem']['n']
             )
+            nbr_inputs += 1
+            awaiting_ids[package_id] = False
 
         print('Starting solver...')
         solver.start()
@@ -58,10 +60,14 @@ def run(slv_path: str, runtime_config=None):
 
         solver.stop()
         print('Solver finished...')
-        res = solver.fetch_output()
-        while res['id'] != input_id:
-            res = solver.fetch_output()
-    return res
+
+        results = {}
+        while not all(awaiting_ids.values()):
+            package_res = solver.fetch_output()
+            if package_res['id'] in awaiting_ids:
+                awaiting_ids[package_res['id']] = True
+                results[package_res['id']] = package_res
+    return results
 
 
 def benchmark(slv_path: str, runtime_config=None, amount_data=1000):
