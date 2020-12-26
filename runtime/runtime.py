@@ -65,6 +65,8 @@ def run(slv_path: str, runtime_config=None, amount_data=None):
         while not all(awaiting_ids.values()):
             package_res = solver.fetch_output()
             if package_res['id'] in awaiting_ids:
+                if awaiting_ids[package_res['id']]:
+                    raise Exception('Already got results for this id.')
                 awaiting_ids[package_res['id']] = True
                 results.append(package_res)
     return results
