@@ -24,7 +24,7 @@ def assign(clk, rst, out_val, in_val):
 @block
 def ff_synchronizer(clk, rst, chain_out, chain_in, stages=2, chain_rst_value=0):
     """
-    Flip-Flop based synchronizer. Can be used to stabelize signals which are crossing clock domains.
+    Flip-Flop based synchronizer. Can be used to stabilize signals which are crossing clock domains.
     Generates a chain with ff_stages flip flops. Use only with 1 bit values if you are not certain
     what you are doing!
     :param clk: clock for the flip flops
@@ -45,11 +45,11 @@ def ff_synchronizer(clk, rst, chain_out, chain_in, stages=2, chain_rst_value=0):
 @block
 def areset_synchronizer(clk, async_rst, sync_rst, min_reset_cycles=2):
     """
-    Synchronizer for async reset signals. Uses internally a flip-flop sychronizer.
+    Synchronizer for async reset signals. Uses internally a flip-flop synchronizer.
     :param clk: clock of target domain
-    :param async_rst: async reset signal to be synchonized
+    :param async_rst: async reset signal to be synchronized
     :param sync_rst: sync reset signal
-    :param min_reset_cycles: min clock cycles the sychronized reset should be high
+    :param min_reset_cycles: min clock cycles the synchronized reset should be high
     :return: myhdl instances
     """
     driver_val = Signal(bool(1))
@@ -95,8 +95,8 @@ class AsyncFifoConsumer(FifoConsumer):
 def async_fifo(p: AsyncFifoProducer, c: AsyncFifoConsumer, buffer_size_bits=8):
     """
     Async fifo usable for cdc synchronisation.
-    The producer and consumer domains are seperated. The buffer size can be given
-    by buffer_size_bits. The resulting size is 2**buffer_size_bits.
+    The producer and consumer domains are separated. The buffer size can be given
+    by buffer_size_bits. The resulting size is 2^buffer_size_bits.
     :param p: all signals of the producer
     :param c: all signals of the consumer
     :param buffer_size_bits:
