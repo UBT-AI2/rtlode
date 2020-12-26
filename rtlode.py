@@ -53,7 +53,7 @@ The most commonly used git commands are:
             json.loads(args.runtime_config) if args.runtime_config is not None else None,
             amount_data=args.amount
         )
-        print('Result:\n%r' % json.dumps(res, sort_keys=True, indent=4))
+        print('Result:\n%s' % json.dumps(res, sort_keys=True, indent=4))
 
     def benchmark(self):
         parser = argparse.ArgumentParser(description='Benchmark a given solver')
