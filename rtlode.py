@@ -43,9 +43,10 @@ The most commonly used git commands are:
 
         parser.add_argument('solver', help='solver file to execute')
         parser.add_argument('--runtime_config', help='overwrites the default config, must be an json string')
-        parser.add_argument('--amount', type=int, help='number of initial value problems to solve', default=0)
+        parser.add_argument('--amount', type=int, help='number of initial value problems to solve', default=1)
         args = parser.parse_args(sys.argv[2:])
 
+        assert args.amount > 0
         from runtime import runtime
         res = runtime.run(
             args.solver,

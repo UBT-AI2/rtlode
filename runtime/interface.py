@@ -149,7 +149,7 @@ class Solver:
             self._output_data_offset = 0
 
         return {
-            'id': unpacked_data['id'],
+            'id': num.get_integer_factory().value_of(unpacked_data['id']),
             'x': num.get_numeric_factory().value_of(unpacked_data['x']),
             'y': list(map(num.get_numeric_factory().value_of, reversed(unpacked_data['y'])))
         }
