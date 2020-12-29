@@ -2,10 +2,10 @@ from enum import Enum, auto
 
 from myhdl import block, Signal, instances, always_seq, always_comb, SignalType
 
-from framework.pipeline import PipelineNode, PipeConstant, PipeNumeric
+from framework.pipeline import PipelineNode, PipeConstant, PipeNumeric, PipeSignal
 from framework.fifo import FifoProducer, FifoConsumer, fifo
 from utils import num
-from utils.num import FloatingPrecission
+from utils.num import FloatingPrecision
 
 
 class NumericFunction(Enum):
@@ -17,33 +17,33 @@ class NumericFunction(Enum):
 _ip_core_infos = {
     NumericFunction.MUL: {
         'analog_function': lambda x, y: x * y,
-        FloatingPrecission.SINGLE: {
+        FloatingPrecision.SINGLE: {
             'latency': 3,
             'component': 'multfp_single'
         },
-        FloatingPrecission.DOUBLE: {
+        FloatingPrecision.DOUBLE: {
             'latency': 5,
             'component': 'multfp_double'
         }
     },
     NumericFunction.ADD: {
         'analog_function': lambda x, y: x + y,
-        FloatingPrecission.SINGLE: {
+        FloatingPrecision.SINGLE: {
             'latency': 3,
             'component': 'addfp_single'
         },
-        FloatingPrecission.DOUBLE: {
+        FloatingPrecision.DOUBLE: {
             'latency': 7,
             'component': 'addfp_double'
         }
     },
     NumericFunction.SUB: {
         'analog_function': lambda x, y: x - y,
-        FloatingPrecission.SINGLE: {
+        FloatingPrecision.SINGLE: {
             'latency': 3,
             'component': 'subfp_single'
         },
-        FloatingPrecission.DOUBLE: {
+        FloatingPrecision.DOUBLE: {
             'latency': 7,
             'component': 'subfp_double'
         }
@@ -51,8 +51,8 @@ _ip_core_infos = {
 }
 
 
-def _get_ip_core_info(function: NumericFunction, num_factory: num.FloatingNumberFactory):
-    return _ip_core_infos[function][num_factory.precission]
+def _get_ip_core_info(function: NumericFunction, num_factory: num.FloatingNumberType):
+    return _ip_core_infos[function][num_factory.precision]
 
 
 def _calc_analog(function: NumericFunction, a, b):
@@ -81,7 +81,7 @@ fp_core_inst_counter = 0
 
 
 @block
-def fp_core(clk, dataa, datab, result, num_factory: num.FloatingNumberFactory = None, function: NumericFunction = None):
+def fp_core(clk, dataa, datab, result, num_factory: num.FloatingNumberType = None, function: NumericFunction = None):
     """
     Implementing a floating point ip core instance.
     Ip Core must be described in _ip_core_info. Analog myhdl simulation logic is implemented.
@@ -165,20 +165,20 @@ def fp_core_wrapper(
     """
     assert pipeline_latency > 0
 
-    num_factory = num.get_numeric_factory()
+    num_factory = num.get_default_type()
 
     inner_pipe_res = Signal(num_factory.create())
     inner_pipe = fp_core(
         clk, node_input.a, node_input.b, inner_pipe_res, **kwargs
     )
 
-    in_valid = Signal(num.get_bool_factory().create())
+    in_valid = Signal(num.BoolNumberType().create())
 
     @always_seq(clk.posedge, reset=rst)
     def check_input_validity():
         in_valid.next = in_stage_valid and not in_stage_busy
 
-    valid_signals = [Signal(num.get_bool_factory().create()) for _ in range(pipeline_latency - 1)]
+    valid_signals = [Signal(num.BoolNumberType().create()) for _ in range(pipeline_latency - 1)]
     valid_reg = []
 
     previous_signal = in_valid
@@ -195,7 +195,7 @@ def fp_core_wrapper(
     bits_needed = len("{0:b}".format(pipeline_latency + 1)) + 1
     reg_fifo = fifo(clk, rst, reg_fifo_p, reg_fifo_c, buffer_size_bits=bits_needed)
 
-    reg_fill_level = Signal(num.get_integer_factory().create(0))
+    reg_fill_level = Signal(num.UnsignedIntegerNumberType(32).create(0))  # TODO, correct size
 
     @always_seq(clk.posedge, reset=rst)
     def drive_data():
@@ -230,12 +230,13 @@ def generic(function: NumericFunction, a: PipeNumeric, b: PipeNumeric):
     :param b: parameter b
     :return: PipeConstant for static results or pipeline node
     """
-    num_factory = num.get_numeric_factory()
-    assert isinstance(num_factory, num.FloatingNumberFactory)
+    assert a.get_type() == b.get_type()
+    num_type = num.get_default_type()
+    assert isinstance(num_type, num.FloatingNumberType)
 
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
         return PipeConstant.from_float(
-            _calc_analog(function, num_factory.value_of(a.get_value()), num_factory.value_of(b.get_value()))
+            _calc_analog(function, num_type.value_of(a.get_value()), num_type.value_of(b.get_value()))
         )
     elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
         if isinstance(a, PipeConstant):
@@ -255,19 +256,19 @@ def generic(function: NumericFunction, a: PipeNumeric, b: PipeNumeric):
             if static_value == 0:
                 return dynamic_value
 
-    latency = _get_ip_core_info(function, num_factory)['latency']
+    latency = _get_ip_core_info(function, num_type)['latency']
 
     node = PipelineNode(latency + 1)
 
     node.add_inputs(a=a, b=b)
-    res = Signal(num_factory.create())
+    res = PipeSignal(num_type, Signal(num_type.create()))
     node.add_output(res)
-    node.set_name(function.name.lower())
+    node.set_name('floating-{}'.format(function.name.lower()))
 
     node.set_logic(
         fp_core_wrapper,
         pipeline_latency=latency,
-        num_factory=num_factory,
+        num_factory=num_type,
         function=function
     )
     return node

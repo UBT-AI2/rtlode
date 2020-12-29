@@ -5,9 +5,12 @@ import struct
 from myhdl import intbv
 
 
-class NumberFactory:
+class NumberType:
     def __init__(self, nbr_bits):
         self.nbr_bits = nbr_bits
+
+    def __eq__(self, other):
+        raise NotImplementedError
 
     def create(self, val=0):
         return self.create_from_constant(self.create_constant(val))
@@ -26,16 +29,21 @@ class NumberFactory:
         numeric_type = numeric_cfg.get('type', 'fixed')
 
         if numeric_type == 'fixed':
-            return SignedFixedNumberFactory.from_config(numeric_cfg)
+            return SignedFixedNumberType.from_config(numeric_cfg)
         elif numeric_type == 'floating':
-            return FloatingNumberFactory.from_config(numeric_cfg)
+            return FloatingNumberType.from_config(numeric_cfg)
         else:
             raise NotImplementedError('Unknwown numeric_type specified in config.')
 
 
-class BoolNumberFactory(NumberFactory):
+class BoolNumberType(NumberType):
     def __init__(self):
         super().__init__(1)
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return True
+        raise NotImplementedError
 
     def create_from_constant(self, const_val):
         return bool(const_val)
@@ -51,7 +59,12 @@ class BoolNumberFactory(NumberFactory):
         raise NotImplementedError()
 
 
-class IntegerNumberFactory(NumberFactory):
+class UnsignedIntegerNumberType(NumberType):
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.nbr_bits == other.nbr_bits
+        raise NotImplementedError
+
     def create_from_constant(self, const_val):
         return intbv(const_val, min=0, max=2 ** self.nbr_bits)
 
@@ -66,7 +79,7 @@ class IntegerNumberFactory(NumberFactory):
         raise NotImplementedError()
 
 
-class SignedFixedNumberFactory(NumberFactory):
+class SignedFixedNumberType(NumberType):
     nonfraction_bits = None
     fraction_bits = None
 
@@ -74,6 +87,11 @@ class SignedFixedNumberFactory(NumberFactory):
         self.fraction_bits = fraction_size
         self.nonfraction_bits = nonfraction_size
         super().__init__(1 + self.nonfraction_bits + self.fraction_bits)
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.fraction_bits == other.fraction_bits and self.nonfraction_bits == other.nonfraction_bits
+        raise NotImplementedError
 
     def create_from_constant(self, const_val):
         max_value = 2 ** (self.nonfraction_bits + self.fraction_bits)
@@ -92,44 +110,49 @@ class SignedFixedNumberFactory(NumberFactory):
     def from_config(numeric_cfg: dict):
         fraction_size = numeric_cfg.get('fixed_point_fraction_size', 37)
         nonfraction_size = numeric_cfg.get('fixed_point_nonfraction_size', 16)
-        return SignedFixedNumberFactory(fraction_size, nonfraction_size)
+        return SignedFixedNumberType(fraction_size, nonfraction_size)
 
 
-class FloatingPrecission(Enum):
+class FloatingPrecision(Enum):
     SINGLE = 32
     DOUBLE = 64
 
 
-class FloatingNumberFactory(NumberFactory):
-    precission_struct_id_map = {
-        FloatingPrecission.SINGLE: ('!I', '!f'),
-        FloatingPrecission.DOUBLE: ('!Q', '!d')
+class FloatingNumberType(NumberType):
+    precision_struct_id_map = {
+        FloatingPrecision.SINGLE: ('!I', '!f'),
+        FloatingPrecision.DOUBLE: ('!Q', '!d')
     }
 
-    def __init__(self, precission: Union[FloatingPrecission, str]):
-        if isinstance(precission, str):
-            precission = FloatingPrecission[precission.upper()]
-        super().__init__(precission.value)
+    def __init__(self, precision: Union[FloatingPrecision, str]):
+        if isinstance(precision, str):
+            precision = FloatingPrecision[precision.upper()]
+        super().__init__(precision.value)
 
-        self.precission = precission
+        self.precision = precision
+
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.precision == other.precision
+        raise NotImplementedError
 
     def create_from_constant(self, const_val):
         return intbv(const_val, min=0, max=2 ** self.nbr_bits)
 
     def create_constant(self, val):
-        unpack_mod, pack_mod = self.precission_struct_id_map[self.precission]
+        unpack_mod, pack_mod = self.precision_struct_id_map[self.precision]
         return struct.unpack(unpack_mod, struct.pack(pack_mod, val))[0]
 
     def value_of(self, val):
-        pack_mod, unpack_mod = self.precission_struct_id_map[self.precission]
+        pack_mod, unpack_mod = self.precision_struct_id_map[self.precision]
         return struct.unpack(unpack_mod, struct.pack(pack_mod, val))[0]
 
     @staticmethod
     def from_config(numeric_cfg: dict):
-        precission = FloatingPrecission[
+        precision = FloatingPrecision[
             numeric_cfg.get('floating_precision', 'double').upper()
         ]
-        return FloatingNumberFactory(precission)
+        return FloatingNumberType(precision)
 
 
 """
@@ -138,32 +161,13 @@ Numeric Type Handling
 Use the method set_default() to set a default NumberFactory for the whole numeric logic.
 The get_default() method is used by the logic to retrieve the type.
 """
-default_factory = SignedFixedNumberFactory(37, 16)
+default_type = SignedFixedNumberType(37, 16)
 
 
-def get_numeric_factory():
-    return default_factory
+def get_default_type():
+    return default_type
 
 
-def set_numeric_factory(number_type: NumberFactory):
-    global default_factory
-    default_factory = number_type
-
-
-integer_factory = IntegerNumberFactory(32)
-
-
-def get_integer_factory():
-    return integer_factory
-
-
-def set_integer_factory(number_type: IntegerNumberFactory):
-    global integer_factory
-    integer_factory = number_type
-
-
-bool_factory = BoolNumberFactory()
-
-
-def get_bool_factory():
-    return bool_factory
+def set_default_type(number_type: NumberType):
+    global default_type
+    default_type = number_type

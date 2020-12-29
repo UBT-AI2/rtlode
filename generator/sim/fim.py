@@ -37,9 +37,9 @@ class Fim:
 
         packed_data = data_desc.pack_input_data(self._config.system_size, {
             'id': int(self._current_input_id),
-            'x_start': num.get_numeric_factory().create_constant(x_start),
-            'y_start': list(map(num.get_numeric_factory().create_constant, reversed(y_start))),
-            'h': num.get_numeric_factory().create_constant(h),
+            'x_start': num.get_default_type().create_constant(x_start),
+            'y_start': list(map(num.get_default_type().create_constant, reversed(y_start))),
+            'h': num.get_default_type().create_constant(h),
             'n': int(n)
         })
         print(packed_data)
@@ -69,8 +69,8 @@ class Fim:
             self._mem_output_data_offset = 0
 
         return {
-            'x': num.get_numeric_factory().value_of(unpacked_data['x']),
-            'y': list(map(num.get_numeric_factory().value_of, reversed(unpacked_data['y']))),
+            'x': num.get_default_type().value_of(unpacked_data['x']),
+            'y': list(map(num.get_default_type().value_of, reversed(unpacked_data['y']))),
             'id': unpacked_data['id']
         }
 
@@ -204,8 +204,8 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
         deep_update(config_dict, runtime_config)
     config = Config.from_dict(config_dict)
 
-    default_factory = num.NumberFactory.from_config(config_dict.get('numeric', {}))
-    num.set_numeric_factory(default_factory)
+    default_factory = num.NumberType.from_config(config_dict.get('numeric', {}))
+    num.set_default_type(default_factory)
 
     @block
     def sim():

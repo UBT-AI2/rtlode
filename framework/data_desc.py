@@ -6,8 +6,8 @@ from utils import num
 
 
 def get_input_desc(system_size):
-    integer_size = num.get_integer_factory().nbr_bits
-    default_size = num.get_numeric_factory().nbr_bits
+    integer_size = num.UnsignedIntegerNumberType(32).nbr_bits
+    default_size = num.get_default_type().nbr_bits
     len_without_padding = 2 * integer_size + (2 + system_size) * default_size
     if len_without_padding % 8 != 0:
         len_padding = 8 - len_without_padding % 8
@@ -70,8 +70,8 @@ def pack_input_data(system_size, input_data: dict) -> bytes:
 
 
 def get_output_desc(system_size):
-    integer_size = num.get_integer_factory().nbr_bits
-    default_size = num.get_numeric_factory().nbr_bits
+    integer_size = num.UnsignedIntegerNumberType(32).nbr_bits
+    default_size = num.get_default_type().nbr_bits
     len_without_padding = integer_size + (1 + system_size) * default_size
     if len_without_padding % 8 != 0:
         len_padding = 8 - len_without_padding % 8

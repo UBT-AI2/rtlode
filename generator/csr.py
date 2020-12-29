@@ -36,8 +36,8 @@ class CsrHeader:
 class CsrSignals:
     input_addr: SignalType = field(default_factory=CcipClAddr.create_instance)
     output_addr: SignalType = field(default_factory=CcipClAddr.create_instance)
-    buffer_size: SignalType = field(default_factory=lambda: Signal(num.get_integer_factory().create(0)))
-    buffer_unused_bytes: SignalType = field(default_factory=lambda: Signal(num.get_integer_factory().create(0)))
+    buffer_size: SignalType = field(default_factory=lambda: Signal(num.UnsignedIntegerNumberType(32).create(0)))
+    buffer_unused_bytes: SignalType = field(default_factory=lambda: Signal(num.UnsignedIntegerNumberType(32).create(0)))
     enb: SignalType = field(default_factory=lambda: Signal(bool(0)))
     fin: SignalType = field(default_factory=lambda: Signal(bool(0)))
 

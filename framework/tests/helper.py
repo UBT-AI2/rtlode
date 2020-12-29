@@ -19,7 +19,7 @@ class PipeTestCase(TestCase):
             rst = ResetSignal(False, True, False)
 
             in_valid = Signal(bool(0))
-            in_signal = Signal(num.get_numeric_factory().create(input_data[0]))
+            in_signal = Signal(num.get_default_type().create(input_data[0]))
 
             out_busy = Signal(bool(0))
 
@@ -37,8 +37,8 @@ class PipeTestCase(TestCase):
             def clk_driver():
                 clk.next = not clk
 
-            in_counter = Signal(num.get_integer_factory().create(1))
-            valid_counter = Signal(num.get_integer_factory().create())
+            in_counter = Signal(num.UnsignedIntegerNumberType(32).create(1))
+            valid_counter = Signal(num.UnsignedIntegerNumberType(32).create())
 
             in_valid.next = True
 
@@ -46,21 +46,21 @@ class PipeTestCase(TestCase):
             def input_driver():
                 if in_valid and not data_in.pipe_busy:
                     in_counter.next = in_counter + 1
-                    in_signal.next = num.get_numeric_factory().create(input_data[min(in_counter, len(input_data) - 1)])
+                    in_signal.next = num.get_default_type().create(input_data[min(in_counter, len(input_data) - 1)])
                 if valid_counter == 5:
                     in_valid.next = not in_valid
                     valid_counter.next = 0
                 else:
                     valid_counter.next = valid_counter + 1
 
-            busy_counter = Signal(num.get_integer_factory().create())
-            out_counter = Signal(num.get_integer_factory().create(0))
+            busy_counter = Signal(num.UnsignedIntegerNumberType(32).create())
+            out_counter = Signal(num.UnsignedIntegerNumberType(32).create(0))
 
             @always(clk.posedge)
             def output_driver():
                 if data_out.pipe_valid and not out_busy:
                     out_counter.next += 1
-                    self.assertEqual(num.get_numeric_factory().create_constant(output_data[out_counter]), data_out.res)
+                    self.assertEqual(num.get_default_type().create_constant(output_data[out_counter]), data_out.res)
                 if busy_counter == 20:
                     out_busy.next = not out_busy
                     busy_counter.next = 0

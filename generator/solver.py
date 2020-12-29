@@ -3,7 +3,7 @@ from myhdl import block, instances, SignalType, always, Signal, always_comb, alw
 from framework import data_desc
 from framework.packed_struct import StructDescription, StructDescriptionMetaclass, List, BitVector
 from framework.fifo import FifoConsumer, FifoProducer, fifo
-from framework.pipeline import PipeInput, PipeOutput, Pipe, PipeConstant
+from framework.pipeline import PipeInput, PipeOutput, Pipe, PipeConstant, PipeSignal
 from framework.vector_utils import vec_mul
 from generator.utils import assign, assign_3, assign_2
 from utils import num
@@ -35,26 +35,26 @@ def solver(
         def drive_output_bit_padding():
             solver_output._bit_padding.next = 0
 
-    integer_factory = num.get_integer_factory()
-    default_factory = num.get_numeric_factory()
+    integer_type = num.UnsignedIntegerNumberType(32)
+    numeric_type = num.get_default_type()
 
     class PipeData(StructDescription, metaclass=StructDescriptionMetaclass):
-        id = BitVector(integer_factory.nbr_bits)
-        h = BitVector(default_factory.nbr_bits)
-        n = BitVector(default_factory.nbr_bits)
-        cn = BitVector(default_factory.nbr_bits)
-        x = BitVector(default_factory.nbr_bits)
-        y = List(config.system_size, BitVector(default_factory.nbr_bits))
+        id = BitVector(integer_type.nbr_bits)
+        h = BitVector(numeric_type.nbr_bits)
+        n = BitVector(numeric_type.nbr_bits)
+        cn = BitVector(numeric_type.nbr_bits)
+        x = BitVector(numeric_type.nbr_bits)
+        y = List(config.system_size, BitVector(numeric_type.nbr_bits))
 
     pipe_input_valid = Signal(bool(0))
     pipe_output_busy = Signal(bool(0))
 
-    pipe_input_id = Signal(integer_factory.create())
-    pipe_input_h = Signal(default_factory.create())
-    pipe_input_n = Signal(integer_factory.create())
-    pipe_input_cn = Signal(integer_factory.create())
-    pipe_input_x = Signal(default_factory.create())
-    pipe_input_y = [Signal(default_factory.create()) for _ in range(config.system_size)]
+    pipe_input_id = Signal(integer_type.create())
+    pipe_input_h = Signal(numeric_type.create())
+    pipe_input_n = Signal(integer_type.create())
+    pipe_input_cn = Signal(integer_type.create())
+    pipe_input_x = Signal(numeric_type.create())
+    pipe_input_y = [Signal(numeric_type.create()) for _ in range(config.system_size)]
 
     cycle_p = FifoProducer(BitVector(len(PipeData)).create_instance())
     cycle_c = FifoConsumer(BitVector(len(PipeData)).create_instance())
@@ -66,12 +66,12 @@ def solver(
     cycle_output = PipeData.create_read_instance(cycle_c.data)
 
     pipe_data_in = PipeInput(pipe_input_valid,
-                             id=pipe_input_id,
-                             h=pipe_input_h,
-                             n=pipe_input_n,
-                             cn=pipe_input_cn,
-                             x=pipe_input_x,
-                             y=pipe_input_y)
+                             id=PipeSignal(integer_type, pipe_input_id),
+                             h=PipeSignal(numeric_type, pipe_input_h),
+                             n=PipeSignal(integer_type, pipe_input_n),
+                             cn=PipeSignal(integer_type, pipe_input_cn),
+                             x=PipeSignal(numeric_type, pipe_input_x),
+                             y=list(map(lambda x: PipeSignal(numeric_type, x), pipe_input_y)))
     v = []
     for si in range(config.stages):
         v.append(
@@ -85,13 +85,11 @@ def solver(
         ) for i in range(config.system_size)
     ]
 
-    from framework import pipeline_elements_fixed
-
     pipe_data_out = PipeOutput(pipe_output_busy,
                                id=pipe_data_in.id,
                                h=pipe_data_in.h,
                                n=pipe_data_in.n,
-                               cn=pipeline_elements_fixed.add(pipe_data_in.cn, PipeConstant(1)),
+                               cn=pipe_data_in.cn + PipeConstant.from_float(1, integer_type),
                                x=pipe_data_in.x + pipe_data_in.h,
                                y=y_n)
     pipe = Pipe(pipe_data_in, pipe_data_out)

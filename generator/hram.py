@@ -32,11 +32,11 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     assert len(output_desc) <= len(data_in.data)
 
     # Used to track if all data was processed
-    nbr_inputs = Signal(num.get_integer_factory().create(0))
-    nbr_outputs = Signal(num.get_integer_factory().create(0))
+    nbr_inputs = Signal(num.UnsignedIntegerNumberType(32).create(0))
+    nbr_outputs = Signal(num.UnsignedIntegerNumberType(32).create(0))
 
     # Incremental counter used for iterating trough host array
-    input_addr_offset = Signal(num.get_integer_factory().create(0))
+    input_addr_offset = Signal(num.UnsignedIntegerNumberType(32).create(0))
 
     # Currently not completly process read request?
     read_response_outstanding = Signal(bool(0))
@@ -97,7 +97,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
     chunk_size = 4 * len(CcipClData)
     input_data_size = len(input_desc)
-    input_data_iter = Signal(num.get_integer_factory().create(0))
+    input_data_iter = Signal(num.UnsignedIntegerNumberType(32).create(0))
 
     @always_seq(clk.posedge, reset=reset)
     def mem_reads_responses():
@@ -135,9 +135,9 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
                 cl3_rcv.next = True
 
     # Incremental counter used for iterating trough host array
-    output_addr_offset = Signal(num.get_integer_factory().create(0))
+    output_addr_offset = Signal(num.UnsignedIntegerNumberType(32).create(0))
     output_data_per_chunk = (len(CcipClData) * 4) // len(output_desc)
-    output_data_iter = Signal(num.get_integer_factory().create(0))
+    output_data_iter = Signal(num.UnsignedIntegerNumberType(32).create(0))
     output_data = [BitVector(len(output_desc)).create_instance() for _ in range(output_data_per_chunk)]
     output_data_chunk_padding_size = (len(CcipClData) * 4) - (output_data_per_chunk * len(output_desc))
     if output_data_chunk_padding_size != 0:

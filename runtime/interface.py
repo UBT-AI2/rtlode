@@ -20,8 +20,8 @@ class Solver:
         self._config = config
         self._system_size = len(config['problem']['components'])
         self._csr_addresses = config['build_info']['csr_addresses']
-        default_factory = num.NumberFactory.from_config(config.get('numeric', {}))
-        num.set_numeric_factory(default_factory)
+        default_factory = num.NumberType.from_config(config.get('numeric', {}))
+        num.set_default_type(default_factory)
         # Shift all addresses
         for key, val in self._csr_addresses.items():
             self._csr_addresses[key] = val << 2
@@ -113,9 +113,9 @@ class Solver:
 
         packed_data = data_desc.pack_input_data(self._system_size, {
             'id': int(self._current_input_id),
-            'x_start': num.get_numeric_factory().create_constant(x_start),
-            'y_start': list(map(num.get_numeric_factory().create_constant, reversed(y_start))),
-            'h': num.get_numeric_factory().create_constant(h),
+            'x_start': num.get_default_type().create_constant(x_start),
+            'y_start': list(map(num.get_default_type().create_constant, reversed(y_start))),
+            'h': num.get_default_type().create_constant(h),
             'n': int(n)
         })
         packed_data_len = len(packed_data)
@@ -149,9 +149,9 @@ class Solver:
             self._output_data_offset = 0
 
         return {
-            'id': num.get_integer_factory().value_of(unpacked_data['id']),
-            'x': num.get_numeric_factory().value_of(unpacked_data['x']),
-            'y': list(map(num.get_numeric_factory().value_of, reversed(unpacked_data['y'])))
+            'id': num.UnsignedIntegerNumberType(32).value_of(unpacked_data['id']),
+            'x': num.get_default_type().value_of(unpacked_data['x']),
+            'y': list(map(num.get_default_type().value_of, reversed(unpacked_data['y'])))
         }
 
     @property

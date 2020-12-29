@@ -7,9 +7,9 @@ from utils import num
 class TestPipe(PipeTestCase):
     def run(self, result=None):
         # Run twice for each floating precission
-        num.set_numeric_factory(num.FloatingNumberFactory(num.FloatingPrecission.DOUBLE))
+        num.set_default_type(num.FloatingNumberType(num.FloatingPrecision.DOUBLE))
         super().run(result)
-        num.set_numeric_factory(num.FloatingNumberFactory(num.FloatingPrecission.SINGLE))
+        num.set_default_type(num.FloatingNumberType(num.FloatingPrecision.SINGLE))
         super().run(result)
 
     def test_add(self):

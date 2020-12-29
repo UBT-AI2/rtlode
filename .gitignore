@@ -1,5 +1,6 @@
 .idea
 venv
+venv-linux
 generator/out
 generator/sim/out
 __pycache__

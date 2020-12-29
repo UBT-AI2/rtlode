@@ -1,6 +1,6 @@
 from myhdl import Signal, block, always_seq, instances, intbv, always_comb
 
-from framework.pipeline import SeqNode, CombNode, PipeConstant
+from framework.pipeline import SeqNode, CombNode, PipeConstant, PipeNumeric, PipeSignal
 from generator.utils import clone_signal
 from utils import num
 
@@ -25,7 +25,7 @@ def mul_by_shift_right(node_input, node_output):
 
 @block
 def mul_dsp_c(clk, rst, stage, node_input, node_output):
-    num_factory = num.get_numeric_factory()
+    num_factory = num.get_default_type()
     reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
     reg_data = clone_signal(out)
@@ -49,7 +49,7 @@ def mul_dsp_c(clk, rst, stage, node_input, node_output):
 
 @block
 def mul_dsp(clk, rst, stage, node_input, node_output):
-    num_factory = num.get_numeric_factory()
+    num_factory = num.get_default_type()
     reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
     reg_data = clone_signal(out)
@@ -71,7 +71,7 @@ def mul_dsp(clk, rst, stage, node_input, node_output):
     return instances()
 
 
-def mul(a, b):
+def mul(a: PipeNumeric, b: PipeNumeric):
     """
     Pipeline node which multiplies the two given parameters.
     Optimization is performed where possible.
@@ -81,14 +81,17 @@ def mul(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    num_factory = num.get_numeric_factory()
+    assert a.get_type() == b.get_type()
+    num_type = a.get_type()
+    assert isinstance(num_type, num.SignedFixedNumberType)
+
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
-        reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
-        return PipeConstant(int(intbv(
-            num_factory.create_constant(a.get_value()) * num_factory.create_constant(b.get_value()),
+        reg_max = 2 ** (num_type.nonfraction_bits + 2 * num_type.fraction_bits)
+        return PipeConstant(num_type, int(intbv(
+            num_type.create_constant(a.get_value()) * num_type.create_constant(b.get_value()),
             min=-reg_max,
             max=reg_max
-        )[1 + num_factory.nonfraction_bits + 2 * num_factory.fraction_bits:num_factory.fraction_bits].signed()))
+        )[1 + num_type.nonfraction_bits + 2 * num_type.fraction_bits:num_type.fraction_bits].signed()))
     elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
         if isinstance(a, PipeConstant):
             static_value = a.get_value()
@@ -102,7 +105,7 @@ def mul(a, b):
         elif bin(static_value).count('1') == 1:
             # This multiplication can be implemented ny shifts.
             bin_repr = bin(static_value)
-            shift_by = len(bin_repr) - 1 - bin_repr.index('1') - num_factory.fraction_bits
+            shift_by = len(bin_repr) - 1 - bin_repr.index('1') - num_type.fraction_bits
             print('Implemented multiplication as shift by: ', shift_by)
             if shift_by == 0:
                 # Just return the dynamic_value
@@ -110,9 +113,9 @@ def mul(a, b):
 
             node = CombNode()
             node.add_inputs(value=dynamic_value)
-            res = Signal(num_factory.create())
+            res = PipeSignal(num_type, Signal(num_type.create()))
             node.add_output(res)
-            node.set_name('mul_by_shift')
+            node.set_name('fixed-mul_by_shift')
 
             if shift_by > 0:
                 node.add_inputs(shift_by=shift_by)
@@ -128,9 +131,9 @@ def mul(a, b):
             node = SeqNode()
 
             node.add_inputs(dynamic_value=dynamic_value, static_value=static_value)
-            res = Signal(num_factory.create())
+            res = PipeSignal(num_type, Signal(num_type.create()))
             node.add_output(res)
-            node.set_name('mul')
+            node.set_name('fixed-mul')
 
             node.set_logic(mul_dsp_c)
             return node
@@ -138,9 +141,9 @@ def mul(a, b):
         node = SeqNode()
 
         node.add_inputs(a=a, b=b)
-        res = Signal(num_factory.create())
+        res = PipeSignal(num_type, Signal(num_type.create()))
         node.add_output(res)
-        node.set_name('mul')
+        node.set_name('fixed-mul')
 
         node.set_logic(mul_dsp)
         return node
@@ -162,7 +165,7 @@ def add_seq(clk, rst, stage, node_input, node_output):
     return instances()
 
 
-def add(a, b):
+def add(a: PipeNumeric, b: PipeNumeric):
     """
     Pipeline node which adds the two given parameters.
     Optimization is performed where possible.
@@ -172,13 +175,14 @@ def add(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    num_factory = num.get_numeric_factory()
+    assert a.get_type() == b.get_type()
+    num_type = a.get_type()
+    assert isinstance(num_type, num.SignedFixedNumberType) or isinstance(num_type, num.UnsignedIntegerNumberType)
+
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
-        return PipeConstant(
-            int(
-                num_factory.create_from_constant(a.get_value()) + num_factory.create_from_constant(b.get_value())
-            )
-        )
+        return PipeConstant(num_type, int(
+            num_type.create_from_constant(a.get_value()) + num_type.create_from_constant(b.get_value())
+        ))
     elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
         if isinstance(a, PipeConstant):
             static_value = a.get_value()
@@ -193,9 +197,9 @@ def add(a, b):
     node = SeqNode()
 
     node.add_inputs(a=a, b=b)
-    res = Signal(num_factory.create())
+    res = PipeSignal(num_type, Signal(num_type.create()))
     node.add_output(res)
-    node.set_name('add')
+    node.set_name('{}-add'.format('fixed' if isinstance(num_type, num.SignedFixedNumberType) else 'integer'))
     node.set_logic(add_seq)
 
     return node
@@ -217,9 +221,9 @@ def sub_seq(clk, rst, stage, node_input, node_output):
     return instances()
 
 
-def sub(a, b):
+def sub(a: PipeNumeric, b: PipeNumeric):
     """
-    Pipeline node which substracts b from a.
+    Pipeline node which subtracts b from a.
     Optimization is performed where possible.
     The return type is int if both parameters were integer and so the result is static.
     Otherwise a SeqNode is returned.
@@ -227,13 +231,14 @@ def sub(a, b):
     :param b: parameter b
     :return: int or pipeline node
     """
-    num_factory = num.get_numeric_factory()
+    assert a.get_type() == b.get_type()
+    num_type = a.get_type()
+    assert isinstance(num_type, num.SignedFixedNumberType)
+
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
-        return PipeConstant(
-            int(
-                num_factory.create_from_constant(a.get_value()) - num_factory.create_from_constant(b.get_value())
-            )
-        )
+        return PipeConstant(num_type, int(
+            num_type.create_from_constant(a.get_value()) - num_type.create_from_constant(b.get_value())
+        ))
     elif isinstance(a, PipeConstant) or isinstance(b, PipeConstant):
         if isinstance(a, PipeConstant):
             static_value = a.get_value()
@@ -248,9 +253,9 @@ def sub(a, b):
     node = SeqNode()
 
     node.add_inputs(a=a, b=b)
-    res = Signal(num_factory.create())
+    res = PipeSignal(num_type, Signal(num_type.create()))
     node.add_output(res)
-    node.set_name('sub')
+    node.set_name('fixed-sub')
     node.set_logic(sub_seq)
 
     return node
@@ -272,7 +277,7 @@ def negate_seq(clk, rst, stage, node_input, node_output):
     return instances()
 
 
-def negate(val):
+def negate(val: PipeNumeric):
     """
     Pipeline node which negates the given parameter.
     The return type is int if the type of the parameter is also int.
@@ -280,15 +285,18 @@ def negate(val):
     :param val: parameter val
     :return: int or pipeline node
     """
+    num_type = val.get_type()
+    assert isinstance(num_type, num.SignedFixedNumberType)
+
     if isinstance(val, PipeConstant):
-        return PipeConstant(-val.get_value())
+        return PipeConstant(num_type, -val.get_value())
 
     node = SeqNode()
 
     node.add_inputs(val=val)
-    res = Signal(num.get_numeric_factory().create())
+    res = PipeSignal(num_type, Signal(num_type.create()))
     node.add_output(res)
-    node.set_name('negate')
+    node.set_name('fixed-negate')
     node.set_logic(negate_seq)
 
     return node

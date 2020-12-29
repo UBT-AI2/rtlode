@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from typing import List, Set, Dict, Iterable
+from typing import List, Set, Dict, Iterable, Optional, Union
 
 from myhdl import SignalType, Signal, block, instances, always_seq, always_comb
 
 from generator.utils import clone_signal
+from utils import num
+from utils.num import NumberType
 
 """
 Pipeline Utility
 
-This file provides all necessary parts to generate a parallized pipeline from a dataflow like description.
+This file provides all necessary parts to generate a parallelized pipeline from a dataflow like description.
 An example of a simple pipeline:
 ```
         in_valid = Signal(bool(0))
@@ -100,45 +102,54 @@ class PipeNumeric:
     """
     Class overloading the python operators with the pipe base numerical nodes.
     """
-    def __init__(self):
-        super().__init__()
+    number_type: Optional[NumberType]
 
-    def __add__(self, other):
+    def __init__(self, number_type: NumberType = None):
+        super().__init__()
+        self.number_type = number_type
+
+    def set_type(self, number_type: NumberType):
+        self.number_type = number_type
+
+    def get_type(self):
+        return self.number_type
+
+    def __add__(self, other: PipeNumeric):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
         from framework.pipeline_elements import add
         return add(self, other)
 
-    def __radd__(self, other):
+    def __radd__(self, other: PipeNumeric):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
         from framework.pipeline_elements import add
         return add(other, self)
 
-    def __sub__(self, other):
+    def __sub__(self, other: PipeNumeric):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
         from framework.pipeline_elements import sub
         return sub(self, other)
 
-    def __rsub__(self, other):
+    def __rsub__(self, other: PipeNumeric):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
         from framework.pipeline_elements import sub
         return sub(other, self)
 
-    def __mul__(self, other):
+    def __mul__(self, other: PipeNumeric):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
         from framework.pipeline_elements import mul
         return mul(self, other)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other: PipeNumeric):
         if not isinstance(other, PipeNumeric):
             return NotImplemented
 
@@ -149,43 +160,50 @@ class PipeNumeric:
 class PipeConstant(PipeNumeric):
     value: int
 
-    def __init__(self, value):
-        super().__init__()
+    def __init__(self, number_type: NumberType, value):
+        super().__init__(number_type)
         self.value = value
 
     def get_value(self):
         return self.value
 
     @staticmethod
-    def from_float(float_val):
+    def from_float(float_val, number_type=None):
         from utils import num
-        return PipeConstant(num.get_numeric_factory().create_constant(float_val))
+        if number_type is None:
+            number_type = num.get_default_type()
+        return PipeConstant(number_type, number_type.create_constant(float_val))
 
 
-class _PipeSignal(PipeNumeric):
+class PipeSignal(PipeNumeric):
     """
     An internal signal of the pipe. Containing the signal itself but also the producers of the signal.
     Supporting basic numeric operations by operation overloading.
     """
-    signal: SignalType
-    producer: ProducerNode
+    signal: Optional[SignalType]
+    producer: Optional[ProducerNode]
 
-    def __init__(self, signal: SignalType = None, producer: ProducerNode = None):
-        super().__init__()
+    def __init__(self, number_type: NumberType = None, signal: SignalType = None, producer: ProducerNode = None):
+        super().__init__(number_type)
         self.signal = signal
         self.producer = producer
 
     def get_producer(self):
         return self.producer
 
-    def get_signal(self):
-        return self.signal
-
     def set_producer(self, producer):
         self.producer = producer
 
+    def get_signal(self):
+        return self.signal
+
     def set_signal(self, signal):
         self.signal = signal
+
+    def update(self, pipe_signal: PipeSignal):
+        self.set_type(pipe_signal.get_type())
+        self.set_signal(pipe_signal.get_signal())
+        self.set_producer(pipe_signal.get_producer())
 
 
 class Pipe:
@@ -375,7 +393,7 @@ class Pipe:
         return stage_instances
 
 
-class ProducerNode(_PipeSignal):
+class ProducerNode(PipeSignal):
     _consumer_nodes: Set[ConsumerNode]
     _output_signals: Dict
 
@@ -384,10 +402,18 @@ class ProducerNode(_PipeSignal):
         self._consumer_nodes = set()
         self._output_signals = {}
 
-    def add_output(self, default=None, **kwargs):
+    def add_output(self, default: PipeSignal = None, **kwargs: Union[PipeSignal, List[PipeSignal]]):
         if default is not None:
+            default.set_producer(self)
             self._output_signals['default'] = default
-            self.set_signal(default)
+            self.update(default)
+
+        for key, value in kwargs.items():
+            if isinstance(value, list):
+                for pipe_signal in value:
+                    pipe_signal.set_producer(self)
+            else:
+                value.set_producer(self)
 
         self._output_signals.update(kwargs)
 
@@ -405,15 +431,7 @@ class ProducerNode(_PipeSignal):
 
     def __getattr__(self, name):
         if name in self._output_signals:
-            signal = self._output_signals[name]
-            if isinstance(signal, list):
-                return list(
-                    map(
-                        lambda x: _PipeSignal(signal=x, producer=self),
-                        signal
-                    ))
-            else:
-                return _PipeSignal(signal=signal, producer=self)
+            return self._output_signals[name]
         raise AttributeError()
 
 
@@ -578,9 +596,9 @@ class CombNode(_Node):
 
 class PipeInput(ProducerNode):
     valid: SignalType
-    pipe_busy: SignalType
+    pipe_busy: Optional[SignalType]
 
-    def __init__(self, input_valid: SignalType, **raw_signals: SignalType):
+    def __init__(self, input_valid: SignalType, **raw_signals: Union[PipeSignal, List[PipeSignal]]):
         super().__init__()
 
         self.valid = input_valid
@@ -594,7 +612,7 @@ class PipeInput(ProducerNode):
 
 class PipeOutput(ConsumerNode):
     busy: SignalType
-    pipe_valid: SignalType
+    pipe_valid: Optional[SignalType]
 
     def __init__(self, busy: SignalType, **inputs):
         super().__init__()
@@ -629,7 +647,7 @@ class Register(SeqNode):
             raise NotImplementedError()
 
         self.add_inputs(default=val)
-        res = clone_signal(val.get_signal())
+        res = PipeSignal(val.get_type(), clone_signal(val.get_signal()))
         self.add_output(res)
         self.set_name('reg')
 
