@@ -35,12 +35,12 @@ def _next_stage(p):
     min_reg_stage = None
     if isinstance(p, PipeInput):
         min_reg_stage = 0
-    elif isinstance(p, SeqNode):
+    elif isinstance(p, OneCycleNode):
         if p.stage_index is not None:
             min_reg_stage = p.stage_index + 1
-    elif isinstance(p, CombNode):
+    elif isinstance(p, ZeroCycleNode):
         min_reg_stage = p.stage_index
-    elif isinstance(p, PipelineNode):
+    elif isinstance(p, MultipleCycleNode):
         if p.stage_index is not None:
             min_reg_stage = p.stage_index + 1
     else:
@@ -239,9 +239,9 @@ class Pipe:
                         stats['by_type'][p.name] += 1
                     else:
                         stats['by_type'][p.name] = 1
-                if isinstance(p, SeqNode):
+                if isinstance(p, OneCycleNode):
                     stats['nbr_seq_nodes'] += 1
-                elif isinstance(p, CombNode):
+                elif isinstance(p, ZeroCycleNode):
                     stats['nbr_comb_nodes'] += 1
 
                 if isinstance(p, Register):
@@ -285,7 +285,7 @@ class Pipe:
                 stage = max(stage, lowest_possible_stage)
             else:
                 if isinstance(node, _Node):
-                    if isinstance(node, PipelineNode):
+                    if isinstance(node, MultipleCycleNode):
                         # Add PipelineNodes to last stage
                         node.stage_index = stage + (node.latency - 1)
                     else:
@@ -369,9 +369,9 @@ class Pipe:
             for node in stage.nodes:
                 node_input = _DynamicInterface(**node.get_inputs())
                 node_output = _DynamicInterface(**node.get_outputs())
-                if isinstance(node, SeqNode):
+                if isinstance(node, OneCycleNode):
                     instance = node.logic(clk, rst, stage, node_input, node_output, **node.logic_kwargs)
-                elif isinstance(node, PipelineNode):
+                elif isinstance(node, MultipleCycleNode):
                     in_stage_id = stage_id - (node.latency - 1)
                     in_stage_valid, _ = self.get_control_signals(in_stage_id)
                     in_stage_busy = self.stages[in_stage_id].busy
@@ -384,7 +384,7 @@ class Pipe:
                         node_input, node_output,
                         **node.logic_kwargs
                     )
-                elif isinstance(node, CombNode):
+                elif isinstance(node, ZeroCycleNode):
                     instance = node.logic(node_input, node_output, **node.logic_kwargs)
                 else:
                     raise NotImplementedError()
@@ -533,7 +533,7 @@ class ConsumerNode:
 class _Node(ProducerNode, ConsumerNode):
     """
     An inner element of the pipeline.
-    Should not be used directly, use SeqNode or CombNode.
+    Should not be used directly, use OneCycleNode or ZeroCycleNode.
     """
     def __init__(self):
         super().__init__()
@@ -557,7 +557,19 @@ class _Node(ProducerNode, ConsumerNode):
         self.name = name
 
 
-class SeqNode(_Node):
+class ZeroCycleNode(_Node):
+    """
+    A combinatorical node of the pipeline. The logic must use only combinational logic.
+    The complexety must be minimized. Intendet for low/no cost logic like shifting of signals.
+
+    The provided logic must be of the following function signature:
+        def logic(node_input, node_output)
+    """
+    def __init__(self):
+        super().__init__()
+
+
+class OneCycleNode(_Node):
     """
     A sequential node of the pipeline. The nodes logic must take exactly one clk cycle.
 
@@ -568,7 +580,7 @@ class SeqNode(_Node):
         super().__init__()
 
 
-class PipelineNode(_Node):
+class MultipleCycleNode(_Node):
     """
     A node implementating an inner pipeline.
     The nodes logic must take a constant number of clk cycles (latency) and must be pipelined internally.
@@ -580,18 +592,6 @@ class PipelineNode(_Node):
         super().__init__()
         assert latency > 0
         self.latency = latency
-
-
-class CombNode(_Node):
-    """
-    A combinatorical node of the pipeline. The logic must use only combinational logic.
-    The complexety must be minimized. Intendet for low/no cost logic like shifting of signals.
-
-    The provided logic must be of the following function signature:
-        def logic(node_input, node_output)
-    """
-    def __init__(self):
-        super().__init__()
 
 
 class PipeInput(ProducerNode):
@@ -639,7 +639,7 @@ class PipeOutput(ConsumerNode):
         self.pipe_valid = valid_signal
 
 
-class Register(SeqNode):
+class Register(OneCycleNode):
     def __init__(self, val):
         super().__init__()
 
@@ -675,7 +675,7 @@ class Stage:
     data2out: SignalType
     reg2out: SignalType
     data2reg: SignalType
-    nodes: Set[SeqNode]
+    nodes: Set[OneCycleNode]
 
     def __init__(self, nodes=None):
         self.busy = Signal(bool(0))

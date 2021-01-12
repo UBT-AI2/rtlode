@@ -2,7 +2,7 @@ from enum import Enum, auto
 
 from myhdl import block, Signal, instances, always_seq, always_comb, SignalType
 
-from framework.pipeline import PipelineNode, PipeConstant, PipeNumeric, PipeSignal
+from framework.pipeline import MultipleCycleNode, PipeConstant, PipeNumeric, PipeSignal
 from framework.fifo import FifoProducer, FifoConsumer, fifo
 from utils import num
 from utils.num import FloatingPrecision
@@ -224,7 +224,7 @@ def generic(function: NumericFunction, a: PipeNumeric, b: PipeNumeric):
     Pipeline node which is able to apply the given NumericFunction to the two parameters (a, b).
     Optimization is performed where possible.
     The return type is PipeConstant if both parameters were integer and so the result is static.
-    In other cases the return type is defined by the used ip core - usually PipelineNode.
+    In other cases the return type is defined by the used ip core - usually MultipleCycleNode.
     :param function: NumericFunction to be applied
     :param a: parameter a
     :param b: parameter b
@@ -258,7 +258,7 @@ def generic(function: NumericFunction, a: PipeNumeric, b: PipeNumeric):
 
     latency = _get_ip_core_info(function, num_type)['latency']
 
-    node = PipelineNode(latency + 1)
+    node = MultipleCycleNode(latency + 1)
 
     node.add_inputs(a=a, b=b)
     res = PipeSignal(num_type, Signal(num_type.create()))
@@ -279,7 +279,7 @@ def mul(a, b):
     Pipeline node which multiplies the two given parameters.
     Optimization is performed where possible.
     The return type is PipeConstant if both parameters were integer and so the result is static.
-    In other cases the return type is defined by the used ip core - usually PipelineNode.
+    In other cases the return type is defined by the used ip core - usually MultipleCycleNode.
     :param a: parameter a
     :param b: parameter b
     :return: PipeConstant for static results or pipeline node
@@ -292,7 +292,7 @@ def add(a, b):
     Pipeline node which adds the two given parameters.
     Optimization is performed where possible.
     The return type is PipeConstant if both parameters were integer and so the result is static.
-    In other cases the return type is defined by the used ip core - usually PipelineNode.
+    In other cases the return type is defined by the used ip core - usually MultipleCycleNode.
     :param a: parameter a
     :param b: parameter b
     :return: PipeConstant for static results or pipeline node
@@ -305,7 +305,7 @@ def sub(a, b):
     Pipeline node which substracts b from a.
     Optimization is performed where possible.
     The return type is PipeConstant if both parameters were integer and so the result is static.
-    In other cases the return type is defined by the used ip core - usually PipelineNode.
+    In other cases the return type is defined by the used ip core - usually MultipleCycleNode.
     :param a: parameter a
     :param b: parameter b
     :return: PipeConstant for static results or pipeline node

@@ -1,6 +1,6 @@
 from myhdl import Signal, block, always_seq, instances, intbv, always_comb
 
-from framework.pipeline import SeqNode, CombNode, PipeConstant, PipeNumeric, PipeSignal
+from framework.pipeline import OneCycleNode, ZeroCycleNode, PipeConstant, PipeNumeric, PipeSignal
 from generator.utils import clone_signal
 from utils import num
 
@@ -76,7 +76,7 @@ def mul(a: PipeNumeric, b: PipeNumeric):
     Pipeline node which multiplies the two given parameters.
     Optimization is performed where possible.
     The return type is int if both parameters were integer and so the result is static. Depending of the multiplication
-    implementation used the return type is CombNode or SeqNode in other cases.
+    implementation used the return type is ZeroCycleNode or OneCycleNode in other cases.
     :param a: parameter a
     :param b: parameter b
     :return: int or pipeline node
@@ -111,7 +111,7 @@ def mul(a: PipeNumeric, b: PipeNumeric):
                 # Just return the dynamic_value
                 return dynamic_value
 
-            node = CombNode()
+            node = ZeroCycleNode()
             node.add_inputs(value=dynamic_value)
             res = PipeSignal(num_type, Signal(num_type.create()))
             node.add_output(res)
@@ -128,7 +128,7 @@ def mul(a: PipeNumeric, b: PipeNumeric):
                 node.set_logic(mul_by_shift_right)
             return node
         else:
-            node = SeqNode()
+            node = OneCycleNode()
 
             node.add_inputs(dynamic_value=dynamic_value, static_value=static_value)
             res = PipeSignal(num_type, Signal(num_type.create()))
@@ -138,7 +138,7 @@ def mul(a: PipeNumeric, b: PipeNumeric):
             node.set_logic(mul_dsp_c)
             return node
     else:
-        node = SeqNode()
+        node = OneCycleNode()
 
         node.add_inputs(a=a, b=b)
         res = PipeSignal(num_type, Signal(num_type.create()))
@@ -170,7 +170,7 @@ def add(a: PipeNumeric, b: PipeNumeric):
     Pipeline node which adds the two given parameters.
     Optimization is performed where possible.
     The return type is int if both parameters were integer and so the result is static.
-    Otherwise a SeqNode is returned.
+    Otherwise a OneCycleNode is returned.
     :param a: parameter a
     :param b: parameter b
     :return: int or pipeline node
@@ -194,7 +194,7 @@ def add(a: PipeNumeric, b: PipeNumeric):
         if static_value == 0:
             return dynamic_value
 
-    node = SeqNode()
+    node = OneCycleNode()
 
     node.add_inputs(a=a, b=b)
     res = PipeSignal(num_type, Signal(num_type.create()))
@@ -226,7 +226,7 @@ def sub(a: PipeNumeric, b: PipeNumeric):
     Pipeline node which subtracts b from a.
     Optimization is performed where possible.
     The return type is int if both parameters were integer and so the result is static.
-    Otherwise a SeqNode is returned.
+    Otherwise a OneCycleNode is returned.
     :param a: parameter a
     :param b: parameter b
     :return: int or pipeline node
@@ -250,7 +250,7 @@ def sub(a: PipeNumeric, b: PipeNumeric):
         if static_value == 0:
             return dynamic_value
 
-    node = SeqNode()
+    node = OneCycleNode()
 
     node.add_inputs(a=a, b=b)
     res = PipeSignal(num_type, Signal(num_type.create()))
@@ -281,7 +281,7 @@ def negate(val: PipeNumeric):
     """
     Pipeline node which negates the given parameter.
     The return type is int if the type of the parameter is also int.
-    Otherwise a SeqNode is returned.
+    Otherwise a OneCycleNode is returned.
     :param val: parameter val
     :return: int or pipeline node
     """
@@ -291,7 +291,7 @@ def negate(val: PipeNumeric):
     if isinstance(val, PipeConstant):
         return PipeConstant(num_type, -val.get_value())
 
-    node = SeqNode()
+    node = OneCycleNode()
 
     node.add_inputs(val=val)
     res = PipeSignal(num_type, Signal(num_type.create()))
