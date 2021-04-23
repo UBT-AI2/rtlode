@@ -15,7 +15,7 @@ def get_input_desc(system_size):
         class InputData(StructDescription, metaclass=StructDescriptionMetaclass):
             id = BitVector(integer_type)
             x_start = BitVector(default_type)
-            y_start = List(system_size, BitVector(num.get_default_type()))
+            y_start = List(system_size, BitVector(default_type))
             h = BitVector(default_type)
             n = BitVector(integer_type)
             _bit_padding = BitVector(len_padding)
@@ -25,7 +25,7 @@ def get_input_desc(system_size):
         class InputData(StructDescription, metaclass=StructDescriptionMetaclass):
             id = BitVector(integer_type)
             x_start = BitVector(default_type)
-            y_start = List(system_size, BitVector(num.get_default_type()))
+            y_start = List(system_size, BitVector(default_type))
             h = BitVector(default_type)
             n = BitVector(integer_type)
 
