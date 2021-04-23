@@ -104,7 +104,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
         if data_out.wr:
             if not data_out.full:
                 nbr_inputs.next = nbr_inputs + 1
-                if input_data_iter + 256 < chunk_size:
+                if input_data_iter + input_data_size <= chunk_size:
                     data_out.data.next = input_data_chunk[input_data_iter + input_data_size:input_data_iter]
                     input_data_iter.next = input_data_iter + input_data_size
                 else:
