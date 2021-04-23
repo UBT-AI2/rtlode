@@ -1,7 +1,11 @@
 import inspect
 
 import collections
+from typing import Union
+
 from myhdl import Signal, intbv, SignalType, ConcatSignal
+
+from utils.num import NumberType
 
 
 class _PackedStruct:
@@ -138,18 +142,22 @@ class BitVector:
     """
     Can be used to describe a bitfield in a StructDescription.
     """
-    def __init__(self, nbr_bits):
-        self._nbr_bits = nbr_bits
+    def __init__(self, size_or_type: Union[NumberType, int]):
+        self._size_or_type = size_or_type
 
     def __len__(self):
-        return self._nbr_bits
+        if isinstance(self._size_or_type, NumberType):
+            return self._size_or_type.nbr_bits
+        return self._size_or_type
 
     def create_instance(self):
         """
         Creates a signal which can be used as representation of given BitVector.
         :return: signal representation
         """
-        return Signal(intbv(0)[self._nbr_bits:0])
+        if isinstance(self._size_or_type, NumberType):
+            return Signal(self._size_or_type.create())
+        return Signal(intbv(0)[self._size_or_type:0])
 
 
 class List:

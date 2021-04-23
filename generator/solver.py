@@ -39,12 +39,12 @@ def solver(
     numeric_type = num.get_default_type()
 
     class PipeData(StructDescription, metaclass=StructDescriptionMetaclass):
-        id = BitVector(integer_type.nbr_bits)
-        h = BitVector(numeric_type.nbr_bits)
-        n = BitVector(numeric_type.nbr_bits)
-        cn = BitVector(numeric_type.nbr_bits)
-        x = BitVector(numeric_type.nbr_bits)
-        y = List(config.system_size, BitVector(numeric_type.nbr_bits))
+        id = BitVector(integer_type)
+        h = BitVector(numeric_type)
+        n = BitVector(numeric_type)
+        cn = BitVector(numeric_type)
+        x = BitVector(numeric_type)
+        y = List(config.system_size, BitVector(numeric_type))
 
     pipe_input_valid = Signal(bool(0))
     pipe_output_busy = Signal(bool(0))
