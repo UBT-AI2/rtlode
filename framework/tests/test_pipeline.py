@@ -233,7 +233,7 @@ class TestPipe(PipeTestCase):
             return mul1
 
         stats = self.run_pipe(inner_pipe, list(range(40)), [(i + 4) * 2 for i in range(40)])
-        self.assertEqual(1, stats['by_type']['add'])
+        self.assertEqual(1, stats['by_type']['fixed-add'])
 
     def test_register_reuse(self):
         """

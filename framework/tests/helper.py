@@ -3,7 +3,7 @@ from unittest import TestCase
 
 from myhdl import block, Signal, ResetSignal, always, delay, StopSimulation, instances
 
-from framework.pipeline import PipeInput, PipeOutput, Pipe
+from framework.pipeline import PipeInput, PipeOutput, Pipe, PipeSignal
 from utils import num
 
 
@@ -23,7 +23,7 @@ class PipeTestCase(TestCase):
 
             out_busy = Signal(bool(0))
 
-            data_in = PipeInput(in_valid, value=in_signal)
+            data_in = PipeInput(in_valid, value=PipeSignal(num.get_default_type(), in_signal))
             res = inner_pipe(data_in.value)
             data_out = PipeOutput(out_busy, res=res)
             pipe = Pipe(data_in, data_out)
