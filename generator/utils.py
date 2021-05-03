@@ -1,4 +1,13 @@
-from myhdl import Signal, SignalType, block, always_seq, modbv, intbv
+from myhdl import Signal, SignalType, block, always_seq, modbv, intbv, always_comb
+
+
+@block
+def reinterpret_as_signed(data_in, data_out):
+    @always_comb
+    def _assign():
+        data_out.next = data_in.signed()
+
+    return _assign
 
 
 def clone_signal(sig, reset_value=0):
@@ -39,7 +48,7 @@ def clone_signal_structure(sig_data, value=0):
 
 
 """
-No easy eay to implement these assigns smarter because of limitations of the myhdl conversion.
+No easy way to implement these assigns smarter because of limitations of the myhdl conversion.
 Each signal can only be driven by one instance.
 """
 

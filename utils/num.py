@@ -6,8 +6,9 @@ from myhdl import intbv
 
 
 class NumberType:
-    def __init__(self, nbr_bits):
+    def __init__(self, nbr_bits, signed=False):
         self.nbr_bits = nbr_bits
+        self.signed = signed
 
     def __eq__(self, other):
         raise NotImplementedError
@@ -86,7 +87,7 @@ class SignedFixedNumberType(NumberType):
     def __init__(self, fraction_size, nonfraction_size):
         self.fraction_bits = fraction_size
         self.nonfraction_bits = nonfraction_size
-        super().__init__(1 + self.nonfraction_bits + self.fraction_bits)
+        super().__init__(1 + self.nonfraction_bits + self.fraction_bits, signed=True)
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):

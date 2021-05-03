@@ -133,6 +133,7 @@ def simulate(*config_files, trace=False, buffer_size_bits=4, runtime_config=None
             disp_inst = dispatcher(config, data_in=in_fifo_c, data_out=out_fifo_p)
 
         parsed_output_data = data_desc.get_output_desc(config.system_size).create_read_instance(out_fifo_c.data)
+        parsed_output_data_inst = parsed_output_data.instances()
 
         in_fifo_p.data.next = create_input_data(
             config_dict['problem']['x'],

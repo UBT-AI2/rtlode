@@ -21,6 +21,7 @@ def solver(
 ):
     solver_input_desc = data_desc.get_input_desc(config.system_size)
     solver_input = solver_input_desc.create_read_instance(data_in.data)
+    solver_input_inst = solver_input.instances()
     solver_input_reg_filled = Signal(bool(0))
     solver_input_reg = solver_input_desc.create_write_instance()
 
@@ -64,6 +65,7 @@ def solver(
     cycle_input_reg = PipeData.create_write_instance()
     cycle_input_reg_filled = Signal(bool(0))
     cycle_output = PipeData.create_read_instance(cycle_c.data)
+    cycle_output_inst = cycle_output.instances()
 
     pipe_data_in = PipeInput(pipe_input_valid,
                              id=PipeSignal(integer_type, pipe_input_id),

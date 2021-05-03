@@ -3,7 +3,7 @@ import inspect
 import collections
 from typing import Union
 
-from myhdl import Signal, intbv, SignalType, ConcatSignal
+from myhdl import Signal, intbv, SignalType, ConcatSignal, block
 
 from utils.num import NumberType
 
@@ -28,33 +28,42 @@ class PackedReadStruct(_PackedStruct):
     @staticmethod
     def _definition_to_signal(definition, data, high_index, low_index):
         if isinstance(definition, BitVector):
-            return data(high_index, low_index)
+            return definition.create_read_instance(data, high_index, low_index)
         elif isinstance(definition, List):
             vector = []
+            instances = []
             for el in definition.as_list():
                 low_index = high_index - len(el)
-                vector.append(
-                    PackedReadStruct._definition_to_signal(el, data, high_index, low_index)
-                )
+                inst, sign = PackedReadStruct._definition_to_signal(el, data, high_index, low_index)
+                vector.append(sign)
+                instances.extend(inst)
                 high_index = low_index
-            return vector
+            return instances, vector
         elif issubclass(definition, StructDescription):
-            return definition.create_read_instance(data, high_index, low_index)
+            sub_struct = PackedReadStruct.create(definition.get_fields(), data, high_index, low_index)
+            return sub_struct._instance_desc, sub_struct
 
-    def __init__(self, fields, data, high_lim, low_lim):
-        if isinstance(data, PackedReadStruct):
-            data = data._data
-        self._data = data
-        self._high_lim = high_lim
-        self._low_lim = low_lim
+    @staticmethod
+    def create(fields, data, high_lim, low_lim):
+        instance_desc = []
 
         high_index = high_lim
         for name, value in fields.items():
             low_index = high_index - len(value)
             if low_index < low_lim:
                 raise Exception('PackedReadStruct trying to access data below lower limit.')
-            fields[name] = PackedReadStruct._definition_to_signal(value, data, high_index, low_index)
+            field_instances, fields[name] = PackedReadStruct._definition_to_signal(value, data, high_index, low_index)
+            instance_desc.extend(field_instances)
             high_index = low_index
+
+        return PackedReadStruct(fields, data, high_lim, low_lim, instance_desc)
+
+    def __init__(self, fields, data, high_lim, low_lim, instance_desc):
+        self._data = data
+        self._high_lim = high_lim
+        self._low_lim = low_lim
+        self._instance_desc = instance_desc
+
         super().__init__(fields)
 
     def high_lim(self):
@@ -62,6 +71,10 @@ class PackedReadStruct(_PackedStruct):
 
     def low_lim(self):
         return self._low_lim
+
+    @block
+    def instances(self):
+        return [logic(*parameter) for logic, parameter in self._instance_desc]
 
 
 class PackedWriteStruct(_PackedStruct):
@@ -159,6 +172,13 @@ class BitVector:
             return Signal(self._size_or_type.create())
         return Signal(intbv(0)[self._size_or_type:0])
 
+    def create_read_instance(self, data, high_index, low_index):
+        if isinstance(self._size_or_type, NumberType) and self._size_or_type.signed:
+            signed_data = self.create_instance()
+            from generator.utils import reinterpret_as_signed
+            return [(reinterpret_as_signed, (data(high_index, low_index), signed_data))], signed_data
+        return [], data(high_index, low_index)
+
 
 class List:
     """
@@ -239,7 +259,8 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
     @classmethod
     def create_read_instance(cls, data: SignalType, high_lim=None, low_lim=None) -> PackedReadStruct:
         """
-        Creates a read instance of a described structure.
+        Creates a read instance of a described structure. YOU MUST call the instances() method on the result and take
+        care that they are known to myhdl.
         :param data: raw data to be mapped on struct
         :param high_lim: Upper limit for data access
         :param low_lim: Lower limit for data access
@@ -261,9 +282,12 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
             else:
                 low_lim = 0
 
+        if isinstance(data, PackedReadStruct):
+            data = data._data
+
         if high_lim - low_lim != len(cls):
             raise Exception('PackedReadStruct data must be the size of StructDescription.')
-        return PackedReadStruct(cls.get_fields(), data, high_lim, low_lim)
+        return PackedReadStruct.create(cls.get_fields(), data, high_lim, low_lim)
 
     @classmethod
     def create_write_instance(cls) -> PackedWriteStruct:

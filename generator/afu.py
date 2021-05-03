@@ -26,6 +26,7 @@ def afu(config: Config, clk: SignalType, usr_clk: SignalType, reset: SignalType,
     """
     # Initiating of ccip ports
     cp2af = CcipRx.create_read_instance(cp2af_port)
+    cp2af_inst = cp2af.instances()
     af2cp = CcipTx.create_write_instance()
     af2cp_sig = af2cp.packed()
 

@@ -93,6 +93,7 @@ class Fim:
         cp2af = CcipRx.create_write_instance()
         cp2af_sig = cp2af.packed()
         af2cp = CcipTx.create_read_instance(af2cp_port)
+        af2cp_inst = af2cp.instances()
 
         @always_comb
         def assign_cp2af():
@@ -259,7 +260,7 @@ def sim_manager(*config_files, trace=False, runtime_config=None):
             yield delay(40)
             fim.queue_csr_write(csr.csr_addresses['enb'], 1)
             yield delay(1000000)
-            for i in range(107):
+            for i in range(120):
                 print(fim.get_output())
 
         return instances()

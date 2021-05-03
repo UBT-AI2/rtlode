@@ -63,6 +63,7 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
 
     # Reinterpret header as mmio header
     mmio_hdr = CcipC0ReqMmioHdr.create_read_instance(cp2af.c0.hdr)
+    mmio_hdr_inst = mmio_hdr.instances()
 
     @always_seq(clk.posedge, reset=reset)
     def handle_mmio_writes():
