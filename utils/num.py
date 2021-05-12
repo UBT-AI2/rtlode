@@ -17,9 +17,20 @@ class NumberType:
         return self.create_from_constant(self.create_constant(val))
 
     def create_from_constant(self, const_val):
+        """
+        Create a myhdl type of correct size with initial value of const_val.
+        Const_val must be in correct const representation (see create_constant).
+        :param const_val: constant value
+        :return: myhdl intbv with correct size (min, max) and initial value of const_val
+        """
         raise NotImplementedError
 
     def create_constant(self, val):
+        """
+        Creates a constant representation of a python val.
+        :param val: python value
+        :return: constant representation usable in myhdl
+        """
         raise NotImplementedError
 
     def value_of(self, val):

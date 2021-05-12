@@ -88,7 +88,7 @@ def mul(a: PipeNumeric, b: PipeNumeric):
     if isinstance(a, PipeConstant) and isinstance(b, PipeConstant):
         reg_max = 2 ** (num_type.nonfraction_bits + 2 * num_type.fraction_bits)
         return PipeConstant(num_type, int(intbv(
-            num_type.create_constant(a.get_value()) * num_type.create_constant(b.get_value()),
+            num_type.create_from_constant(a.get_value()) * num_type.create_from_constant(b.get_value()),
             min=-reg_max,
             max=reg_max
         )[1 + num_type.nonfraction_bits + 2 * num_type.fraction_bits:num_type.fraction_bits].signed()))
