@@ -259,6 +259,21 @@ class Pipe:
             self.stages.append(Stage())
         self.stages[node.stage_index].add(node)
 
+    @staticmethod
+    def is_node_needed(node):
+        """
+        Checks if a node can be dropped because no node used by the PipeOutput needs it results.
+        Returns False if the node can be safely dropped.
+        """
+        to_visit = _OrderedSet(node.get_consumers())
+        while len(to_visit) > 0:
+            node = to_visit.pop()
+            if isinstance(node, PipeOutput):
+                return True
+            else:
+                to_visit.update(node.get_consumers())
+        return False
+
     def resolve(self):
         # TODO recognize circles and abort
         to_visit = _OrderedSet(self.pipe_input.get_consumers())
@@ -269,7 +284,7 @@ class Pipe:
             elif not isinstance(node, _Node):
                 raise NotImplementedError()
 
-            if isinstance(node, _Node) and len(node.get_consumers()) == 0:
+            if isinstance(node, _Node) and not Pipe.is_node_needed(node):
                 print('Dropped not needed node.')
                 # Result not needed, remove this node
                 for p in node.get_producers():
