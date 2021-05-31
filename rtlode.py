@@ -13,7 +13,7 @@ class RtlOde(object):
             description='Used to generate and run ode solver logic on FPGAs.',
             usage='''rtlode <command> [<args>]
 
-The most commonly used git commands are:
+The most commonly used commands are:
    build       Generate a solver for a given configuration
    run         Solve a single initial value problem in a given solver
    benchmark   Bechmark a given solver
