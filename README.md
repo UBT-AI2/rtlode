@@ -1,4 +1,7 @@
 # rtlode
+
+[![DOI](https://zenodo.org/badge/372437289.svg)](https://zenodo.org/badge/latestdoi/372437289)
+
 An open source tool that can automatically generate logic circuits from a user-friendly configuration file for efficiently solving systems of ODEs on FPGAs.
 
 ## Supported FPGAs
