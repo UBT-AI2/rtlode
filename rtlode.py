@@ -33,7 +33,7 @@ The most commonly used commands are:
                             help='configuration files for the solver')
 
         args = parser.parse_args(sys.argv[2:])
-        import generator
+        from generator import generator
         generator.build(*args.configuration)
 
     def run(self):
