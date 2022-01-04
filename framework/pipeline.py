@@ -354,7 +354,7 @@ class Pipe:
     def create(self, clk, rst):
         if len(self.stages) == 0:
             self.resolve()
-        stage_instances = []
+        pipe_instances = []
 
         self.pipe_input.set_pipe_busy(self.pipe_output.busy)
 
@@ -363,15 +363,18 @@ class Pipe:
                 # Last stage before Output
                 self.pipe_output.set_pipe_valid(stage.valid)
 
+            # Data valid signal
             if stage_id == 0:
-                # First stage after Input
-                previous_valid = self.pipe_input.valid
+                # First stage after PipeInput
+                pipe_instances.append(
+                    valid_logic(clk, rst, self.pipe_input.valid, self.pipe_input.pipe_busy, stage.valid)
+                )
             else:
                 previous_valid = self.stages[stage_id - 1].valid
+                pipe_instances.append(
+                    valid_logic(clk, rst, previous_valid, False, stage.valid)
+                )
 
-            stage_instances.append(
-                stage_logic(clk, rst, stage, previous_valid)
-            )
             for node in stage.nodes:
                 node_input = _DynamicInterface(**node.get_inputs())
                 node_output = _DynamicInterface(**node.get_outputs())
@@ -381,9 +384,9 @@ class Pipe:
                     instance = node.logic(node_input, node_output, **node.logic_kwargs)
                 else:
                     raise NotImplementedError()
-                stage_instances.append(instance)
+                pipe_instances.append(instance)
 
-        return stage_instances
+        return pipe_instances
 
 
 class ProducerNode(PipeSignal):
@@ -674,9 +677,8 @@ class Stage:
 
 
 @block
-def stage_logic(clk, rst, stage, in_valid):
+def valid_logic(clk, rst, valid_in, busy, valid_out):
     @always_seq(clk.posedge, reset=rst)
-    def pass_valid():
-        stage.valid.next = in_valid
-
+    def drive_data():
+        valid_out.next = valid_in and not busy
     return instances()
