@@ -140,85 +140,6 @@ $component fp_core_component_$fp_core_inst_counter (
     """
 
 
-@block
-def fp_core_wrapper(
-        clk, rst,
-        in_stage_valid, in_stage_busy,
-        out_stage_valid, out_stage_busy,
-        node_input, node_output,
-        pipeline_latency,
-        **kwargs):
-    """
-    Wrapper functio for floating point ip core instances.
-    Implements additional logic to track value validity and proper handling while pipeline stalls.
-
-    :param clk: clock signal
-    :param rst: reset signal
-    :param in_stage_valid: is input currently valid?
-    :param in_stage_busy: is input stage currently signaling that it is busy?
-    :param out_stage_valid: is output currently valid?
-    :param out_stage_busy: is output stage currently signaling that it is busy?
-    :param node_input: input values of the node
-    :param node_output: output values of the node
-    :param pipeline_latency: latency of the altfp pipeline
-    :return: myhdl instances
-    """
-    assert pipeline_latency > 0
-
-    num_factory = num.get_default_type()
-
-    inner_pipe_res = Signal(num_factory.create())
-    inner_pipe = fp_core(
-        clk, node_input.a, node_input.b, inner_pipe_res, **kwargs
-    )
-
-    in_valid = Signal(num.BoolNumberType().create())
-
-    @always_seq(clk.posedge, reset=rst)
-    def check_input_validity():
-        in_valid.next = in_stage_valid and not in_stage_busy
-
-    valid_signals = [Signal(num.BoolNumberType().create()) for _ in range(pipeline_latency - 1)]
-    valid_reg = []
-
-    previous_signal = in_valid
-    for next_signal in valid_signals:
-        valid_reg.append(
-            stupid_register(clk, rst, previous_signal, next_signal)
-        )
-        previous_signal = next_signal
-    valid = previous_signal
-
-    # Must be a fifo of size pipeline_latency
-    reg_fifo_p = FifoProducer(Signal(num_factory.create()))
-    reg_fifo_c = FifoConsumer(Signal(num_factory.create()))
-    bits_needed = len("{0:b}".format(pipeline_latency + 1)) + 1
-    reg_fifo = fifo(clk, rst, reg_fifo_p, reg_fifo_c, buffer_size_bits=bits_needed)
-
-    reg_fill_level = Signal(num.UnsignedIntegerNumberType(32).create(0))  # TODO, correct size
-
-    @always_seq(clk.posedge, reset=rst)
-    def drive_data():
-        reg_fifo_p.wr.next = False
-        if not out_stage_busy:
-            if reg_fifo_c.empty:
-                node_output.default.next = inner_pipe_res
-            else:
-                node_output.default.next = reg_fifo_c.data
-                reg_fill_level.next = reg_fill_level - 1
-
-        if valid and ((out_stage_valid and out_stage_busy) or not reg_fifo_c.empty):
-            reg_fifo_p.data.next = inner_pipe_res
-            reg_fifo_p.wr.next = True
-            reg_fill_level.next = reg_fill_level + 1
-
-    @always_comb
-    def drive_fifo_c():
-        reg_fifo_c.rd.next = not out_stage_busy
-
-    return instances()
-
-
 def generic(function: NumericFunction, a: PipeNumeric, b: PipeNumeric):
     """
     Pipeline node which is able to apply the given NumericFunction to the two parameters (a, b).
@@ -266,8 +187,7 @@ def generic(function: NumericFunction, a: PipeNumeric, b: PipeNumeric):
     node.set_name('floating-{}'.format(function.name.lower()))
 
     node.set_logic(
-        fp_core_wrapper,
-        pipeline_latency=latency,
+        fp_core,
         num_factory=num_type,
         function=function
     )

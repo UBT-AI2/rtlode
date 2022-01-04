@@ -24,20 +24,14 @@ def mul_by_shift_right(node_input, node_output):
 
 
 @block
-def mul_dsp_c(clk, rst, stage, node_input, node_output):
+def mul_dsp_c(clk, rst, node_input, node_output):
     num_factory = num.get_default_type()
     reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
-    reg_data = clone_signal(out)
 
     @always_seq(clk.posedge, reset=rst)
     def drive_data():
-        if stage.data2out:
-            out.next = intbv(node_input.static_value).signed() * node_input.dynamic_value
-        if stage.reg2out:
-            out.next = reg_data
-        if stage.data2reg:
-            reg_data.next = intbv(node_input.static_value).signed() * node_input.dynamic_value
+        out.next = intbv(node_input.static_value).signed() * node_input.dynamic_value
 
     @always_comb
     def resize():
@@ -48,20 +42,14 @@ def mul_dsp_c(clk, rst, stage, node_input, node_output):
 
 
 @block
-def mul_dsp(clk, rst, stage, node_input, node_output):
+def mul_dsp(clk, rst, node_input, node_output):
     num_factory = num.get_default_type()
     reg_max = 2 ** (num_factory.nonfraction_bits + 2 * num_factory.fraction_bits)
     out = Signal(intbv(0, min=-reg_max, max=reg_max))
-    reg_data = clone_signal(out)
 
     @always_seq(clk.posedge, reset=rst)
     def drive_data():
-        if stage.data2out:
-            out.next = node_input.a * node_input.b
-        if stage.reg2out:
-            out.next = reg_data
-        if stage.data2reg:
-            reg_data.next = node_input.a * node_input.b
+        out.next = node_input.a * node_input.b
 
     @always_comb
     def resize():
@@ -150,17 +138,10 @@ def mul(a: PipeNumeric, b: PipeNumeric):
 
 
 @block
-def add_seq(clk, rst, stage, node_input, node_output):
-    reg_data = clone_signal(node_output.default)
-
+def add_seq(clk, rst, node_input, node_output):
     @always_seq(clk.posedge, reset=rst)
     def drive_data():
-        if stage.data2out:
-            node_output.default.next = node_input.a + node_input.b
-        if stage.reg2out:
-            node_output.default.next = reg_data
-        if stage.data2reg:
-            reg_data.next = node_input.a + node_input.b
+        node_output.default.next = node_input.a + node_input.b
 
     return instances()
 
@@ -206,17 +187,10 @@ def add(a: PipeNumeric, b: PipeNumeric):
 
 
 @block
-def sub_seq(clk, rst, stage, node_input, node_output):
-    reg_data = clone_signal(node_output.default)
-
+def sub_seq(clk, rst, node_input, node_output):
     @always_seq(clk.posedge, reset=rst)
     def drive_data():
-        if stage.data2out:
-            node_output.default.next = node_input.a - node_input.b
-        if stage.reg2out:
-            node_output.default.next = reg_data
-        if stage.data2reg:
-            reg_data.next = node_input.a - node_input.b
+        node_output.default.next = node_input.a - node_input.b
 
     return instances()
 
@@ -262,17 +236,10 @@ def sub(a: PipeNumeric, b: PipeNumeric):
 
 
 @block
-def negate_seq(clk, rst, stage, node_input, node_output):
-    reg_data = clone_signal(node_output.default)
-
+def negate_seq(clk, rst, node_input, node_output):
     @always_seq(clk.posedge, reset=rst)
     def drive_data():
-        if stage.data2out:
-            node_output.default.next = -node_input.val
-        if stage.reg2out:
-            node_output.default.next = reg_data
-        if stage.data2reg:
-            reg_data.next = -node_input.val
+        node_output.default.next = -node_input.val
 
     return instances()
 
