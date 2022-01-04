@@ -61,5 +61,9 @@ from generator.generator import convert, _load_config
 convert(_load_config('config/numeric/default_fixed.yaml', 'config/problems/vdpol.yaml', 'config/methods/rk4.yaml'))
 ```
 
+## Related Articles
+* Bartel S, Korch M. Generation of logic designs for efficiently solving ordinary
+differential equations on field programmable gate arrays. Softw Pract Exper. 2021;1-26. doi: [10.1002/spe.3043](https://doi.org/10.1002/spe.3043)
+
 ## License
 rtlode is licensed under the [MIT](LICENSE) license.

@@ -253,15 +253,16 @@ def convert(config):
 
 def build(*config_files, name=None, config=None, cleanup=True):
     """
-    Create solver file for given cofiguration.
+    Create solver file for given configuration.
 
     The following steps are performed:
         1. Load and enrich config
         2. Invokes :func:`convert` to get generated solver in verilog.
-        3. Create build directory for synthese with OPAE tools.
-        4. Start synthese and fitting.
-        5. Create solver file by combining gbs file and solver config.
-        6. Clean up build directories.
+        3. Create build directory for synthesis with OPAE tools.
+        4. Start synthesis and fitting.
+        5. Prepend afu with authentication blocks (with an empty signature chain)
+        6. Create solver file by combining gbs file and solver config.
+        7. Clean up build directories.
     :return:
     """
     if name is None:
@@ -278,24 +279,30 @@ def build(*config_files, name=None, config=None, cleanup=True):
     # 2. Invokes :func:`convert` to get generated solver in verilog.
     convert(config)
 
-    # 3. Create build directory for synthese with OPAE tools.
+    # 3. Create build directory for synthesis with OPAE tools.
     _create_build_config(config)
     build_dir = 'build'
     generator_path = os.path.dirname(os.path.realpath(__file__))
     filelist_path = os.path.join(generator_path, 'static', 'filelist.txt')
     subprocess.run(['afu_synth_setup', '--sources', filelist_path, build_dir], cwd=generator_path).check_returncode()
 
-    # 4. Start synthese and fitting.
+    # 4. Start synthesis and fitting.
     build_path = os.path.join(generator_path, build_dir)
     subprocess.run(['${OPAE_PLATFORM_ROOT}/bin/run.sh'], shell=True, cwd=build_path).check_returncode()
 
-    # 5. Create solver file by combining gbs file and solver config.
-    gbs_path = os.path.join(build_path, 'solver.gbs')
+    # 5. Prepend afu with authentication blocks (with an empty signature chain)
+    subprocess.run(
+        ['PACSign PR -t UPDATE -H openssl_manager -y -i solver.gbs -o solver_signed.gbs'],
+        shell=True, cwd=build_path
+    ).check_returncode()
+
+    # 6. Create solver file by combining gbs file and solver config.
+    gbs_path = os.path.join(build_path, 'solver_signed.gbs')
     out_path = os.path.join(os.getcwd(), name)
     if not os.path.isfile(gbs_path):
-        raise Exception('solver.gbs output file from synthesis could not be found.')
+        raise Exception('solver_signed.gbs output file from synthesis could not be found.')
     slv.pack(gbs_path, config, out_path)
 
-    # 6. Clean up build directories.
+    # 7. Clean up build directories.
     if cleanup:
         shutil.rmtree(build_path)
