@@ -285,7 +285,7 @@ class Pipe:
                 raise NotImplementedError()
 
             if isinstance(node, _Node) and not Pipe.is_node_needed(node):
-                print('Dropped not needed node.')
+                # print('Dropped not needed node.')
                 # Result not needed, remove this node
                 for p in node.get_producers():
                     p.deregister_consumer(node)
@@ -350,55 +350,33 @@ class Pipe:
 
         return self.stages
 
-    def get_control_signals(self, stage_id):
-        stage = self.stages[stage_id]
-
-        if stage_id == 0:
-            # First stage after Input
-            previous_valid = self.pipe_input.valid
-            self.pipe_input.set_pipe_busy(stage.busy)
-        else:
-            previous_valid = self.stages[stage_id - 1].valid
-
-        if stage_id == len(self.stages) - 1:
-            # Last stage before Output
-            next_busy = self.pipe_output.busy
-            self.pipe_output.set_pipe_valid(stage.valid)
-        else:
-            next_busy = self.stages[stage_id + 1].busy
-
-        return previous_valid, next_busy
-
     @block
     def create(self, clk, rst):
         if len(self.stages) == 0:
             self.resolve()
         stage_instances = []
 
+        self.pipe_input.set_pipe_busy(self.pipe_output.busy)
+
         for stage_id, stage in enumerate(self.stages):
-            previous_valid, next_busy = self.get_control_signals(stage_id)
+            if stage_id == len(self.stages) - 1:
+                # Last stage before Output
+                self.pipe_output.set_pipe_valid(stage.valid)
+
+            if stage_id == 0:
+                # First stage after Input
+                previous_valid = self.pipe_input.valid
+            else:
+                previous_valid = self.stages[stage_id - 1].valid
 
             stage_instances.append(
-                stage_logic(clk, rst, stage, previous_valid, next_busy)
+                stage_logic(clk, rst, stage, previous_valid)
             )
             for node in stage.nodes:
                 node_input = _DynamicInterface(**node.get_inputs())
                 node_output = _DynamicInterface(**node.get_outputs())
-                if isinstance(node, OneCycleNode):
-                    instance = node.logic(clk, rst, stage, node_input, node_output, **node.logic_kwargs)
-                elif isinstance(node, MultipleCycleNode):
-                    in_stage_id = stage_id - (node.latency - 1)
-                    in_stage_valid, _ = self.get_control_signals(in_stage_id)
-                    in_stage_busy = self.stages[in_stage_id].busy
-                    out_stage_valid = stage.valid
-                    out_stage_busy = next_busy
-                    instance = node.logic(
-                        clk, rst,
-                        in_stage_valid, in_stage_busy,
-                        out_stage_valid, out_stage_busy,
-                        node_input, node_output,
-                        **node.logic_kwargs
-                    )
+                if isinstance(node, OneCycleNode) or isinstance(node, MultipleCycleNode):
+                    instance = node.logic(clk, rst, node_input, node_output, **node.logic_kwargs)
                 elif isinstance(node, ZeroCycleNode):
                     instance = node.logic(node_input, node_output, **node.logic_kwargs)
                 else:
@@ -670,34 +648,19 @@ class Register(OneCycleNode):
 
 
 @block
-def register(clk, rst, stage, node_input, node_output):
-    reg_data = clone_signal(node_output.default)
-
+def register(clk, rst, node_input, node_output):
     @always_seq(clk.posedge, reset=rst)
     def drive_data():
-        if stage.data2out:
-            node_output.default.next = node_input.default
-        if stage.reg2out:
-            node_output.default.next = reg_data
-        if stage.data2reg:
-            reg_data.next = node_input.default
+        node_output.default.next = node_input.default
     return instances()
 
 
 class Stage:
-    busy: SignalType
     valid: SignalType
-    data2out: SignalType
-    reg2out: SignalType
-    data2reg: SignalType
     nodes: Set[OneCycleNode]
 
     def __init__(self, nodes=None):
-        self.busy = Signal(bool(0))
         self.valid = Signal(bool(0))
-        self.data2out = Signal(bool(0))
-        self.reg2out = Signal(bool(0))
-        self.data2reg = Signal(bool(0))
         if nodes is None:
             self.nodes = set()
         else:
@@ -711,45 +674,9 @@ class Stage:
 
 
 @block
-def stage_logic(clk, rst, stage, in_valid, out_busy):
-    @always_seq(clk.posedge, reset=None)
-    def control():
-        if rst:
-            stage.busy.next = False
-            stage.valid.next = False
-        elif not out_busy:
-            # Next stage not busy
-            if not stage.busy:
-                # Buffer empty
-                stage.valid.next = in_valid
-            else:
-                # Push buffer data out
-                stage.valid.next = True
-
-            # Consumer not busy
-            stage.busy.next = False
-        elif not stage.valid:
-            # Just pass valid signals
-            stage.valid.next = in_valid
-            stage.busy.next = False
-
-        elif in_valid and not stage.busy:
-            stage.busy.next = in_valid and stage.valid
-
-    @always_comb
-    def flag_driver():
-        stage.data2out.next = False
-        stage.reg2out.next = False
-        stage.data2reg.next = False
-        if not out_busy:
-            if not stage.busy:
-                stage.data2out.next = True
-            else:
-                stage.reg2out.next = True
-        elif not stage.valid:
-            stage.data2out.next = True
-
-        if not stage.busy:
-            stage.data2reg.next = True
+def stage_logic(clk, rst, stage, in_valid):
+    @always_seq(clk.posedge, reset=rst)
+    def pass_valid():
+        stage.valid.next = in_valid
 
     return instances()
