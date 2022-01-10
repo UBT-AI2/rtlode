@@ -1,7 +1,7 @@
 from bitarray import bitarray
 from myhdl import intbv
 
-from framework.packed_struct import StructDescription, BitVector, List, StructDescriptionMetaclass
+from framework.packed_struct import StructDescription, BitVector, StructDescriptionMetaclass
 from utils import num
 
 
@@ -15,7 +15,7 @@ def get_input_desc(system_size):
         class InputData(StructDescription, metaclass=StructDescriptionMetaclass):
             id = BitVector(integer_type)
             x_start = BitVector(default_type)
-            y_start = List(system_size, BitVector(default_type))
+            y_start = [BitVector(default_type) for _ in range(system_size)]
             h = BitVector(default_type)
             n = BitVector(integer_type)
             _bit_padding = BitVector(len_padding)
@@ -25,7 +25,7 @@ def get_input_desc(system_size):
         class InputData(StructDescription, metaclass=StructDescriptionMetaclass):
             id = BitVector(integer_type)
             x_start = BitVector(default_type)
-            y_start = List(system_size, BitVector(default_type))
+            y_start = [BitVector(default_type) for _ in range(system_size)]
             h = BitVector(default_type)
             n = BitVector(integer_type)
 
@@ -41,9 +41,9 @@ def _data_to_bitarray(field_desc, data):
         value = intbv(data)[nbr_bits:0]
         value_bits = bitarray([value[i] for i in range(nbr_bits)])
         return value_bits
-    elif isinstance(field_desc, List):
+    elif isinstance(field_desc, list):
         list_bits = bitarray()
-        for i, el in enumerate(field_desc.as_list()):
+        for i, el in enumerate(field_desc):
             list_bits += _data_to_bitarray(el, data[i])
         return list_bits
     else:
@@ -79,7 +79,7 @@ def get_output_desc(system_size):
         class OutputData(StructDescription, metaclass=StructDescriptionMetaclass):
             id = BitVector(integer_type)
             x = BitVector(default_type)
-            y = List(system_size, BitVector(num.get_default_type()))
+            y = [BitVector(default_type) for _ in range(system_size)]
             _bit_padding = BitVector(len_padding)
 
     else:
@@ -88,7 +88,7 @@ def get_output_desc(system_size):
         class OutputData(StructDescription, metaclass=StructDescriptionMetaclass):
             id = BitVector(integer_type)
             x = BitVector(default_type)
-            y = List(system_size, BitVector(num.get_default_type()))
+            y = [BitVector(default_type) for _ in range(system_size)]
 
     assert (len_without_padding + len_padding) % 8 == 0
     assert len(OutputData) == len_without_padding + len_padding
@@ -103,10 +103,10 @@ def _bitarray_to_data(field_desc, data_bits):
         for i in range(nbr_bits):
             value[i] = data_bits[i]
         return value
-    elif isinstance(field_desc, List):
+    elif isinstance(field_desc, list):
         value_list = []
         offset = 0
-        for el in field_desc.as_list():
+        for el in field_desc:
             nbr_bits = len(el)
             el_bits = data_bits[offset:offset + nbr_bits]
             value_list.append(_bitarray_to_data(el, el_bits))

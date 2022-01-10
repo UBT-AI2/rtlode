@@ -2,13 +2,13 @@ from unittest import TestCase
 
 from myhdl import intbv, Signal
 
-from framework.packed_struct import StructDescription, BitVector, List
+from framework.packed_struct import StructDescription, BitVector
 
 
 class TestA(StructDescription):
     a = BitVector(1)
     b = BitVector(5)
-    c = List(2, BitVector(2))
+    c = [BitVector(2) for _ in range(2)]
 
 
 class TestB(StructDescription):

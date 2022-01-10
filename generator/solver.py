@@ -1,7 +1,7 @@
 from myhdl import block, instances, SignalType, always, Signal, always_comb, always_seq
 
 from framework import data_desc
-from framework.packed_struct import StructDescription, StructDescriptionMetaclass, List, BitVector
+from framework.packed_struct import StructDescription, StructDescriptionMetaclass, BitVector
 from framework.fifo import FifoConsumer, FifoProducer, fifo
 from framework.pipeline import PipeInput, PipeOutput, Pipe, PipeConstant, PipeSignal
 from framework.vector_utils import vec_mul
@@ -45,7 +45,7 @@ def solver(
         n = BitVector(numeric_type)
         cn = BitVector(numeric_type)
         x = BitVector(numeric_type)
-        y = List(config.system_size, BitVector(numeric_type))
+        y = [BitVector(numeric_type) for _ in range(config.system_size)]
 
     pipe_input_valid = Signal(bool(0))
     pipe_output_busy = Signal(bool(0))

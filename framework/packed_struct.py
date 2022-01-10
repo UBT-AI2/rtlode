@@ -29,10 +29,10 @@ class PackedReadStruct(_PackedStruct):
     def _definition_to_signal(definition, data, high_index, low_index):
         if isinstance(definition, BitVector):
             return definition.create_read_instance(data, high_index, low_index)
-        elif isinstance(definition, List):
+        elif isinstance(definition, list):
             vector = []
             instances = []
-            for el in definition.as_list():
+            for el in definition:
                 low_index = high_index - len(el)
                 inst, sign = PackedReadStruct._definition_to_signal(el, data, high_index, low_index)
                 vector.append(sign)
@@ -85,8 +85,8 @@ class PackedWriteStruct(_PackedStruct):
     def _definition_to_field(value):
         if isinstance(value, BitVector):
             return value.create_instance()
-        elif isinstance(value, List):
-            return [PackedWriteStruct._definition_to_field(el) for el in value.as_list()]
+        elif isinstance(value, list):
+            return [PackedWriteStruct._definition_to_field(el) for el in value]
         elif issubclass(value, StructDescription):
             return value.create_write_instance()
         raise Exception('Unsupported field type in StructDescription.')
@@ -180,25 +180,6 @@ class BitVector:
         return [], data(high_index, low_index)
 
 
-class List:
-    """
-    Can be used to describe a list in a StructDescription.
-    """
-    def __init__(self, size, inner_type):
-        self._size = size
-        self._inner_type = inner_type
-
-    def __len__(self):
-        return self._size * len(self._inner_type)
-
-    def as_list(self):
-        """
-        Unfolds list descriptopn to a list with description elements.
-        :return: list of description elements
-        """
-        return [self._inner_type for _ in range(self._size)]
-
-
 class StructDescriptionMetaclass(type):
     """
     Internal metaclass allowing the use of len() on StructDescription classes.
@@ -228,6 +209,19 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
             c1 = CcipC1Rx
     """
     @classmethod
+    def from_kwargs(cls, name, **kwargs):
+        return StructDescriptionMetaclass(name, (StructDescription, ), kwargs)
+
+    @staticmethod
+    def field_len(field):
+        if isinstance(field, list):
+            length = 0
+            for subfield in field:
+                length += StructDescription.field_len(subfield)
+            return length
+        return len(field)
+
+    @classmethod
     def len(cls):
         """
         Returns the number of bits of the descripted struct.
@@ -235,24 +229,34 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
         """
         cls._check_wellformness()
         length = 0
-        for _, value in cls.get_fields().items():
-            length += len(value)
+        for value in cls.get_fields().values():
+            length += StructDescription.field_len(value)
         return length
 
     @classmethod
     def get_fields(cls):
         return collections.OrderedDict([(k, getattr(cls, k)) for k in cls.__ordered__ if not k.startswith("__")])
 
+    @staticmethod
+    def _is_field_wellformed(field):
+        if isinstance(field, BitVector):
+            return True
+        elif isinstance(field, list):
+            wellformed = True
+            for el in field:
+                wellformed = wellformed and StructDescription._is_field_wellformed(el)
+            return wellformed
+        elif inspect.isclass(field) and issubclass(field, StructDescription):
+            wellformed = True
+            for el in field.get_fields().values():
+                wellformed = wellformed and StructDescription._is_field_wellformed(el)
+            return wellformed
+        return False
+
     @classmethod
     def _check_wellformness(cls):
-        for name, value in cls.get_fields().items():
-            if isinstance(value, BitVector):
-                continue
-            elif isinstance(value, List):
-                continue
-            elif inspect.isclass(value) and issubclass(value, StructDescription):
-                continue
-            else:
+        for field in cls.get_fields().values():
+            if not StructDescription._is_field_wellformed(field):
                 raise Exception('Unsupported field type in StructDescription.')
         return True
 
@@ -292,7 +296,7 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
     @classmethod
     def create_write_instance(cls) -> PackedWriteStruct:
         """
-        Creates a written instance of the a described structure.
+        Creates a writable instance of the described structure.
         :return: nested struct following the described structure
         """
         cls._check_wellformness()
