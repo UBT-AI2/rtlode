@@ -1,9 +1,10 @@
 import uuid
 
 from dataclasses import dataclass, field
-from myhdl import block, always_seq, concat, SignalType, Signal, intbv, instances
+from myhdl import block, always_seq, concat, SignalType, Signal, intbv, instances, always_comb
 
 from generator.ccip import CcipC0ReqMmioHdr, CcipClAddr
+from generator.utils import clone_signal
 from utils import num
 
 csr_addresses = {
@@ -65,17 +66,23 @@ def csr_handler(header: CsrHeader, clk, reset, cp2af, af2cp, data: CsrSignals):
     mmio_hdr = CcipC0ReqMmioHdr.create_read_instance(cp2af.c0.hdr)
     mmio_hdr_inst = mmio_hdr.instances()
 
+    mmio_writes_data = clone_signal(cp2af.c0.data)
+
     @always_seq(clk.posedge, reset=reset)
     def handle_mmio_writes():
         if cp2af.c0.mmioWrValid:
             if mmio_hdr.address == csr_address_input_addr:
-                data.input_addr.next = concat(cp2af.c0.data)[len(CcipClAddr):]
+                data.input_addr.next = mmio_writes_data[len(CcipClAddr):]
             elif mmio_hdr.address == csr_address_output_addr:
-                data.output_addr.next = concat(cp2af.c0.data)[len(CcipClAddr):]
+                data.output_addr.next = mmio_writes_data[len(CcipClAddr):]
             elif mmio_hdr.address == csr_address_buffer_size:
-                data.buffer_size.next = concat(cp2af.c0.data)[32:]
+                data.buffer_size.next = mmio_writes_data[32:]
             elif mmio_hdr.address == csr_address_enb:
-                data.enb.next = concat(cp2af.c0.data)[1:]
+                data.enb.next = mmio_writes_data[1:]
+
+    @always_comb
+    def assign_mmio_writes_data():
+        mmio_writes_data.next = cp2af.c0.data
 
     @always_seq(clk.posedge, reset=None)
     def handle_mmio_reads():
