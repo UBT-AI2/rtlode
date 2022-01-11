@@ -8,6 +8,15 @@ from myhdl import Signal, intbv, SignalType, ConcatSignal, block
 from utils.num import NumberType
 
 
+def field_len(field):
+    if isinstance(field, list):
+        length = 0
+        for subfield in field:
+            length += field_len(subfield)
+        return length
+    return len(field)
+
+
 class _PackedStruct:
     def __init__(self, fields):
         self._fields = fields
@@ -17,7 +26,7 @@ class _PackedStruct:
     def __len__(self):
         nbr_bits = 0
         for name in self._fields:
-            nbr_bits += len(self._fields[name])
+            nbr_bits += field_len(self._fields[name])
         return nbr_bits
 
 
@@ -49,7 +58,7 @@ class PackedReadStruct(_PackedStruct):
 
         high_index = high_lim
         for name, value in fields.items():
-            low_index = high_index - len(value)
+            low_index = high_index - field_len(value)
             if low_index < low_lim:
                 raise Exception('PackedReadStruct trying to access data below lower limit.')
             field_instances, fields[name] = PackedReadStruct._definition_to_signal(value, data, high_index, low_index)
@@ -92,20 +101,6 @@ class PackedWriteStruct(_PackedStruct):
         raise Exception('Unsupported field type in StructDescription.')
 
     @staticmethod
-    def _field_to_signal(value):
-        if isinstance(value, SignalType):
-            return [value]
-        elif isinstance(value, list):
-            vector = []
-            for el in value:
-                vector.extend(PackedWriteStruct._field_to_signal(el))
-            return vector
-        elif isinstance(value, PackedWriteStruct):
-            return value._packed()
-        else:
-            raise Exception('Unsupported field type in PackedWriteStruct obj.')
-
-    @staticmethod
     def _update_field(value):
         if isinstance(value, SignalType):
             value._update()
@@ -127,20 +122,34 @@ class PackedWriteStruct(_PackedStruct):
         Returns a ConcatSignal following the signals of the struct.
         :return: concatted signal
         """
-        bitvector = self._packed()
+        signal_list = PackedWriteStruct.create_signal_list(list(self._fields.values()))
+        return PackedWriteStruct.concat_signal_list(signal_list)
 
-        if len(bitvector) == 0:
+    @staticmethod
+    def concat_signal_list(signal_list):
+        if len(signal_list) == 0:
             raise Exception('Empty PackedSignals obj.')
-        elif len(bitvector) == 1:
-            return bitvector[0]
+        elif len(signal_list) == 1:
+            return signal_list[0]
         else:
-            return ConcatSignal(*bitvector)
+            return ConcatSignal(*signal_list)
 
-    def _packed(self):
-        bitvector = []
-        for _, value in self._fields.items():
-            bitvector.extend(PackedWriteStruct._field_to_signal(value))
-        return bitvector
+    @staticmethod
+    def create_signal_list(value):
+        if isinstance(value, SignalType):
+            return [value]
+        elif isinstance(value, list):
+            vector = []
+            for el in value:
+                vector.extend(PackedWriteStruct.create_signal_list(el))
+            return vector
+        elif isinstance(value, PackedWriteStruct):
+            vector = []
+            for el in value._fields.values():
+                vector.extend(PackedWriteStruct.create_signal_list(el))
+            return vector
+        else:
+            raise Exception('Unsupported field type in PackedWriteStruct obj.')
 
     def update(self):
         """
@@ -212,15 +221,6 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
     def from_kwargs(cls, name, **kwargs):
         return StructDescriptionMetaclass(name, (StructDescription, ), kwargs)
 
-    @staticmethod
-    def field_len(field):
-        if isinstance(field, list):
-            length = 0
-            for subfield in field:
-                length += StructDescription.field_len(subfield)
-            return length
-        return len(field)
-
     @classmethod
     def len(cls):
         """
@@ -230,7 +230,7 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
         cls._check_wellformness()
         length = 0
         for value in cls.get_fields().values():
-            length += StructDescription.field_len(value)
+            length += field_len(value)
         return length
 
     @classmethod

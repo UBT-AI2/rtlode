@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from typing import List, Set, Dict, Iterable, Optional, Union
 
-from myhdl import SignalType, Signal, block, instances, always_seq, always_comb
+from myhdl import SignalType, Signal, block, instances, always_seq, always_comb, ConcatSignal
 
+from framework import packed_struct
+from framework.fifo import fifo, FifoProducer, FifoConsumer
+from framework.packed_struct import StructDescription, BitVector, PackedReadStruct, PackedWriteStruct
 from generator.utils import clone_signal
-from utils import num
 from utils.num import NumberType
 
 """
@@ -222,8 +224,9 @@ class Pipe:
         self.resolve()
         stats = {
             'nbr_nodes': 0,
-            'nbr_seq_nodes': 0,
-            'nbr_comb_nodes': 0,
+            'nbr_zero_cylce_nodes': 0,
+            'nbr_one_cylce_nodes': 0,
+            'nbr_multiple_cylce_nodes': 0,
             'nbr_regs': 0,
             'nbr_stages': len(self.stages),
             'by_type': {}
@@ -239,10 +242,12 @@ class Pipe:
                         stats['by_type'][p.name] += 1
                     else:
                         stats['by_type'][p.name] = 1
-                if isinstance(p, OneCycleNode):
-                    stats['nbr_seq_nodes'] += 1
-                elif isinstance(p, ZeroCycleNode):
-                    stats['nbr_comb_nodes'] += 1
+                if isinstance(p, ZeroCycleNode):
+                    stats['nbr_zero_cylce_nodes'] += 1
+                elif isinstance(p, OneCycleNode):
+                    stats['nbr_one_cylce_nodes'] += 1
+                elif isinstance(p, MultipleCycleNode):
+                    stats['nbr_multiple_cylce_nodes'] += 1
 
                 if isinstance(p, Register):
                     stats['nbr_regs'] += 1
@@ -361,7 +366,7 @@ class Pipe:
         for stage_id, stage in enumerate(self.stages):
             if stage_id == len(self.stages) - 1:
                 # Last stage before Output
-                self.pipe_output.set_pipe_valid(stage.valid)
+                self.pipe_output.set_stage_data_valid(stage.valid)
 
             # Data valid signal
             if stage_id == 0:
@@ -385,6 +390,9 @@ class Pipe:
                 else:
                     raise NotImplementedError()
                 pipe_instances.append(instance)
+
+        # Add additional output logic
+        pipe_instances.append(self.pipe_output.create_logic(clk, rst, len(self.stages)))
 
         return pipe_instances
 
@@ -608,31 +616,82 @@ class PipeInput(ProducerNode):
 
 class PipeOutput(ConsumerNode):
     busy: SignalType
-    pipe_valid: Optional[SignalType]
+    pipe_valid: SignalType
+    _stage_data_valid: Optional[SignalType]
+    _pipe_outputs: Optional[PackedReadStruct]
 
     def __init__(self, busy: SignalType, **inputs):
         super().__init__()
 
         self.busy = busy
-        self.pipe_valid = None
+        self.pipe_valid = Signal(bool(0))
+        self.stage_data_valid = None
+        self._pipe_outputs = None
 
         self.add_inputs(**inputs)
 
     def __getattr__(self, name):
-        if name in self._inputs:
-            signal = self._inputs[name]
+        if hasattr(self._pipe_outputs, name):
+            signal = getattr(self._pipe_outputs, name)
             if isinstance(signal, list):
-                return list(
-                    map(
-                        lambda x: x.get_signal(),
-                        signal
-                    ))
+                return list(signal)
             else:
-                return signal.get_signal()
+                return signal
         raise AttributeError("%r object has no attribute %r" % (self.__class__.__name__, name))
 
-    def set_pipe_valid(self, valid_signal):
-        self.pipe_valid = valid_signal
+    def set_stage_data_valid(self, valid_signal):
+        self.stage_data_valid = valid_signal
+
+    @block
+    def create_logic(self, clk, rst, pipe_len):
+        def nested_map(function, el):
+            if isinstance(el, list):
+                return [nested_map(function, subel) for subel in el]
+            return function(el)
+
+        data_desc = StructDescription.from_kwargs(
+            'IntermediateStructDescription',
+            **{k: nested_map(lambda x: BitVector(x.get_type()), pn) for k, pn in self._inputs.items()}
+        )
+
+        # input_vector = [s.get_signal() for s in self._inputs.values()]
+        input_vector = PackedWriteStruct.create_signal_list(
+            nested_map(lambda x: x.get_signal(), list(self._inputs.values()))
+        )
+        if len(input_vector) == 1:
+            cache_input = input_vector[0]
+        else:
+            cache_input = ConcatSignal(*input_vector)
+        cache_output = BitVector(len(data_desc)).create_instance()
+
+        self._pipe_outputs = data_desc.create_read_instance(cache_output)
+        out_insts = self._pipe_outputs.instances()
+
+        producer = FifoProducer(BitVector(len(cache_input)).create_instance())
+        consumer = FifoConsumer(BitVector(len(producer.data)).create_instance())
+        bits_needed = len("{0:b}".format(pipe_len + 1)) + 1
+        cache_fifo = fifo(clk, rst, producer, consumer, bits_needed)
+
+        @always_seq(clk.posedge, reset=rst)
+        def drive_data():
+            producer.wr.next = False
+            if not self.busy:
+                if consumer.empty:
+                    cache_output.next = cache_input.unsigned()
+                    self.pipe_valid.next = self.stage_data_valid
+                else:
+                    cache_output.next = consumer.data
+                    self.pipe_valid.next = True
+
+            if self.stage_data_valid and (self.busy or not consumer.empty):
+                producer.data.next = cache_input.unsigned()
+                producer.wr.next = True
+
+        @always_comb
+        def drive_fifo_c():
+            consumer.rd.next = not self.busy
+
+        return instances()
 
 
 class Register(OneCycleNode):
