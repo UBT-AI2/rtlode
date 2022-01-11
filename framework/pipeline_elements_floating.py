@@ -1,9 +1,8 @@
 from enum import Enum, auto
 
-from myhdl import block, Signal, instances, always_seq, always_comb, SignalType
+from myhdl import block, Signal, instances, always_seq, SignalType
 
 from framework.pipeline import MultipleCycleNode, PipeConstant, PipeNumeric, PipeSignal
-from framework.fifo import FifoProducer, FifoConsumer, fifo
 from utils import num
 from utils.num import FloatingPrecision
 
@@ -81,7 +80,7 @@ fp_core_inst_counter = 0
 
 
 @block
-def fp_core(clk, dataa, datab, result, num_factory: num.FloatingNumberType = None, function: NumericFunction = None):
+def fp_core(clk, rst, node_input, node_output, num_factory: num.FloatingNumberType = None, function: NumericFunction = None):
     """
     Implementing a floating point ip core instance.
     Ip Core must be described in _ip_core_info. Analog myhdl simulation logic is implemented.
@@ -102,25 +101,25 @@ def fp_core(clk, dataa, datab, result, num_factory: num.FloatingNumberType = Non
 
     data_width = num_factory.nbr_bits
 
-    dataa_desc = _handle_inputs(dataa, data_width)
-    datab_desc = _handle_inputs(datab, data_width)
+    dataa_desc = _handle_inputs(node_input.a, data_width)
+    datab_desc = _handle_inputs(node_input.b, data_width)
 
     @always_seq(clk.posedge, reset=None)
     def logic():
         if function == NumericFunction.MUL:
-            calc_res = num_factory.value_of(dataa) * num_factory.value_of(datab)
+            calc_res = num_factory.value_of(node_input.a) * num_factory.value_of(node_input.b)
         elif function == NumericFunction.ADD:
-            calc_res = num_factory.value_of(dataa) + num_factory.value_of(datab)
+            calc_res = num_factory.value_of(node_input.a) + num_factory.value_of(node_input.b)
         elif function == NumericFunction.SUB:
-            calc_res = num_factory.value_of(dataa) - num_factory.value_of(datab)
+            calc_res = num_factory.value_of(node_input.a) - num_factory.value_of(node_input.b)
         else:
             raise NotImplementedError
 
         internal_pipeline.insert(0, num_factory.create_constant(calc_res))
-        result.next = internal_pipeline.pop()
+        node_output.default.next = internal_pipeline.pop()
 
-    result.driven = 'reg'
-    for d in [dataa, datab]:
+    node_output.default.driven = 'reg'
+    for d in [node_input.a, node_input.b]:
         if isinstance(d, SignalType):
             d.read = True
 
@@ -179,7 +178,7 @@ def generic(function: NumericFunction, a: PipeNumeric, b: PipeNumeric):
 
     latency = _get_ip_core_info(function, num_type)['latency']
 
-    node = MultipleCycleNode(latency + 1)
+    node = MultipleCycleNode(latency)
 
     node.add_inputs(a=a, b=b)
     res = PipeSignal(num_type, Signal(num_type.create()))

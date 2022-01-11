@@ -1,7 +1,6 @@
 from myhdl import Signal, block, always_seq, instances, intbv, always_comb
 
 from framework.pipeline import OneCycleNode, ZeroCycleNode, PipeConstant, PipeNumeric, PipeSignal
-from generator.utils import clone_signal
 from utils import num
 
 
