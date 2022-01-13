@@ -228,7 +228,7 @@ class Pipe:
             'nbr_one_cylce_nodes': 0,
             'nbr_multiple_cylce_nodes': 0,
             'nbr_regs': 0,
-            'nbr_stages': len(self.stages),
+            'nbr_stages': len(self.stages) + 1,  # PipeOutput is not inserted into stage array
             'by_type': {}
         }
         already_visited = [self.pipe_input]
@@ -659,7 +659,8 @@ class PipeOutput(ConsumerNode):
             nested_map(lambda x: x.get_signal(), list(self._inputs.values()))
         )
         if len(input_vector) == 1:
-            cache_input = input_vector[0]
+            single_input = input_vector[0]
+            cache_input = single_input(len(single_input), 0)
         else:
             cache_input = ConcatSignal(*input_vector)
         cache_output = BitVector(len(data_desc)).create_instance()
@@ -677,14 +678,14 @@ class PipeOutput(ConsumerNode):
             producer.wr.next = False
             if not self.busy:
                 if consumer.empty:
-                    cache_output.next = cache_input.unsigned()
+                    cache_output.next = cache_input
                     self.pipe_valid.next = self.stage_data_valid
                 else:
                     cache_output.next = consumer.data
                     self.pipe_valid.next = True
 
             if self.stage_data_valid and (self.busy or not consumer.empty):
-                producer.data.next = cache_input.unsigned()
+                producer.data.next = cache_input
                 producer.wr.next = True
 
         @always_comb

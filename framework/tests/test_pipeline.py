@@ -220,7 +220,7 @@ class TestPipe(PipeTestCase):
             return mul1
 
         stats = self.run_pipe(inner_pipe, list(range(40)), [i * 2 for i in range(40)])
-        self.assertEqual(1, stats['nbr_stages'])
+        self.assertEqual(2, stats['nbr_stages'])
 
     def test_unconnected_node(self):
         """
