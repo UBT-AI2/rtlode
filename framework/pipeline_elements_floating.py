@@ -103,6 +103,7 @@ def fp_core(clk, rst, node_input, node_output, num_factory: num.FloatingNumberTy
 
     dataa_desc = _handle_inputs(node_input.a, data_width)
     datab_desc = _handle_inputs(node_input.b, data_width)
+    result = node_output.default
 
     @always_seq(clk.posedge, reset=None)
     def logic():
@@ -116,9 +117,9 @@ def fp_core(clk, rst, node_input, node_output, num_factory: num.FloatingNumberTy
             raise NotImplementedError
 
         internal_pipeline.insert(0, num_factory.create_constant(calc_res))
-        node_output.default.next = internal_pipeline.pop()
+        result.next = internal_pipeline.pop()
 
-    node_output.default.driven = 'reg'
+    result.driven = 'reg'
     for d in [node_input.a, node_input.b]:
         if isinstance(d, SignalType):
             d.read = True
