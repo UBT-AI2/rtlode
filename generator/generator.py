@@ -251,7 +251,7 @@ def convert(config):
     afu_inst.convert(hdl='Verilog', testbench=False, name='solver', path=dir_path)
 
 
-def build(*config_files, name=None, config=None, cleanup=True):
+def build(*config_files, name=None, config=None):
     """
     Create solver file for given configuration.
 
@@ -262,7 +262,6 @@ def build(*config_files, name=None, config=None, cleanup=True):
         4. Start synthesis and fitting.
         5. Prepend afu with authentication blocks (with an empty signature chain)
         6. Create solver file by combining gbs file and solver config.
-        7. Clean up build directories.
     :return:
     """
     if name is None:
@@ -281,14 +280,21 @@ def build(*config_files, name=None, config=None, cleanup=True):
 
     # 3. Create build directory for synthesis with OPAE tools.
     _create_build_config(config)
-    build_dir = 'build'
+    build_path = os.path.join(os.getcwd(), '_'.join(os.path.basename(name).split('.')[:-1]))
     generator_path = os.path.dirname(os.path.realpath(__file__))
     filelist_path = os.path.join(generator_path, 'static', 'filelist.txt')
-    subprocess.run(['afu_synth_setup', '--sources', filelist_path, build_dir], cwd=generator_path).check_returncode()
+    subprocess.run(['afu_synth_setup', '--sources', filelist_path, build_path]).check_returncode()
 
     # 4. Start synthesis and fitting.
-    build_path = os.path.join(generator_path, build_dir)
-    subprocess.run(['${OPAE_PLATFORM_ROOT}/bin/run.sh'], shell=True, cwd=build_path).check_returncode()
+    log_file_path = os.path.join(build_path, 'quartus-run.log')
+    with open(log_file_path, "w") as log_file:
+        subprocess.run(
+            ['${OPAE_PLATFORM_ROOT}/bin/run.sh'],
+            shell=True,
+            cwd=build_path,
+            stdout=log_file,
+            stderr=subprocess.STDOUT
+        ).check_returncode()
 
     # 5. Prepend afu with authentication blocks (with an empty signature chain)
     subprocess.run(
@@ -302,7 +308,3 @@ def build(*config_files, name=None, config=None, cleanup=True):
     if not os.path.isfile(gbs_path):
         raise Exception('solver_signed.gbs output file from synthesis could not be found.')
     slv.pack(gbs_path, config, out_path)
-
-    # 7. Clean up build directories.
-    if cleanup:
-        shutil.rmtree(build_path)
