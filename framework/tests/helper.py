@@ -8,7 +8,7 @@ from utils import num
 
 
 class PipeTestCase(TestCase):
-    def run_pipe(self, inner_pipe, input_data, output_data, valid_cycles=5, busy_cycles=20) -> Dict:
+    def run_pipe(self, inner_pipe, input_data, output_data, valid_cycles=5, busy_cycles=20, busy_init=False) -> Dict:
         assert len(input_data) == len(output_data)
 
         stats = None
@@ -21,7 +21,7 @@ class PipeTestCase(TestCase):
             in_valid = Signal(bool(0))
             in_signal = Signal(num.get_default_type().create(input_data[0]))
 
-            out_busy = Signal(bool(0))
+            out_busy = Signal(bool(False))
 
             data_in = PipeInput(in_valid, value=PipeSignal(num.get_default_type(), in_signal))
             res = inner_pipe(data_in.value)

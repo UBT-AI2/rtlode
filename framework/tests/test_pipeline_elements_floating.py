@@ -6,11 +6,13 @@ from utils import num
 
 class TestPipe(PipeTestCase):
     def run(self, result=None):
-        # Run twice for each floating precission
+        # Run twice for each floating precision
+        previous_type = num.get_default_type()
         num.set_default_type(num.FloatingNumberType(num.FloatingPrecision.DOUBLE))
         super().run(result)
         num.set_default_type(num.FloatingNumberType(num.FloatingPrecision.SINGLE))
         super().run(result)
+        num.set_default_type(previous_type)
 
     def test_add(self):
         """
@@ -153,10 +155,18 @@ class TestPipe(PipeTestCase):
             res = add(add6, PipeConstant.from_float(1))
             return res
 
-        for busy_cycles in range(1, 40):
+        for busy_cycles in range(1, 100):
             self.run_pipe(
                 inner_pipe,
                 list(range(40)), [i + 7 for i in range(40)],
                 valid_cycles=5 if busy_cycles != 5 else 4,
-                busy_cycles=busy_cycles
+                busy_cycles=busy_cycles,
+                busy_init=False
+            )
+            self.run_pipe(
+                inner_pipe,
+                list(range(40)), [i + 7 for i in range(40)],
+                valid_cycles=5 if busy_cycles != 5 else 4,
+                busy_cycles=busy_cycles,
+                busy_init=True
             )
