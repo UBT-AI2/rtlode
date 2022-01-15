@@ -8,7 +8,7 @@ from utils import num
 
 
 class PipeTestCase(TestCase):
-    def run_pipe(self, inner_pipe, input_data, output_data) -> Dict:
+    def run_pipe(self, inner_pipe, input_data, output_data, busy_cycles=20) -> Dict:
         assert len(input_data) == len(output_data)
 
         stats = None
@@ -61,7 +61,7 @@ class PipeTestCase(TestCase):
                 if data_out.pipe_valid and not out_busy:
                     out_counter.next += 1
                     self.assertEqual(num.get_default_type().create_constant(output_data[out_counter]), data_out.res)
-                if busy_counter == 20:
+                if busy_counter >= busy_cycles:
                     out_busy.next = not out_busy
                     busy_counter.next = 0
                 else:

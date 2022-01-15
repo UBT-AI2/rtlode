@@ -254,3 +254,20 @@ class TestPipe(PipeTestCase):
 
         stats = self.run_pipe(inner_pipe, list(range(40)), [(i + 7) * i + (i + 6) * i for i in range(40)])
         self.assertEqual(8, stats['by_type']['reg'])
+
+    def test_different_busy_cycles(self):
+        """
+        Testing if pipelines handles different rythms of busy signals correctly.
+        """
+        def inner_pipe(data):
+            add1 = add(data, PipeConstant.from_float(1))
+            add2 = add(add1, PipeConstant.from_float(1))
+            add3 = add(add2, PipeConstant.from_float(1))
+            add4 = add(add3, PipeConstant.from_float(1))
+            add5 = add(add4, PipeConstant.from_float(1))
+            add6 = add(add5, PipeConstant.from_float(1))
+            res = add(add6, PipeConstant.from_float(1))
+            return res
+
+        for busy_cycles in range(1, 40):
+            self.run_pipe(inner_pipe, list(range(40)), [i + 7 for i in range(40)], busy_cycles=busy_cycles)
