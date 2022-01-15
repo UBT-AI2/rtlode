@@ -673,13 +673,14 @@ class PipeOutput(ConsumerNode):
         bits_needed = len("{0:b}".format(pipe_len + 1)) + 1
         cache_fifo = fifo(clk, rst, producer, consumer, bits_needed)
 
-        @always_seq(clk.posedge, reset=rst)
-        def drive_data():
-            producer.wr.next = self.stage_data_valid
-            producer.data.next = cache_input
+        # Based on assumption, that cache_fifo will never be full, because size is at least pipe len
+        # and busy signal is directly forwarded to PipeInput, therefore their should never be enough
+        # data packages inside the pipeline to overflow cache_fifo.
 
         @always_comb
         def drive_fifo_c():
+            producer.wr.next = self.stage_data_valid
+            producer.data.next = cache_input
             cache_output.next = consumer.data
             self.pipe_valid.next = not self.busy and not consumer.empty
             consumer.rd.next = not self.busy
