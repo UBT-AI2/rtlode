@@ -115,6 +115,29 @@ class TestPipe(PipeTestCase):
 
         self.run_pipe(inner_pipe, list(range(40)), [5 * i for i in range(40)])
 
+    def test_different_valid_cycles(self):
+        """
+        Testing if pipelines handles different rythms of valid signals correctly.
+        Same as in test_pipeline, but floating point elements could be implemented differently.
+        """
+        def inner_pipe(data):
+            add1 = add(data, PipeConstant.from_float(1))
+            add2 = add(add1, PipeConstant.from_float(1))
+            add3 = add(add2, PipeConstant.from_float(1))
+            add4 = add(add3, PipeConstant.from_float(1))
+            add5 = add(add4, PipeConstant.from_float(1))
+            add6 = add(add5, PipeConstant.from_float(1))
+            res = add(add6, PipeConstant.from_float(1))
+            return res
+
+        for valid_cycles in range(1, 40):
+            self.run_pipe(
+                inner_pipe,
+                list(range(40)), [i + 7 for i in range(40)],
+                valid_cycles=valid_cycles,
+                busy_cycles=5 if valid_cycles != 5 else 4
+            )
+
     def test_different_busy_cycles(self):
         """
         Testing if pipelines handles different rythms of busy signals correctly.
@@ -131,4 +154,9 @@ class TestPipe(PipeTestCase):
             return res
 
         for busy_cycles in range(1, 40):
-            self.run_pipe(inner_pipe, list(range(40)), [i + 7 for i in range(40)], busy_cycles=busy_cycles)
+            self.run_pipe(
+                inner_pipe,
+                list(range(40)), [i + 7 for i in range(40)],
+                valid_cycles=5 if busy_cycles != 5 else 4,
+                busy_cycles=busy_cycles
+            )
