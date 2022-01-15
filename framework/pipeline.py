@@ -675,21 +675,13 @@ class PipeOutput(ConsumerNode):
 
         @always_seq(clk.posedge, reset=rst)
         def drive_data():
-            producer.wr.next = False
-            if not self.busy:
-                if consumer.empty:
-                    cache_output.next = cache_input
-                    self.pipe_valid.next = self.stage_data_valid
-                else:
-                    cache_output.next = consumer.data
-                    self.pipe_valid.next = True
-
-            if self.stage_data_valid and (self.busy or not consumer.empty):
-                producer.data.next = cache_input
-                producer.wr.next = True
+            producer.wr.next = self.stage_data_valid
+            producer.data.next = cache_input
 
         @always_comb
         def drive_fifo_c():
+            cache_output.next = consumer.data
+            self.pipe_valid.next = not self.busy and not consumer.empty
             consumer.rd.next = not self.busy
 
         return instances()
