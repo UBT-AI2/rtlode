@@ -1,7 +1,7 @@
 import inspect
 
 import collections
-from typing import Union
+from typing import Union, Dict
 
 from myhdl import Signal, intbv, SignalType, ConcatSignal, block
 
@@ -172,14 +172,15 @@ class BitVector:
             return self._size_or_type.nbr_bits
         return self._size_or_type
 
-    def create_instance(self):
+    def create_instance(self, init_value=0):
         """
         Creates a signal which can be used as representation of given BitVector.
+        :param init_value: optional value which the signal should have after initialization
         :return: signal representation
         """
         if isinstance(self._size_or_type, NumberType):
-            return Signal(self._size_or_type.create())
-        return Signal(intbv(0)[self._size_or_type:0])
+            return Signal(self._size_or_type.create(init_value))
+        return Signal(intbv(init_value)[self._size_or_type:0])
 
     def create_read_instance(self, data, high_index, low_index):
         if isinstance(self._size_or_type, NumberType) and self._size_or_type.signed:
@@ -302,3 +303,39 @@ class StructDescription(metaclass=StructDescriptionMetaclass):
         cls._check_wellformness()
 
         return PackedWriteStruct(cls.get_fields())
+
+    @staticmethod
+    def _nested_map(function, el):
+        if isinstance(el, list):
+            return [StructDescription._nested_map(function, subel) for subel in el]
+        elif inspect.isclass(el) and issubclass(el, StructDescription):
+            return [StructDescription._nested_map(function, subel) for subel in el.get_fields().values()]
+        return function(el)
+
+    @classmethod
+    def create_constant(cls, data: Dict):
+        """
+        Packs the given data as dict into a packed intbv as described in data_desc.
+        :param data: data of data_desc as a dict
+        :return:
+        """
+        cls._check_wellformness()
+
+        input_data = cls.create_write_instance()
+
+        def set_data(write_struct, data_desc, data):
+            if isinstance(data_desc, list):
+                for i in range(len(data_desc)):
+                    set_data(write_struct[i], data_desc[i], data[i])
+            elif inspect.isclass(data_desc) and issubclass(data_desc, StructDescription):
+                for key, subel in cls.get_fields().items():
+                    if key in data:
+                        set_data(getattr(write_struct, key), subel, data[key])
+            else:
+                write_struct.next = data_desc.create_instance(data)
+
+        set_data(input_data, cls, data)
+
+        input_data.update()
+        input_packed = input_data.packed()
+        return int(input_packed)
