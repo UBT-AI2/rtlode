@@ -1,8 +1,8 @@
 import json
 import os
-import shutil
 import subprocess
 import uuid
+from datetime import datetime
 from typing import List
 
 import yaml
@@ -36,6 +36,7 @@ def _build_info():
     return {
         'build_info': {
             'version': subprocess.check_output(["git", "describe", "--tags"]).strip().decode('utf-8'),
+            'datetime': datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             'csr_addresses': csr_addresses,
             'uuid': str(uuid.uuid4())
         }

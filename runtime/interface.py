@@ -139,6 +139,8 @@ class Solver:
         packed_data_len = len(data_desc.get_output_desc(self._system_size)) // 8
 
         offset = self._output_data_offset + self._output_data_chunk
+        if offset + packed_data_len > self._buffer_size:
+            return None
         packed_data = self._output_buffer[offset:offset + packed_data_len]
 
         unpacked_data = data_desc.unpack_output_data(self._system_size, bytes(packed_data))

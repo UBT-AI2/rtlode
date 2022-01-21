@@ -31,6 +31,13 @@ def run(slv_path: str, runtime_config=None, amount_data=None):
     # Patch loaded configs with runtime configuration
     if runtime_config is not None:
         deep_update(config, runtime_config)
+    info_msg = ''
+    if config['build_info'].get('datetime') is not None:
+        info_msg += f" at {config['build_info']['datetime']}"
+    if config['build_info'].get('version') is not None:
+        info_msg += f" with version {config['build_info']['version']}"
+    if len(info_msg) > 0:
+        print(f"Solver was build{info_msg}...")
 
     # Load bitstream on FPGA
     print('Loading bitstream on fpga...')
@@ -64,6 +71,8 @@ def run(slv_path: str, runtime_config=None, amount_data=None):
         results = []
         while not all(awaiting_ids.values()):
             package_res = solver.fetch_output()
+            if package_res is None:
+                raise Exception('Did not receive all outputs.')
             if package_res['id'] in awaiting_ids:
                 if awaiting_ids[package_res['id']]:
                     raise Exception('Already got results for this id.')
@@ -84,6 +93,13 @@ def benchmark(slv_path: str, runtime_config=None, amount_data=1000):
     # Patch loaded configs with runtime configuration
     if runtime_config is not None:
         deep_update(config, runtime_config)
+    info_msg = ''
+    if config['build_info'].get('datetime') is not None:
+        info_msg += f" at {config['build_info']['datetime']}"
+    if config['build_info'].get('version') is not None:
+        info_msg += f" with version {config['build_info']['version']}"
+    if len(info_msg) > 0:
+        print(f"Solver was build{info_msg}...")
 
     # Load bitstream on FPGA
     print('Loading bitstream on fpga...')
