@@ -105,19 +105,18 @@ def async_fifo(p: AsyncFifoProducer, c: AsyncFifoConsumer, buffer_size_bits=8):
     assert len(p.data) == len(c.data)
 
     buffer_size = 2 ** buffer_size_bits
-    addr_max = 2 ** (buffer_size_bits + 1)
     buffer = [clone_signal(p.data) for _ in range(buffer_size)]
 
     do_write = Signal(bool(0))
     do_read = Signal(bool(0))
 
-    p_wr_addr = Signal(modbv(0, min=0, max=addr_max))
+    p_wr_addr = Signal(modbv(0)[buffer_size_bits + 1:])
     p_wr_addr_next = clone_signal(p_wr_addr)
     p_wr_addr_gray = clone_signal(p_wr_addr)
     p_wr_addr_gray_next = clone_signal(p_wr_addr)
     p_rd_addr_gray = clone_signal(p_wr_addr)
     p_full_next = Signal(bool(1))
-    c_rd_addr = Signal(modbv(0, min=0, max=addr_max))
+    c_rd_addr = Signal(modbv(0)[buffer_size_bits + 1:])
     c_rd_addr_next = clone_signal(c_rd_addr)
     c_rd_addr_gray = clone_signal(c_rd_addr)
     c_rd_addr_gray_next = clone_signal(c_rd_addr)
@@ -131,7 +130,7 @@ def async_fifo(p: AsyncFifoProducer, c: AsyncFifoConsumer, buffer_size_bits=8):
     @always_comb
     def wr_pointer_next():
         if do_write:
-            p_wr_addr_next.next = p_wr_addr + 1
+            p_wr_addr_next.next = (p_wr_addr + 1)[buffer_size_bits + 1:]
         else:
             p_wr_addr_next.next = p_wr_addr
 
@@ -167,7 +166,7 @@ def async_fifo(p: AsyncFifoProducer, c: AsyncFifoConsumer, buffer_size_bits=8):
     @always_comb
     def rd_pointer_next():
         if do_read:
-            c_rd_addr_next.next = c_rd_addr + 1
+            c_rd_addr_next.next = (c_rd_addr + 1)[buffer_size_bits + 1:]
         else:
             c_rd_addr_next.next = c_rd_addr
 

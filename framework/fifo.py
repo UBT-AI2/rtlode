@@ -45,13 +45,12 @@ def fifo(clk: SignalType, rst: SignalType, p: FifoProducer, c: FifoConsumer, buf
     assert len(p.data) == len(c.data)
 
     buffer_size = 2 ** buffer_size_bits
-    addr_max = 2 ** (buffer_size_bits + 1)
     buffer = [clone_signal(p.data) for _ in range(buffer_size)]
 
-    p_addr = Signal(modbv(0, min=0, max=addr_max))
-    p_addr_next = Signal(modbv(0, min=0, max=addr_max))
-    c_addr = Signal(modbv(0, min=0, max=addr_max))
-    c_addr_next = Signal(modbv(0, min=0, max=addr_max))
+    p_addr = Signal(modbv(0)[buffer_size_bits + 1:])
+    p_addr_next = Signal(modbv(0)[buffer_size_bits + 1:])
+    c_addr = Signal(modbv(0)[buffer_size_bits + 1:])
+    c_addr_next = Signal(modbv(0)[buffer_size_bits + 1:])
 
     do_write = Signal(bool(0))
     do_read = Signal(bool(0))
@@ -68,7 +67,7 @@ def fifo(clk: SignalType, rst: SignalType, p: FifoProducer, c: FifoConsumer, buf
     @always_comb
     def handle_wr_addr_next():
         if do_write:
-            p_addr_next.next = p_addr + 1
+            p_addr_next.next = (p_addr + 1)[buffer_size_bits + 1:]
         else:
             p_addr_next.next = p_addr
 
@@ -95,7 +94,7 @@ def fifo(clk: SignalType, rst: SignalType, p: FifoProducer, c: FifoConsumer, buf
     @always_comb
     def handle_rd_addr_next():
         if do_read:
-            c_addr_next.next = c_addr + 1
+            c_addr_next.next = (c_addr + 1)[buffer_size_bits + 1:]
         else:
             c_addr_next.next = c_addr
 
