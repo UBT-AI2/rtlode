@@ -62,9 +62,10 @@ def dispatcher(config: Config, data_in: AsyncFifoConsumer, data_out: AsyncFifoPr
     fin_signals = [Signal(bool(0)) for _ in range(config.nbr_solver)]
     fin_signals_vec = ConcatSignal(*reversed(fin_signals)) if config.nbr_solver > 1 else fin_signals[0]
     fin_priority = Signal(intbv(0)[config.nbr_solver:])
+    fin_index = Signal(intbv(0)[config.nbr_solver:])
 
     rdy_priority_encoder = priority_encoder_one_hot(rdy_signals_vec, rdy_priority)
-    fin_priority_encoder = priority_encoder_one_hot(fin_signals_vec, fin_priority)
+    fin_priority_encoder = priority_encoder_one_hot(fin_signals_vec, fin_priority, fin_index)
 
     solver_data_out = [clone_signal(data_out.data) for _ in range(config.nbr_solver)]
 
@@ -122,8 +123,6 @@ def dispatcher(config: Config, data_in: AsyncFifoConsumer, data_out: AsyncFifoPr
 
     @always_comb
     def assign_data_out():
-        for i in range(config.nbr_solver):
-            if fin_priority[i]:
-                data_out.data.next = solver_data_out[i]
+        data_out.data.next = solver_data_out[fin_index]
 
     return instances()

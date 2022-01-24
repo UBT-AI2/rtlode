@@ -1,55 +1,37 @@
-from myhdl import instances, block, SignalType, always_comb, Signal, ConcatSignal
-
-
-@block
-def highest_bit_checker(
-        in_vec: SignalType,
-        out_bit: SignalType,
-        index
-):
-    @always_comb
-    def check():
-        if in_vec[index] and in_vec[:index + 1] == 0:
-            out_bit.next = True
-        else:
-            out_bit.next = False
-
-    return instances()
+from myhdl import instances, block, SignalType, always_comb, Signal, ConcatSignal, intbv
 
 
 @block
 def priority_encoder_one_hot(
         in_vec: SignalType,
-        out_vec: SignalType
+        out_vec: SignalType,
+        index: SignalType = None
 ):
     """
-    Highest order bit gets priority and outputed in out_vec.
+    Highest order bit gets priority and is the only true in out_vec.
     :param in_vec: input vector
     :param out_vec: out vector one hot
+    :param index: optional signal to get current index
     :return: myhdl instances
     """
     assert len(in_vec) == len(out_vec)
 
     bit_width = len(in_vec)
-    priority_bits = [Signal(bool(0)) for _ in range(bit_width)]
-    priority_vec = ConcatSignal(*reversed(priority_bits)) if bit_width > 1 else priority_bits[0]
-
-    in_vec_highest_bit = in_vec(bit_width - 1) if bit_width > 1 else in_vec
-    priority_highest_bit = priority_bits[bit_width - 1]
-
-    @always_comb
-    def highest_index():
-        if in_vec_highest_bit:
-            priority_highest_bit.next = True
-        else:
-            priority_highest_bit.next = False
-
-    other_indeces = [
-        highest_bit_checker(in_vec, priority_bits[i], i) for i in range(bit_width - 1)
-    ]
+    if index is None:
+        index = Signal(intbv(0)[bit_width:])
 
     @always_comb
     def assign_out():
-        out_vec.next = priority_vec
+        index.next = 0
+        for i in range(bit_width):
+            if in_vec[i]:
+                index.next = i
+
+    @always_comb
+    def out_driver():
+        if in_vec == 0:
+            out_vec.next = 0
+        else:
+            out_vec.next = (1 << index)
 
     return instances()
