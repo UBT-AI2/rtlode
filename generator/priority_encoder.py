@@ -1,4 +1,4 @@
-from myhdl import instances, block, SignalType, always_comb, Signal, ConcatSignal, intbv
+from myhdl import instances, block, SignalType, always_comb, Signal, intbv
 
 
 @block
@@ -17,21 +17,33 @@ def priority_encoder_one_hot(
     assert len(in_vec) == len(out_vec)
 
     bit_width = len(in_vec)
-    if index is None:
-        index = Signal(intbv(0)[bit_width:])
 
-    @always_comb
-    def assign_out():
-        index.next = 0
-        for i in range(bit_width):
-            if in_vec[i]:
-                index.next = i
-
-    @always_comb
-    def out_driver():
-        if in_vec == 0:
-            out_vec.next = 0
+    if bit_width == 1:
+        if index is None:
+            @always_comb
+            def assign():
+                out_vec.next = in_vec
         else:
-            out_vec.next = (1 << index)
+            @always_comb
+            def assign():
+                index.next = 0
+                out_vec.next = in_vec
+    else:
+        if index is None:
+            index = Signal(intbv(0)[bit_width:])
+
+        @always_comb
+        def assign_index():
+            index.next = 0
+            for i in range(1, bit_width):
+                if in_vec[i]:
+                    index.next = i
+
+        @always_comb
+        def assign_out_vec():
+            if in_vec == 0:
+                out_vec.next = 0
+            else:
+                out_vec.next = (1 << index)
 
     return instances()
