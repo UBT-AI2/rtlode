@@ -111,12 +111,14 @@ def async_fifo(p: AsyncFifoProducer, c: AsyncFifoConsumer, buffer_size_bits=8):
     do_read = Signal(bool(0))
 
     p_wr_addr = Signal(modbv(0)[buffer_size_bits + 1:])
+    p_wr_addr_incremented = Signal(modbv(0)[buffer_size_bits + 2:])
     p_wr_addr_next = clone_signal(p_wr_addr)
     p_wr_addr_gray = clone_signal(p_wr_addr)
     p_wr_addr_gray_next = clone_signal(p_wr_addr)
     p_rd_addr_gray = clone_signal(p_wr_addr)
     p_full_next = Signal(bool(1))
     c_rd_addr = Signal(modbv(0)[buffer_size_bits + 1:])
+    c_rd_addr_incremented = Signal(modbv(0)[buffer_size_bits + 2:])
     c_rd_addr_next = clone_signal(c_rd_addr)
     c_rd_addr_gray = clone_signal(c_rd_addr)
     c_rd_addr_gray_next = clone_signal(c_rd_addr)
@@ -128,9 +130,13 @@ def async_fifo(p: AsyncFifoProducer, c: AsyncFifoConsumer, buffer_size_bits=8):
         do_write.next = p.wr and not p.full
 
     @always_comb
+    def wr_addr_incremented_driver():
+        p_wr_addr_incremented.next = p_wr_addr + 1
+
+    @always_comb
     def wr_pointer_next():
         if do_write:
-            p_wr_addr_next.next = (p_wr_addr + 1)[buffer_size_bits + 1:]
+            p_wr_addr_next.next = p_wr_addr_incremented[buffer_size_bits + 1:]
         else:
             p_wr_addr_next.next = p_wr_addr
 
@@ -164,9 +170,13 @@ def async_fifo(p: AsyncFifoProducer, c: AsyncFifoConsumer, buffer_size_bits=8):
         do_read.next = c.rd and not c.empty
 
     @always_comb
+    def rd_addr_incremented_driver():
+        c_rd_addr_incremented.next = c_rd_addr + 1
+
+    @always_comb
     def rd_pointer_next():
         if do_read:
-            c_rd_addr_next.next = (c_rd_addr + 1)[buffer_size_bits + 1:]
+            c_rd_addr_next.next = c_rd_addr_incremented[buffer_size_bits + 1:]
         else:
             c_rd_addr_next.next = c_rd_addr
 

@@ -48,8 +48,10 @@ def fifo(clk: SignalType, rst: SignalType, p: FifoProducer, c: FifoConsumer, buf
     buffer = [clone_signal(p.data) for _ in range(buffer_size)]
 
     p_addr = Signal(modbv(0)[buffer_size_bits + 1:])
+    p_addr_incremented = Signal(modbv(0)[buffer_size_bits + 2:])
     p_addr_next = Signal(modbv(0)[buffer_size_bits + 1:])
     c_addr = Signal(modbv(0)[buffer_size_bits + 1:])
+    c_addr_incremented = Signal(modbv(0)[buffer_size_bits + 2:])
     c_addr_next = Signal(modbv(0)[buffer_size_bits + 1:])
 
     do_write = Signal(bool(0))
@@ -65,9 +67,13 @@ def fifo(clk: SignalType, rst: SignalType, p: FifoProducer, c: FifoConsumer, buf
         do_write.next = p.wr and not p.full
 
     @always_comb
+    def p_addr_incremented_driver():
+        p_addr_incremented.next = p_addr + 1
+
+    @always_comb
     def handle_wr_addr_next():
         if do_write:
-            p_addr_next.next = (p_addr + 1)[buffer_size_bits + 1:]
+            p_addr_next.next = p_addr_incremented[buffer_size_bits + 1:]
         else:
             p_addr_next.next = p_addr
 
@@ -92,9 +98,13 @@ def fifo(clk: SignalType, rst: SignalType, p: FifoProducer, c: FifoConsumer, buf
         do_read.next = c.rd and not c.empty
 
     @always_comb
+    def c_addr_incremented_driver():
+        c_addr_incremented.next = c_addr + 1
+
+    @always_comb
     def handle_rd_addr_next():
         if do_read:
-            c_addr_next.next = (c_addr + 1)[buffer_size_bits + 1:]
+            c_addr_next.next = c_addr_incremented[buffer_size_bits + 1:]
         else:
             c_addr_next.next = c_addr
 
