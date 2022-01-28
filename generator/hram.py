@@ -47,12 +47,12 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
     @always_comb
     def input_finished_driver():
-        input_finished.next = input_addr_offset == csr.buffer_size and not read_response_outstanding \
+        input_finished.next = input_addr_offset >= csr.buffer_size and not read_response_outstanding \
                               and not read_response_processing_ongoing
 
     @always_comb
     def output_finished_driver():
-        output_finished.next = input_finished and nbr_outputs == nbr_inputs
+        output_finished.next = output_addr_offset >= csr.buffer_size or (input_finished and nbr_outputs >= nbr_inputs)
 
     @always_seq(clk.posedge, reset=None)
     def mem_reads_request():
@@ -172,7 +172,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
             write_state.next = t_write_state.RDY
             output_addr_offset.next = 0
-            data_in.rd.next = True
+            data_in.rd.next = False
             csr.fin.next = False
             output_data_iter.next = 0
 
@@ -182,16 +182,18 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
         else:
             if write_state == t_write_state.RDY:
                 af2cp.c1.valid.next = 0
-                if not data_in.empty and not cp2af.c1TxAlmFull:
+
+                if not cp2af.c1TxAlmFull:
+                    data_in.rd.next = True
+
+                if data_in.rd and not data_in.empty:
                     nbr_outputs.next = nbr_outputs.next + 1
                     output_data[output_data_iter].next = data_in.data
                     output_data_iter.next = output_data_iter + 1
-                    if output_data_iter + 1 == output_data_per_chunk:
+                    if output_data_iter + 1 == output_data_per_chunk or\
+                            (input_finished and nbr_outputs + 1 >= nbr_inputs):
                         data_in.rd.next = False
                         write_state.next = t_write_state.CL0
-                if output_finished:
-                    data_in.rd.next = False
-                    write_state.next = t_write_state.CL0
             elif write_state == t_write_state.CL0:
                 af2cp.c1.hdr.sop.next = 1
                 af2cp.c1.hdr.address.next = csr.output_addr + (output_addr_offset << 2)  # * 4 (0b100)
@@ -221,7 +223,10 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
                     output_data_iter.next = 0
                     for i in range(output_data_per_chunk):
                         output_data[i].next = 0
-                    data_in.rd.next = True
+                    if cp2af.c1TxAlmFull:
+                        data_in.rd.next = False
+                    else:
+                        data_in.rd.next = True
                 else:
                     write_state.next = t_write_state.FIN
                     data_in.rd.next = False
