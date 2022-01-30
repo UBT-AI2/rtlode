@@ -261,8 +261,8 @@ def build(*config_files, name=None, config=None):
         1. Load and enrich config
         2. Invokes :func:`convert` to get generated solver in verilog.
         3. Create build directory for synthesis with OPAE tools.
-        4. Start synthesis and fitting.
-        5. Preserving solver.v
+        4. Preserving solver.v
+        5. Start synthesis and fitting.
         6. Prepend afu with authentication blocks (with an empty signature chain)
         7. Create solver file by combining gbs file and solver config.
     :return:
@@ -288,7 +288,11 @@ def build(*config_files, name=None, config=None):
     filelist_path = os.path.join(generator_path, 'static', 'filelist.txt')
     subprocess.run(['afu_synth_setup', '--sources', filelist_path, build_path]).check_returncode()
 
-    # 4. Start synthesis and fitting.
+    # 4. Preserving solver.v
+    generated_solver_path = os.path.join(generator_path, 'out', 'solver.v')
+    shutil.copy(generated_solver_path, build_path)
+
+    # 5. Start synthesis and fitting.
     log_file_path = os.path.join(build_path, 'quartus-run.log')
     with open(log_file_path, "w") as log_file:
         subprocess.run(
@@ -298,10 +302,6 @@ def build(*config_files, name=None, config=None):
             stdout=log_file,
             stderr=subprocess.STDOUT
         ).check_returncode()
-
-    # 5. Preserving solver.v
-    generated_solver_path = os.path.join(generator_path, 'out', 'solver.v')
-    shutil.copy(generated_solver_path, build_path)
 
     # 6. Prepend afu with authentication blocks (with an empty signature chain)
     subprocess.run(
