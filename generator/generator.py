@@ -294,10 +294,10 @@ def build(*config_files, name=None, config=None):
     shutil.copy(generated_solver_path, build_path)
 
     # 5. Patch build process
-    clock_crossing_path = os.path.abspath(os.path.join(generator_path, 'static', 'clock_crossing.sdc'))
+    clock_crossing_sdc_path = os.path.abspath(os.path.join(generator_path, 'static', 'clock_crossing.sdc'))
     project_qsf_path = os.path.join(build_path, 'build', 'afu_default.qsf')
     with open(project_qsf_path, 'a') as project_file:
-        project_file.write(f'\nset_global_assignment -name SDC_FILE "{clock_crossing_path}"\n')
+        project_file.write(f'\nset_global_assignment -name SDC_FILE "{clock_crossing_sdc_path}"\n')
 
     # 6. Start synthesis and fitting.
     log_file_path = os.path.join(build_path, 'quartus-run.log')
