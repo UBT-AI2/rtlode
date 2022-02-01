@@ -17,7 +17,6 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     assert data_out.clk == data_in.clk
     assert data_out.rst == data_in.rst
     clk = data_out.clk
-    reset = data_out.rst
 
     input_desc = get_input_desc(config.system_size)
     assert len(input_desc) <= len(CcipClData)
@@ -51,7 +50,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
     @always_seq(clk.posedge, reset=None)
     def mem_reads_request():
-        if reset or not csr.enb:
+        if not csr.enb:
             af2cp.c0.hdr.vc_sel.next = 0
             af2cp.c0.hdr.rsvd1.next = 0
             af2cp.c0.hdr.cl_len.next = 3  # 4 CL's
@@ -96,7 +95,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
     @always_seq(clk.posedge, reset=None)
     def mem_reads_responses():
-        if reset or not csr.enb:
+        if not csr.enb:
             nbr_inputs.next = 0
             input_data_iter.next = 0
             read_response_processing_ongoing.next = False
@@ -159,8 +158,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
         @always_seq(clk.posedge, reset=None)
         def reset_padding():
-            if reset or not csr.enb:
-                output_data_chunk_padding.next = 0
+            output_data_chunk_padding.next = 0
     else:
         output_data_chunk = ConcatSignal(*reversed(output_data))
 
@@ -170,7 +168,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     # Host Memory Writes
     @always_seq(clk.posedge, reset=None)
     def mem_writes():
-        if reset or not csr.enb:
+        if not csr.enb:
             af2cp.c1.hdr.rsvd2.next = 0
             af2cp.c1.hdr.vc_sel.next = 0
             af2cp.c1.hdr.sop.next = 0
