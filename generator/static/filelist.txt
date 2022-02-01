@@ -10,4 +10,3 @@ ip_cores/subfp_single.ip
 ccip_interface_reg.sv
 ccip_std_afu.sv
 ../out/solver.v
-clock_crossing.sdc

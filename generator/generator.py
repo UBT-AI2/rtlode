@@ -262,9 +262,10 @@ def build(*config_files, name=None, config=None):
         2. Invokes :func:`convert` to get generated solver in verilog.
         3. Create build directory for synthesis with OPAE tools.
         4. Preserving solver.v
-        5. Start synthesis and fitting.
-        6. Prepend afu with authentication blocks (with an empty signature chain)
-        7. Create solver file by combining gbs file and solver config.
+        5. Patch build process
+        6. Start synthesis and fitting.
+        7. Prepend afu with authentication blocks (with an empty signature chain)
+        8. Create solver file by combining gbs file and solver config.
     :return:
     """
     if name is None:
@@ -292,9 +293,15 @@ def build(*config_files, name=None, config=None):
     generated_solver_path = os.path.join(generator_path, 'out', 'solver.v')
     shutil.copy(generated_solver_path, build_path)
 
-    # 5. Start synthesis and fitting.
+    # 5. Patch build process
+    clock_crossing_sdc_path = os.path.abspath(os.path.join(generator_path, 'static', 'clock_crossing.sdc'))
+    project_qsf_path = os.path.join(build_path, 'build', 'afu_default.qsf')
+    with open(project_qsf_path, 'a') as project_file:
+        project_file.write(f'\nset_global_assignment -name SDC_FILE "{clock_crossing_sdc_path}"\n')
+
+    # 6. Start synthesis and fitting.
     log_file_path = os.path.join(build_path, 'quartus-run.log')
-    with open(log_file_path, "w") as log_file:
+    with open(log_file_path, 'w') as log_file:
         subprocess.run(
             ['${OPAE_PLATFORM_ROOT}/bin/run.sh'],
             shell=True,
@@ -303,13 +310,13 @@ def build(*config_files, name=None, config=None):
             stderr=subprocess.STDOUT
         ).check_returncode()
 
-    # 6. Prepend afu with authentication blocks (with an empty signature chain)
+    # 7. Prepend afu with authentication blocks (with an empty signature chain)
     subprocess.run(
         ['PACSign PR -t UPDATE -H openssl_manager -y -i solver.gbs -o solver_signed.gbs'],
         shell=True, cwd=build_path
     ).check_returncode()
 
-    # 7. Create solver file by combining gbs file and solver config.
+    # 8. Create solver file by combining gbs file and solver config.
     gbs_path = os.path.join(build_path, 'solver_signed.gbs')
     out_path = os.path.join(os.getcwd(), name)
     if not os.path.isfile(gbs_path):

@@ -1,4 +1,4 @@
-from myhdl import block, always_seq, Signal, instances, ConcatSignal, enum, ResetSignal, always_comb
+from myhdl import block, always_seq, Signal, instances, ConcatSignal, enum, always_comb
 
 from framework.data_desc import get_input_desc, get_output_desc
 from framework.packed_struct import BitVector
@@ -17,12 +17,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     assert data_out.clk == data_in.clk
     assert data_out.rst == data_in.rst
     clk = data_out.clk
-
-    reset = ResetSignal(True, True, False)
-
-    @always_comb
-    def reset_driver():
-        reset.next = data_out.rst or not csr.enb
+    reset = data_out.rst
 
     input_desc = get_input_desc(config.system_size)
     assert len(input_desc) <= len(CcipClData)
@@ -56,7 +51,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
     @always_seq(clk.posedge, reset=None)
     def mem_reads_request():
-        if reset:
+        if reset or not csr.enb:
             af2cp.c0.hdr.vc_sel.next = 0
             af2cp.c0.hdr.rsvd1.next = 0
             af2cp.c0.hdr.cl_len.next = 3  # 4 CL's
@@ -99,40 +94,52 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     input_data_size = len(input_desc)
     input_data_iter = Signal(num.UnsignedIntegerNumberType(32).create(0))
 
-    @always_seq(clk.posedge, reset=reset)
+    @always_seq(clk.posedge, reset=None)
     def mem_reads_responses():
-        if data_out.wr:
-            if not data_out.full:
-                nbr_inputs.next = nbr_inputs + 1
-                if input_data_iter + input_data_size <= chunk_size:
-                    data_out.data.next = input_data_chunk[input_data_iter + input_data_size:input_data_iter]
-                    input_data_iter.next = input_data_iter + input_data_size
-                else:
-                    data_out.wr.next = False
-                    input_data_iter.next = 0
-                    cl0_rcv.next = False
-                    cl1_rcv.next = False
-                    cl2_rcv.next = False
-                    cl3_rcv.next = False
-                    read_response_processing_ongoing.next = False
-        elif cl_rcv_vec == 0b1111:
-            data_out.wr.next = True
-            data_out.data.next = input_data_chunk[input_data_iter + input_data_size:input_data_iter]
-            input_data_iter.next = input_data_iter + input_data_size
-            read_response_processing_ongoing.next = True
-        elif cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0:
-            if cp2af.c0.hdr.cl_num == 0:
-                cl0_data.next = cp2af.c0.data
-                cl0_rcv.next = True
-            elif cp2af.c0.hdr.cl_num == 1:
-                cl1_data.next = cp2af.c0.data
-                cl1_rcv.next = True
-            elif cp2af.c0.hdr.cl_num == 2:
-                cl2_data.next = cp2af.c0.data
-                cl2_rcv.next = True
-            elif cp2af.c0.hdr.cl_num == 3:
-                cl3_data.next = cp2af.c0.data
-                cl3_rcv.next = True
+        if reset or not csr.enb:
+            nbr_inputs.next = 0
+            input_data_iter.next = 0
+            read_response_processing_ongoing.next = False
+
+            data_out.wr.next = False
+
+            cl0_rcv.next = False
+            cl1_rcv.next = False
+            cl2_rcv.next = False
+            cl3_rcv.next = False
+        else:
+            if data_out.wr:
+                if not data_out.full:
+                    nbr_inputs.next = nbr_inputs + 1
+                    if input_data_iter + input_data_size <= chunk_size:
+                        data_out.data.next = input_data_chunk[input_data_iter + input_data_size:input_data_iter]
+                        input_data_iter.next = input_data_iter + input_data_size
+                    else:
+                        data_out.wr.next = False
+                        input_data_iter.next = 0
+                        cl0_rcv.next = False
+                        cl1_rcv.next = False
+                        cl2_rcv.next = False
+                        cl3_rcv.next = False
+                        read_response_processing_ongoing.next = False
+            elif cl_rcv_vec == 0b1111:
+                data_out.wr.next = True
+                data_out.data.next = input_data_chunk[input_data_iter + input_data_size:input_data_iter]
+                input_data_iter.next = input_data_iter + input_data_size
+                read_response_processing_ongoing.next = True
+            elif cp2af.c0.rspValid == 1 and cp2af.c0.hdr.mdata == 0:
+                if cp2af.c0.hdr.cl_num == 0:
+                    cl0_data.next = cp2af.c0.data
+                    cl0_rcv.next = True
+                elif cp2af.c0.hdr.cl_num == 1:
+                    cl1_data.next = cp2af.c0.data
+                    cl1_rcv.next = True
+                elif cp2af.c0.hdr.cl_num == 2:
+                    cl2_data.next = cp2af.c0.data
+                    cl2_rcv.next = True
+                elif cp2af.c0.hdr.cl_num == 3:
+                    cl3_data.next = cp2af.c0.data
+                    cl3_rcv.next = True
 
     # Incremental counter used for iterating trough host array
     output_addr_offset = Signal(num.UnsignedIntegerNumberType(32).create(0))
@@ -146,7 +153,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
         @always_seq(clk.posedge, reset=None)
         def reset_padding():
-            if reset:
+            if reset or not csr.enb:
                 output_data_chunk_padding.next = 0
     else:
         output_data_chunk = ConcatSignal(*reversed(output_data))
@@ -157,7 +164,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     # Host Memory Writes
     @always_seq(clk.posedge, reset=None)
     def mem_writes():
-        if reset:
+        if reset or not csr.enb:
             af2cp.c1.hdr.rsvd2.next = 0
             af2cp.c1.hdr.vc_sel.next = 0
             af2cp.c1.hdr.sop.next = 0

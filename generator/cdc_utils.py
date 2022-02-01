@@ -22,7 +22,7 @@ def assign(clk, rst, out_val, in_val):
 
 
 @block
-def ff_synchronizer(clk, rst, chain_out, chain_in, stages=2, chain_rst_value=0):
+def ff_synchronizer(clk, rst, chain_out, chain_in, stages=3, chain_rst_value=0):
     """
     Flip-Flop based synchronizer. Can be used to stabilize signals which are crossing clock domains.
     Generates a chain with ff_stages flip flops. Use only with 1 bit values if you are not certain
@@ -43,7 +43,7 @@ def ff_synchronizer(clk, rst, chain_out, chain_in, stages=2, chain_rst_value=0):
 
 
 @block
-def areset_synchronizer(clk, async_rst, sync_rst, min_reset_cycles=2):
+def areset_synchronizer(clk, async_rst, sync_rst, min_reset_cycles=3):
     """
     Synchronizer for async reset signals. Uses internally a flip-flop synchronizer.
     :param clk: clock of target domain
