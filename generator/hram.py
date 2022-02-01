@@ -17,6 +17,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     assert data_out.clk == data_in.clk
     assert data_out.rst == data_in.rst
     clk = data_out.clk
+    reset = data_out.rst
 
     input_desc = get_input_desc(config.system_size)
     assert len(input_desc) <= len(CcipClData)
@@ -50,7 +51,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
     @always_seq(clk.posedge, reset=None)
     def mem_reads_request():
-        if not csr.enb:
+        if reset or not csr.enb:
             af2cp.c0.hdr.vc_sel.next = 0
             af2cp.c0.hdr.rsvd1.next = 0
             af2cp.c0.hdr.cl_len.next = 3  # 4 CL's
@@ -95,23 +96,17 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
     @always_seq(clk.posedge, reset=None)
     def mem_reads_responses():
-        if not csr.enb:
+        if reset or not csr.enb:
             nbr_inputs.next = 0
             input_data_iter.next = 0
             read_response_processing_ongoing.next = False
 
             data_out.wr.next = False
-            data_out.data.next = 0
 
             cl0_rcv.next = False
             cl1_rcv.next = False
             cl2_rcv.next = False
             cl3_rcv.next = False
-
-            cl0_data.next = 0
-            cl1_data.next = 0
-            cl2_data.next = 0
-            cl3_data.next = 0
         else:
             if data_out.wr:
                 if not data_out.full:
@@ -158,7 +153,8 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
 
         @always_seq(clk.posedge, reset=None)
         def reset_padding():
-            output_data_chunk_padding.next = 0
+            if reset or not csr.enb:
+                output_data_chunk_padding.next = 0
     else:
         output_data_chunk = ConcatSignal(*reversed(output_data))
 
@@ -168,7 +164,7 @@ def hram_handler(config, cp2af, af2cp, csr: CsrSignals, data_out: AsyncFifoProdu
     # Host Memory Writes
     @always_seq(clk.posedge, reset=None)
     def mem_writes():
-        if not csr.enb:
+        if reset or not csr.enb:
             af2cp.c1.hdr.rsvd2.next = 0
             af2cp.c1.hdr.vc_sel.next = 0
             af2cp.c1.hdr.sop.next = 0
